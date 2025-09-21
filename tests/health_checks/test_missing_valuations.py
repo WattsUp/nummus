@@ -4,15 +4,18 @@ from typing import TYPE_CHECKING
 
 from nummus.health_checks.missing_valuations import MissingAssetValuations
 from nummus.models import (
-    Asset,
-    AssetValuation,
     HealthCheckIssue,
     query_count,
-    Transaction,
 )
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
+
+    from nummus.models import (
+        Asset,
+        AssetValuation,
+        Transaction,
+    )
 
 
 def test_empty(session: orm.Session) -> None:

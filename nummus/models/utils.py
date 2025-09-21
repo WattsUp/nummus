@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 import sqlalchemy
 from sqlalchemy import (
     CheckConstraint,
-    Constraint,
     ForeignKeyConstraint,
     func,
     orm,
@@ -19,6 +18,10 @@ from nummus import exceptions as exc
 from nummus.models.base import YIELD_PER
 
 if TYPE_CHECKING:
+    from sqlalchemy import (
+        Constraint,
+    )
+
     from nummus.models.base import Base
 
 
@@ -30,6 +33,7 @@ def query_count(query: orm.Query) -> int:
 
     Returns:
         Number of instances query will return upon execution
+
     """
     # From here:
     # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
@@ -57,6 +61,7 @@ def paginate(
     Returns:
         Page (list of result from query), amount count for query, next_offset for
         subsequent calls (None if no more)
+
     """
     offset = max(0, offset)
 
@@ -88,6 +93,7 @@ def dump_table_configs(
 
     Returns:
         List of lines used to create tables
+
     """
     stmt = f"""
         SELECT sql
@@ -113,6 +119,7 @@ def get_constraints(
 
     Returns:
         list[(Constraint type, construction text)]
+
     """
     config = "\n".join(dump_table_configs(s, model))
     constraints: list[tuple[type[Constraint], str]] = []
@@ -146,6 +153,7 @@ def obj_session(m: Base) -> orm.Session:
 
     Raises:
         UnboundExecutionError: if model is unbound
+
     """
     s = orm.object_session(m)
     if s is None:
@@ -168,6 +176,7 @@ def update_rows(
         query: Query to fetch all applicable models
         id_key: Name of property used for identification
         updates: dict{id_value: {parameter: value}}
+
     """
     updates = updates.copy()
     leftovers: list[Base] = []
@@ -213,6 +222,7 @@ def update_rows_list(
 
     Returns:
         list[cls.id_ for each updated/created]
+
     """
     ids: list[int] = []
 
@@ -243,7 +253,13 @@ def update_rows_list(
 
 
 def one_or_none[T](query: orm.Query[T]) -> T | None:
-    """Return one result. If no results or multiple, return None."""
+    """Return one result.
+
+    Returns:
+        One result
+        If no results or multiple, return None
+
+    """
     try:
         return query.one_or_none()
     except (exc.NoResultFound, exc.MultipleResultsFound):

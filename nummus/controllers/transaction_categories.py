@@ -30,6 +30,7 @@ def page() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     return base.page(
         "transaction-categories/page.jinja",
@@ -43,6 +44,7 @@ def new() -> str | flask.Response:
 
     Returns:
         string HTML response
+
     """
     if flask.request.method == "GET":
         ctx: dict[str, object] = {
@@ -94,6 +96,7 @@ def category(uri: str) -> str | flask.Response:
 
     Raises:
         Forbidden: If locked category is edited
+
     """
     p = web.portfolio
     with p.begin_session() as s:
@@ -163,6 +166,7 @@ def validation() -> str:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     args = flask.request.args
@@ -204,6 +208,7 @@ def ctx_categories() -> dict[TransactionCategoryGroup, list[CategoryContext]]:
 
     Returns:
         List of HTML context
+
     """
     p = web.portfolio
 

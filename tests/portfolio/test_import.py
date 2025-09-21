@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus import exceptions as exc
-from nummus.models import Account, Asset, Base, query_count, Transaction
+from nummus.models import Account, Asset, query_count, Transaction
 from nummus.models.transaction import TransactionSplit
 from nummus.portfolio import Portfolio
 from tests.importers.test_raw_csv import TRANSACTIONS_REQUIRED
@@ -15,6 +15,8 @@ from tests.importers.test_raw_csv import TRANSACTIONS_REQUIRED
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
+
+    from nummus.models import Base
 
 
 def test_import_file(

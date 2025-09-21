@@ -63,20 +63,22 @@ class RandomStringGenerator:
 
 @pytest.fixture(scope="session")
 def rand_str_generator() -> RandomStringGenerator:
-    """Returns a random string generator.
+    """Return a random string generator.
 
     Returns:
         RandomStringGenerator
+
     """
     return RandomStringGenerator()
 
 
 @pytest.fixture
 def rand_str(rand_str_generator: RandomStringGenerator) -> str:
-    """Returns a random string.
+    """Return a random string.
 
     Returns:
         Random string with 20 characters
+
     """
     return rand_str_generator()
 
@@ -98,20 +100,22 @@ class RandomRealGenerator:
 
 @pytest.fixture(scope="session")
 def rand_real_generator() -> RandomRealGenerator:
-    """Returns a random decimal generator.
+    """Return a random decimal generator.
 
     Returns:
         RandomRealGenerator
+
     """
     return RandomRealGenerator()
 
 
 @pytest.fixture
 def rand_real(rand_real_generator: RandomRealGenerator) -> Decimal:
-    """Returns a random decimal [0, 1].
+    """Return a random decimal [0, 1].
 
     Returns:
         Real number between [0, 1] with 6 digits
+
     """
     return rand_real_generator()
 
@@ -154,10 +158,11 @@ def empty_portfolio_generator(
     tmp_path_factory: pytest.TempPathFactory,
     rand_str_generator: RandomStringGenerator,
 ) -> EmptyPortfolioGenerator:
-    """Returns an empty portfolio generator.
+    """Return an empty portfolio generator.
 
     Returns:
         EmptyPortfolio generator
+
     """
     return EmptyPortfolioGenerator(tmp_path_factory, rand_str_generator, None)
 
@@ -167,10 +172,11 @@ def empty_portfolio_encrypted_generator(
     tmp_path_factory: pytest.TempPathFactory,
     rand_str_generator: RandomStringGenerator,
 ) -> EmptyPortfolioGenerator:
-    """Returns an empty portfolio generator.
+    """Return an empty portfolio generator.
 
     Returns:
         EmptyPortfolio generator
+
     """
     return EmptyPortfolioGenerator(
         tmp_path_factory,
@@ -181,10 +187,11 @@ def empty_portfolio_encrypted_generator(
 
 @pytest.fixture
 def empty_portfolio(empty_portfolio_generator: EmptyPortfolioGenerator) -> Portfolio:
-    """Returns an empty portfolio.
+    """Return an empty portfolio.
 
     Returns:
         Portfolio
+
     """
     return empty_portfolio_generator()[0]
 
@@ -193,10 +200,11 @@ def empty_portfolio(empty_portfolio_generator: EmptyPortfolioGenerator) -> Portf
 def empty_portfolio_encrypted(
     empty_portfolio_encrypted_generator: EmptyPortfolioGenerator,
 ) -> tuple[Portfolio, str]:
-    """Returns an empty encrypted portfolio.
+    """Return an empty encrypted portfolio.
 
     Returns:
         tuple(Portfolio, key)
+
     """
     p, key = empty_portfolio_encrypted_generator()
     assert key is not None
@@ -209,6 +217,7 @@ def session(empty_portfolio: Portfolio) -> orm.Session:
 
     Returns:
         Session generator
+
     """
     return orm.Session(sql.get_engine(empty_portfolio.path, None))
 
@@ -231,6 +240,7 @@ def today() -> datetime.date:
 
     Returns:
         today datetime.date
+
     """
     return datetime.datetime.now(datetime.UTC).date()
 
@@ -241,6 +251,7 @@ def today_ord(today: datetime.date) -> int:
 
     Returns:
         today as ordinal
+
     """
     return today.toordinal()
 
@@ -251,6 +262,7 @@ def tomorrow(today: datetime.date) -> datetime.date:
 
     Returns:
         tomorrow datetime.date
+
     """
     return today + datetime.timedelta(days=1)
 
@@ -261,6 +273,7 @@ def tomorrow_ord(tomorrow: datetime.date) -> int:
 
     Returns:
         tomorrow as ordinal
+
     """
     return tomorrow.toordinal()
 
@@ -271,6 +284,7 @@ def month(today: datetime.date) -> datetime.date:
 
     Returns:
         month datetime.date
+
     """
     return today.replace(day=1)
 
@@ -281,6 +295,7 @@ def month_ord(month: datetime.date) -> int:
 
     Returns:
         month as ordinal
+
     """
     return month.toordinal()
 
@@ -291,6 +306,7 @@ def account(session: orm.Session, rand_str_generator: RandomStringGenerator) -> 
 
     Returns:
         Checking Account, not closed, budgeted
+
     """
     acct = Account(
         name="Monkey bank checking",
@@ -311,6 +327,7 @@ def account_savings(session: orm.Session) -> Account:
 
     Returns:
         Savings Account, not closed, not budgeted
+
     """
     acct = Account(
         # capital case for HTML header check
@@ -332,6 +349,7 @@ def account_investments(session: orm.Session) -> Account:
 
     Returns:
         Investments Account, not closed, not budgeted
+
     """
     acct = Account(
         name="Monkey bank investments",
@@ -352,6 +370,7 @@ def categories(session: orm.Session) -> dict[str, int]:
 
     Returns:
         dict{name: category id}
+
     """
     return {name: id_ for id_, name in TransactionCategory.map_name(session).items()}
 
@@ -362,6 +381,7 @@ def tags(session: orm.Session) -> dict[str, int]:
 
     Returns:
         dict{name: tag id}
+
     """
     tags = {"engineer", "fruit", "apartments 4 U"}
     session.add_all(Tag(name=name) for name in tags)
@@ -375,6 +395,7 @@ def asset(session: orm.Session) -> Asset:
 
     Returns:
         Banana Incorporated, STOCKS
+
     """
     asset = Asset(
         name="Banana incorporated",
@@ -393,6 +414,7 @@ def asset_etf(session: orm.Session) -> Asset:
 
     Returns:
         Banana ETF, STOCKS
+
     """
     asset = Asset(
         name="Banana ETF",
@@ -415,6 +437,7 @@ def asset_valuation(
 
     Returns:
         AssetValuation on today of $10
+
     """
     v = AssetValuation(asset_id=asset.id_, date_ord=today_ord, value=2)
     session.add(v)
@@ -432,6 +455,7 @@ def asset_split(
 
     Returns:
         AssetSplit on today of 10:1
+
     """
     v = AssetSplit(asset_id=asset.id_, date_ord=today_ord, multiplier=10)
     session.add(v)
@@ -448,6 +472,7 @@ def asset_sectors(
 
     Returns:
         20% BASIC_MATERIALS, 80% TECHNOLOGY
+
     """
     s0 = AssetSector(
         asset_id=asset.id_,
@@ -473,6 +498,7 @@ def budget_group(
 
     Returns:
         BudgetGroup with position 0
+
     """
     g = BudgetGroup(name=rand_str_generator(), position=0)
     session.add(g)
@@ -648,6 +674,7 @@ def data_path() -> Path:
 
     Returns:
         Path to test data
+
     """
     return Path(__file__).with_name("data")
 
@@ -658,6 +685,7 @@ def utc() -> datetime.datetime:
 
     Returns:
         datetime
+
     """
     return datetime.datetime.now(datetime.UTC)
 
@@ -671,6 +699,7 @@ def utc_frozen(
 
     Returns:
         datetime
+
     """
     time_machine.move_to(utc, tick=False)
     return utc
@@ -715,10 +744,11 @@ class FlaskAppGenerator:
 def flask_app_generator(
     empty_portfolio_generator: EmptyPortfolioGenerator,
 ) -> FlaskAppGenerator:
-    """Returns an flask app generator.
+    """Return an flask app generator.
 
     Returns:
         FlaskAppGenerator
+
     """
     return FlaskAppGenerator(empty_portfolio_generator)
 
@@ -727,10 +757,11 @@ def flask_app_generator(
 def flask_app_encrypted_generator(
     empty_portfolio_encrypted_generator: EmptyPortfolioGenerator,
 ) -> FlaskAppGenerator:
-    """Returns an flask app generator.
+    """Return an flask app generator.
 
     Returns:
         FlaskAppGenerator
+
     """
     return FlaskAppGenerator(empty_portfolio_encrypted_generator)
 
@@ -744,6 +775,7 @@ def flask_app(
 
     Returns:
         Flask
+
     """
     return flask_app_generator(empty_portfolio)
 
@@ -757,6 +789,7 @@ def flask_app_encrypted(
 
     Returns:
         Flask
+
     """
     return flask_app_encrypted_generator(empty_portfolio_encrypted[0])
 
@@ -768,7 +801,7 @@ def budget_assignments(
     session: orm.Session,
     categories: dict[str, int],
 ) -> list[BudgetAssignment]:
-    """Creates BudgetAssignments.
+    """Create BudgetAssignments.
 
     Returns:
         [
@@ -776,6 +809,7 @@ def budget_assignments(
             BudgetAssignment this month for $100 of emergency fund,
             BudgetAssignment next month for $2000 of rent,
         ]
+
     """
     b = BudgetAssignment(
         month_ord=month_ord,
@@ -808,6 +842,7 @@ def budget_target(
 
     Returns:
         Target for Emergency Fund, $1000, no due date
+
     """
     target = Target(
         category_id=categories["emergency fund"],

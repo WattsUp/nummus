@@ -24,6 +24,7 @@ class Config(Base):
     Attributes:
         key: Key of config pair
         value: Value of config pair
+
     """
 
     __table_id__ = None
@@ -35,7 +36,7 @@ class Config(Base):
 
     @orm.validates("value")
     def validate_strings(self, key: str, field: str | None) -> str | None:
-        """Validates string fields satisfy constraints.
+        """Validate string fields satisfy constraints.
 
         Args:
             key: Field being updated
@@ -43,5 +44,6 @@ class Config(Base):
 
         Returns:
             field
+
         """
         return self.clean_strings(key, field)

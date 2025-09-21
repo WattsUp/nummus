@@ -53,6 +53,7 @@ def page() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     with p.begin_session() as s:
@@ -68,6 +69,7 @@ def dashboard() -> str:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     with p.begin_session() as s:
@@ -86,6 +88,7 @@ def ctx_page(s: orm.Session, today: datetime.date) -> EFundContext:
 
     Returns:
         EFundContext
+
     """
     today_ord = today.toordinal()
     start = today - datetime.timedelta(days=utils.DAYS_IN_QUARTER * 2)

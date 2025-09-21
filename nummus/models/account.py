@@ -69,6 +69,7 @@ class Account(Base):
         emergency: True if Account is included in emergency fund
         opened_on: Date of first Transaction
         updated_on: Date of latest Transaction
+
     """
 
     __table_id__ = 0x00000000
@@ -89,7 +90,7 @@ class Account(Base):
 
     @orm.validates("name", "number", "institution")
     def validate_strings(self, key: str, field: str | None) -> str | None:
-        """Validates string fields satisfy constraints.
+        """Validate string fields satisfy constraints.
 
         Args:
             key: Field being updated
@@ -97,6 +98,7 @@ class Account(Base):
 
         Returns:
             field
+
         """
         return self.clean_strings(key, field)
 
@@ -138,6 +140,7 @@ class Account(Base):
             ValueResultAll
             All defaultdict
             Accounts and assets with zero values omitted
+
         """
         n = end_ord - start_ord + 1
 
@@ -357,6 +360,7 @@ class Account(Base):
 
         Returns:
             ValueResult
+
         """
         s = obj_session(self)
 
@@ -391,6 +395,7 @@ class Account(Base):
         Returns:
             dict{TransactionCategory: list[values]} with defaultdict
             Accounts with zero values omitted
+
         """
         n = end_ord - start_ord + 1
 
@@ -438,6 +443,7 @@ class Account(Base):
         Returns:
             dict{TransactionCategory: list[values]}
             Includes None in categories
+
         """
         s = obj_session(self)
         return self.get_cash_flow_all(s, start_ord, end_ord, [self.id_])
@@ -461,6 +467,7 @@ class Account(Base):
         Returns:
             dict{Account.id_: dict{Asset.id_: list[values]}} with defaultdict
             Assets with zero values omitted
+
         """
         n = end_ord - start_ord + 1
 
@@ -561,6 +568,7 @@ class Account(Base):
 
         Returns:
             dict{Asset.id_: list[values]}
+
         """
         s = obj_session(self)
         return self.get_asset_qty_all(s, start_ord, end_ord, [self.id_])[self.id_]
@@ -584,6 +592,7 @@ class Account(Base):
         Returns:
             dict{Asset.id_: profit} with defaultdict
             Assets with zero values omitted
+
         """
         # Get Asset quantities on start date
         query = (
@@ -658,6 +667,7 @@ class Account(Base):
 
         Returns:
             dict{Asset.id_: profit}
+
         """
         s = obj_session(self)
         return self.get_profit_by_asset_all(s, start_ord, end_ord, [self.id_])
@@ -672,6 +682,7 @@ class Account(Base):
 
         Returns:
             set{Account.id_}
+
         """
         query = s.query(Account.id_).where(Account.category == category)
         return {acct_id for acct_id, in query.all()}
@@ -684,6 +695,7 @@ class Account(Base):
 
         Returns:
             True if not closed or has a transaction in data range
+
         """
         if not self.closed:
             return True

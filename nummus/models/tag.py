@@ -20,6 +20,7 @@ class TagLink(Base):
     Attributes:
         tag_id: Tag unique identifier
         t_split_id: TransactionSplit unique identifier
+
     """
 
     __table_id__ = None
@@ -40,6 +41,7 @@ class TagLink(Base):
         Args:
             s: SQL session to use
             split_tags: dict {TransactionSplit: {tag names to link}
+
         """
         split_tags = {
             t_split_id: {tag for tag in tags if tag.strip()}
@@ -80,6 +82,7 @@ class Tag(Base):
 
     Attributes:
         name: Name of tag
+
     """
 
     __table_id__ = 0x00000000
@@ -90,7 +93,7 @@ class Tag(Base):
 
     @orm.validates("name")
     def validate_strings(self, key: str, field: str | None) -> str | None:
-        """Validates string fields satisfy constraints.
+        """Validate string fields satisfy constraints.
 
         Args:
             key: Field being updated
@@ -98,5 +101,6 @@ class Tag(Base):
 
         Returns:
             field
+
         """
         return self.clean_strings(key, field)

@@ -27,11 +27,12 @@ class Backup(BaseCommand):
         path_db: Path,
         path_password: Path | None,
     ) -> None:
-        """Initize backup command.
+        """Initialize backup command.
 
         Args:
             path_db: Path to Portfolio DB
             path_password: Path to password file, None will prompt when necessary
+
         """
         super().__init__(path_db, path_password, check_migration=False)
 
@@ -63,13 +64,14 @@ class Restore(BaseCommand):
         *,
         list_ver: bool,
     ) -> None:
-        """Initize restore command.
+        """Initialize restore command.
 
         Args:
             path_db: Path to Portfolio DB
             path_password: Path to password file, None will prompt when necessary
             tar_ver: Backup tar version to restore from, None will restore latest
             list_ver: True will list backups available, False will restore
+
         """
         super().__init__(path_db, path_password, do_unlock=False)
         self._tar_ver = tar_ver

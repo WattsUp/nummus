@@ -15,7 +15,6 @@ from nummus.models import (
     query_count,
     Tag,
     TagLink,
-    Transaction,
     TransactionCategory,
     TransactionCategoryGroup,
     TransactionSplit,
@@ -24,6 +23,10 @@ from nummus.models import (
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
+
+    from nummus.models import (
+        Transaction,
+    )
 
 
 @pytest.mark.parametrize(

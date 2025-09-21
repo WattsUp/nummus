@@ -30,13 +30,14 @@ class BaseCommand(ABC):
         do_unlock: bool = True,
         check_migration: bool = True,
     ) -> None:
-        """Initize base command.
+        """Initialize base command.
 
         Args:
             path_db: Path to Portfolio DB
             path_password: Path to password file, None will prompt when necessary
             do_unlock: True will unlock portfolio, False will not
             check_migration: True will check if migration is required
+
         """
         super().__init__()
 
@@ -81,10 +82,11 @@ class BaseCommand(ABC):
     @classmethod
     @abstractmethod
     def setup_args(cls, parser: argparse.ArgumentParser) -> None:
-        """Setup subparser for this command.
+        """Set up subparser for this command.
 
         Args:
             parser: Subparser to add args to
+
         """
         raise NotImplementedError
 
@@ -95,6 +97,7 @@ class BaseCommand(ABC):
         Returns:
             0 on success
             non-zero on failure
+
         """
         raise NotImplementedError
 
@@ -115,6 +118,7 @@ class BaseCommand(ABC):
 
         Returns:
             Unlocked Portfolio
+
         """
         # defer for faster time to main
         from nummus import exceptions as exc

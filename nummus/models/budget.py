@@ -63,6 +63,7 @@ class BudgetGroup(Base):
     Attributes:
         name: Group name
         position: Group position
+
     """
 
     __table_id__ = 0x00000000
@@ -74,7 +75,7 @@ class BudgetGroup(Base):
 
     @orm.validates("name")
     def validate_strings(self, key: str, field: str | None) -> str | None:
-        """Validates string fields satisfy constraints.
+        """Validate string fields satisfy constraints.
 
         Args:
             key: Field being updated
@@ -82,6 +83,7 @@ class BudgetGroup(Base):
 
         Returns:
             field
+
         """
         return self.clean_strings(key, field)
 
@@ -93,6 +95,7 @@ class BudgetAssignment(Base):
         month_ord: Date ordinal on which BudgetAssignment occurred (1st of month)
         amount: Amount contributed to budget category
         category_id: Budget category to contribute to
+
     """
 
     __table_id__ = None
@@ -108,7 +111,7 @@ class BudgetAssignment(Base):
 
     @orm.validates("amount")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
-        """Validates decimal fields satisfy constraints.
+        """Validate decimal fields satisfy constraints.
 
         Args:
             key: Field being updated
@@ -116,6 +119,7 @@ class BudgetAssignment(Base):
 
         Returns:
             field
+
         """
         return self.clean_decimals(key, field)
 
@@ -137,6 +141,7 @@ class BudgetAssignment(Base):
                 assignable,
                 future_assigned,
             )
+
         """
         month_ord = month.toordinal()
         query = s.query(Account).where(Account.budgeted)
@@ -308,6 +313,7 @@ class BudgetAssignment(Base):
 
         Returns:
             EmergencyFundDetails
+
         """
         n = end_ord - start_ord + 1
         n_smoothing = 15
@@ -443,6 +449,7 @@ class BudgetAssignment(Base):
             src_cat_id: Source category ID, or None
             dest_cat_id: Destination category ID, or None
             to_move: Amount to move
+
         """
         if src_cat_id is not None:
             # Remove to_move from src_cat_id
@@ -513,6 +520,7 @@ class Target(Base):
         period: Type of budget due date
         due_date_ord: First date ordinal on which target is due
         repeat_every: Repeat target every n period
+
     """
 
     __table_id__ = 0x00000000
@@ -553,7 +561,7 @@ class Target(Base):
 
     @orm.validates("amount")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
-        """Validates decimal fields satisfy constraints.
+        """Validate decimal fields satisfy constraints.
 
         Args:
             key: Field being updated
@@ -561,6 +569,7 @@ class Target(Base):
 
         Returns:
             field
+
         """
         return self.clean_decimals(key, field)
 

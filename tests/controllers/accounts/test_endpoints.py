@@ -5,11 +5,12 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus.controllers import base
-from nummus.models import Account, AccountCategory, Asset, Transaction
+from nummus.models import Account, AccountCategory
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
+    from nummus.models import Asset, Transaction
     from tests.controllers.conftest import WebClient
 
 

@@ -51,6 +51,7 @@ def cipher() -> Cipher:
 
     Returns:
         Cipher
+
     """
     return Cipher.generate()
 

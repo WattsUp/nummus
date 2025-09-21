@@ -8,7 +8,6 @@ import pytest
 from nummus import utils
 from nummus.health_checks.category_direction import CategoryDirection
 from nummus.models import (
-    Account,
     HealthCheckIssue,
     query_count,
     Transaction,
@@ -19,6 +18,10 @@ if TYPE_CHECKING:
     import datetime
 
     from sqlalchemy import orm
+
+    from nummus.models import (
+        Account,
+    )
 
 
 def test_empty(session: orm.Session) -> None:

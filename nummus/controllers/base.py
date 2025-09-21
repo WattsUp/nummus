@@ -153,6 +153,7 @@ def ctx_base(
 
     Returns:
         BaseContext
+
     """
     if not PAGES:
         nav_items: list[tuple[str, dict[str, Page | None]]] = [
@@ -272,6 +273,7 @@ def dialog_swap(
 
     Returns:
         Response that updates dialog OOB and triggers events
+
     """
     html = flask.render_template(
         "shared/dialog.jinja",
@@ -297,6 +299,7 @@ def error(e: str | Exception) -> str:
 
     Returns:
         HTML string response
+
     """
     icon = "<icon>error</icon>"
     if isinstance(e, exc.IntegrityError):
@@ -336,6 +339,7 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
 
     Returns:
         Whole page or just main body
+
     """
     if flask.request.headers.get("HX-Request", "false") == "true":
         # Send just the content
@@ -382,6 +386,7 @@ def update_client_timezone(response: flask.Response) -> flask.Response:
 
     Returns:
         Modified HTTP response if refresh is required
+
     """
     current_tz_minutes = int(flask.session.get("tz_minutes", 0))
     tz_minutes = flask.request.headers.get(
@@ -400,6 +405,7 @@ def today_client() -> datetime.date:
 
     Returns:
         Today in the client's timezone
+
     """
     tz_minutes = int(flask.session.get("tz_minutes", 0))
     tz = datetime.timezone(datetime.timedelta(minutes=-tz_minutes))
@@ -414,6 +420,7 @@ def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
 
     Returns:
         Modified HTTP response
+
     """
     if (
         response.status_code == HTTP_CODE_REDIRECT
@@ -443,6 +450,7 @@ def find[T: Base](s: orm.Session, cls: type[T], uri: str) -> T:
     Raises:
         BadRequest: If URI is malformed
         NotFound: If object is not found
+
     """
     try:
         id_ = cls.uri_to_id(uri)
@@ -472,6 +480,7 @@ def parse_period(
 
     Raises:
         BadRequest: If period is unknown
+
     """
     if period == "ytd":
         start = datetime.date(today.year, 1, 1)
@@ -499,6 +508,7 @@ def date_labels(start_ord: int, end_ord: int) -> DateLabels:
 
     Returns:
         DateLabels
+
     """
     dates = utils.range_date(start_ord, end_ord)
     n = len(dates)
@@ -522,6 +532,7 @@ def ctx_to_json(d: dict[str, object], precision: int = 2) -> str:
 
     Returns:
         JSON object
+
     """
 
     def default(obj: object) -> str | float:
@@ -554,6 +565,7 @@ def validate_string(
 
     Returns:
         Error message or ""
+
     """
     value = value.strip()
     if not value:
@@ -613,6 +625,7 @@ def validate_date(
 
     Returns:
         Error message or ""
+
     """
     value = value.strip()
     try:
@@ -655,6 +668,7 @@ def validate_real(
 
     Returns:
         Error message or ""
+
     """
     value = value.strip()
     if not value:
@@ -682,6 +696,7 @@ def validate_int(
 
     Returns:
         Error message or ""
+
     """
     value = value.strip()
     if not value:
@@ -713,6 +728,7 @@ def parse_date(
 
     Raises:
         ValueError: if failed to parse, empty, or in advance
+
     """
     try:
         date = utils.parse_date(value)
@@ -743,6 +759,7 @@ def tranaction_category_groups(s: orm.Session) -> CategoryGroups:
 
     Returns:
         dict{group: list[CategoryContext]}
+
     """
     query = (
         s.query(TransactionCategory)

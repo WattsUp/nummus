@@ -31,6 +31,7 @@ class Base(ABC):
             p: Portfolio to test
             no_ignores: True will print issues that have been ignored
             all other arguments ignored
+
         """
         super().__init__()
         self._issues: dict[str, str] = {}
@@ -42,6 +43,7 @@ class Base(ABC):
 
         Returns:
             str
+
         """
         return utils.camel_to_snake(cls.__name__).replace("_", " ").capitalize()
 
@@ -51,6 +53,7 @@ class Base(ABC):
 
         Returns:
             str
+
         """
         return cls._DESC
 
@@ -66,10 +69,11 @@ class Base(ABC):
 
     @classproperty
     def is_severe(cls) -> bool:  # noqa: N805
-        """True if issues are severe.
+        """Check if issues are severe.
 
         Returns:
             True if issues are severe
+
         """
         return cls._SEVERE
 
@@ -79,6 +83,7 @@ class Base(ABC):
 
         Args:
             s: SQL session to use
+
         """
         raise NotImplementedError
 
@@ -89,6 +94,7 @@ class Base(ABC):
         Args:
             s: SQL session to use
             values: List of issues to ignore
+
         """
         (
             s.query(HealthCheckIssue)
@@ -105,6 +111,7 @@ class Base(ABC):
         Args:
             s: SQL session to use
             issues: dict{value: message}
+
         """
         query = s.query(HealthCheckIssue.value).where(
             HealthCheckIssue.check == self.name,

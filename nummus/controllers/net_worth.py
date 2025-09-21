@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
-from sqlalchemy import func, orm
+from sqlalchemy import func
 
 from nummus import web
 from nummus.controllers import base
@@ -17,6 +17,8 @@ from nummus.models import (
 )
 
 if TYPE_CHECKING:
+    from sqlalchemy import orm
+
     from nummus.controllers.base import Routes
 
 
@@ -51,6 +53,7 @@ def page() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     args = flask.request.args
     p = web.portfolio
@@ -72,6 +75,7 @@ def chart() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     args = flask.request.args
     period = args.get("period", base.DEFAULT_PERIOD)
@@ -100,6 +104,7 @@ def dashboard() -> str:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     with p.begin_session() as s:
@@ -128,6 +133,7 @@ def ctx_chart(
 
     Returns:
         Dictionary HTML context
+
     """
     start, end = base.parse_period(period, today)
 

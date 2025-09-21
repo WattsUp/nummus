@@ -9,7 +9,6 @@ from nummus.models import (
     Account,
     query_count,
     Tag,
-    Transaction,
     TransactionCategory,
     TransactionCategoryGroup,
     TransactionSplit,
@@ -19,6 +18,10 @@ if TYPE_CHECKING:
     import datetime
 
     from sqlalchemy import orm
+
+    from nummus.models import (
+        Transaction,
+    )
 
 
 @pytest.mark.parametrize(

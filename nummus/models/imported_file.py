@@ -15,6 +15,7 @@ class ImportedFile(Base):
     Attributes:
         hash_: SHA256 digest string of file contents
         date: Date of import
+
     """
 
     __table_id__ = None
@@ -28,7 +29,7 @@ class ImportedFile(Base):
 
     @orm.validates("hash_")
     def validate_strings(self, key: str, field: str | None) -> str | None:
-        """Validates string fields satisfy constraints.
+        """Validate string fields satisfy constraints.
 
         Args:
             key: Field being updated
@@ -36,5 +37,6 @@ class ImportedFile(Base):
 
         Returns:
             field
+
         """
         return self.clean_strings(key, field)

@@ -14,7 +14,7 @@ from nummus import __version__, controllers
 from nummus import exceptions as exc
 from nummus import utils
 from nummus.controllers import base
-from nummus.models import Account, Asset, AssetValuation, TransactionCategoryGroup
+from nummus.models import Account, AssetValuation, TransactionCategoryGroup
 from tests import conftest
 
 if TYPE_CHECKING:
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     import werkzeug.test
     from sqlalchemy import orm
 
+    from nummus.models import Asset
     from tests.conftest import RandomStringGenerator
     from tests.controllers.conftest import HTMLValidator, WebClient
 

@@ -6,11 +6,10 @@ import datetime
 import operator
 from collections import defaultdict
 from decimal import Decimal
-from typing import NamedTuple, NotRequired, TypedDict
+from typing import NamedTuple, NotRequired, TYPE_CHECKING, TypedDict
 
 import flask
-import sqlalchemy
-from sqlalchemy import func, orm
+from sqlalchemy import func
 
 from nummus import exceptions as exc
 from nummus import utils, web
@@ -28,6 +27,10 @@ from nummus.models import (
     update_rows_list,
     YIELD_PER,
 )
+
+if TYPE_CHECKING:
+    import sqlalchemy
+    from sqlalchemy import orm
 
 PAGE_LEN = 25
 
@@ -127,6 +130,7 @@ class TableQuery(NamedTuple):
 
         Returns:
             New TableQuery
+
         """
         new_clauses = self.clauses.copy()
         new_clauses.update(clauses)
@@ -138,6 +142,7 @@ def page_all() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     args = flask.request.args
 
@@ -168,6 +173,7 @@ def table() -> str | flask.Response:
 
     Returns:
         HTML response with url set
+
     """
     args = flask.request.args
     first_page = "page" not in args
@@ -212,6 +218,7 @@ def table_options() -> str:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     with p.begin_session() as s:
@@ -265,6 +272,7 @@ def new() -> str | flask.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     today = base.today_client()
@@ -419,6 +427,7 @@ def transaction(uri: str) -> str | flask.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     today = base.today_client()
@@ -475,6 +484,7 @@ def _transaction_edit(txn: Transaction, today: datetime.date) -> str:
 
     Returns:
         Error string or ""
+
     """
     form = flask.request.form
 
@@ -506,6 +516,7 @@ def _transaction_split_edit(s: orm.Session, txn: Transaction) -> str:
 
     Returns:
         Error string or ""
+
     """
     form = flask.request.form
 
@@ -574,6 +585,7 @@ def split(uri: str) -> str:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     form = flask.request.form
@@ -662,6 +674,7 @@ def validation() -> str:
 
     Returns:
         string HTML response
+
     """
     # dict{key: required}
     properties: dict[str, bool] = {
@@ -760,6 +773,7 @@ def table_query(
 
     Returns:
         TableQuery
+
     """
     selected_account = acct_uri or selected_account
     query = s.query(TransactionSplit).order_by(
@@ -834,6 +848,7 @@ def ctx_txn(
 
     Returns:
         Dictionary HTML context
+
     """
     s = obj_session(txn)
 
@@ -927,6 +942,7 @@ def ctx_split(
 
     Returns:
         Dictionary HTML context
+
     """
     qty = t_split.asset_quantity or Decimal()
     if t_split.asset_id:
@@ -968,6 +984,7 @@ def ctx_row(
 
     Returns:
         Dictionary HTML context
+
     """
     return {
         **ctx_split(t_split, assets, tags),
@@ -1000,6 +1017,7 @@ def ctx_options(
 
     Returns:
         OptionsContext
+
     """
     query = tbl_query.query.order_by(None)
 
@@ -1091,6 +1109,7 @@ def ctx_table(
 
     Returns:
         tuple(TableContext, title)
+
     """
     accounts = Account.map_name(s)
     categories_emoji = TransactionCategory.map_name_emoji(s)
@@ -1247,6 +1266,7 @@ def _table_results(
             date,
             list[SplitContext],
         )]
+
     """
     s = query.session
 
@@ -1338,6 +1358,7 @@ def _table_title(
 
     Raises:
         BadRequest: period is unknown
+
     """
     if not period:
         title = ""

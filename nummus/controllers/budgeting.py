@@ -17,7 +17,6 @@ from nummus import utils, web
 from nummus.controllers import base
 from nummus.models import (
     BudgetAssignment,
-    BudgetAvailableCategory,
     BudgetGroup,
     query_count,
     Target,
@@ -31,6 +30,10 @@ from nummus.models import (
 if TYPE_CHECKING:
     import werkzeug.datastructures
     from sqlalchemy import orm
+
+    from nummus.models import (
+        BudgetAvailableCategory,
+    )
 
 
 PERIOD_OPTIONS = {
@@ -138,6 +141,7 @@ def page() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     args = flask.request.args
@@ -181,6 +185,7 @@ def validation() -> flask.Response | str:
 
     Returns:
         string HTML response
+
     """
     args = flask.request.args
 
@@ -231,6 +236,7 @@ def assign(uri: str) -> str:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     args = flask.request.args
@@ -309,6 +315,7 @@ def move(uri: str) -> str | flask.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     args = flask.request.args
@@ -404,6 +411,7 @@ def reorder() -> str:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     form = flask.request.form
@@ -496,6 +504,7 @@ def group(uri: str) -> str:
 
     Raises:
         BadRequest: If ungrouped is renamed
+
     """
     p = web.portfolio
     form = flask.request.form
@@ -528,6 +537,7 @@ def new_group() -> str:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     name = "New group"
@@ -581,6 +591,7 @@ def target(uri: str) -> str | flask.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     args = flask.request.args if flask.request.method == "GET" else flask.request.form
@@ -684,6 +695,7 @@ def parse_target_form(
     Args:
         target: Target to modify
         args: Arguments to use, from args or form
+
     """
     today = base.today_client()
 
@@ -741,6 +753,7 @@ def sidebar() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     args = flask.request.args
@@ -804,6 +817,7 @@ def ctx_sidebar(
 
     Returns:
         SidebarContext
+
     """
     month_str = month.isoformat()[:7]
     if uri is None:
@@ -934,6 +948,7 @@ def ctx_target(
 
     Returns:
         TargetContext
+
     """
     due_date = tar.due_date
     if due_date is None:
@@ -1074,6 +1089,7 @@ def ctx_budget(
 
     Returns:
         tuple(BudgetContext, title)
+
     """
     n_overspent = 0
 
@@ -1204,6 +1220,7 @@ def ctx_progress_bars(
             background fill width, [0, 1]
             foreground fill width, [0, 1]
         )
+
     """
     bar_dollars_sum = sum(bar_dollars)
     bars: list[ProgressBar] = []

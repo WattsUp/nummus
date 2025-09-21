@@ -37,6 +37,7 @@ def add_routes(app: flask.Flask) -> None:
 
     Raises:
         DuplicateURLError: If multiple routes have same URL
+
     """
     module = [
         accounts,

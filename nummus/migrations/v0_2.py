@@ -10,7 +10,6 @@ from nummus.migrations.base import Migrator
 from nummus.models import (
     Account,
     Asset,
-    Base,
     BudgetGroup,
     Config,
     HealthCheckIssue,
@@ -23,6 +22,9 @@ from nummus.models import (
 
 if TYPE_CHECKING:
     from nummus import portfolio
+    from nummus.models import (
+        Base,
+    )
 
 
 class MigratorV0_2(Migrator):

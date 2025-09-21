@@ -90,6 +90,7 @@ def session(tmp_path: Path) -> orm.Session:
 
     Returns:
         Session generator
+
     """
     path = tmp_path / "sql.db"
     s = orm.Session(sql.get_engine(path, None))
@@ -107,6 +108,7 @@ def parent(session: orm.Session) -> Parent:
 
     Returns:
         Parent
+
     """
     p = Parent()
     session.add(p)
@@ -120,6 +122,7 @@ def child(session: orm.Session, parent: Parent) -> Child:
 
     Returns:
         Child
+
     """
     c = Child(parent=parent)
     session.add(c)

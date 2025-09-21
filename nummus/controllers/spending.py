@@ -7,8 +7,7 @@ import operator
 from typing import NamedTuple, TYPE_CHECKING, TypedDict
 
 import flask
-import sqlalchemy
-from sqlalchemy import func, orm
+from sqlalchemy import func
 
 from nummus import utils, web
 from nummus.controllers import base
@@ -25,6 +24,9 @@ from nummus.models import (
 
 if TYPE_CHECKING:
     from decimal import Decimal
+
+    import sqlalchemy
+    from sqlalchemy import orm
 
 
 class OptionsContext(TypedDict):
@@ -70,6 +72,7 @@ def page() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     args = flask.request.args
     p = web.portfolio
@@ -100,6 +103,7 @@ def chart() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     args = flask.request.args
     p = web.portfolio
@@ -141,6 +145,7 @@ def dashboard() -> str:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     with p.begin_session() as s:
@@ -190,6 +195,7 @@ def data_query(
 
     Returns:
         DataQuery
+
     """
     skip_groups = {
         (
@@ -280,6 +286,7 @@ def ctx_options(
 
     Returns:
         OptionsContext
+
     """
     query = dat_query.query
 
@@ -388,6 +395,7 @@ def ctx_chart(
 
     Returns:
         tuple(Context, title)
+
     """
     accounts = Account.map_name(s)
     categories_emoji = TransactionCategory.map_name_emoji(s)

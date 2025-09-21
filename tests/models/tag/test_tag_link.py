@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from nummus.models import query_count, Tag, TagLink, Transaction
+from nummus.models import query_count, Tag, TagLink
 
 if TYPE_CHECKING:
 
     from sqlalchemy import orm
+
+    from nummus.models import Transaction
 
 
 def test_init_properties(

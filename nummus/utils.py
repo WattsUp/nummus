@@ -121,6 +121,7 @@ def camel_to_snake(s: str) -> str:
 
     Returns:
         snake_case
+
     """
     s = _REGEX_CC_SC_0.sub(r"\1_\2", s)  # _ at the start of Words
     return _REGEX_CC_SC_1.sub(r"\1_\2", s).lower()  # _ at then end of Words
@@ -142,6 +143,7 @@ def get_input(
 
     Returns:
         str String entered by user, None if canceled
+
     """
     try:
         if secure:
@@ -166,6 +168,7 @@ def get_password() -> str | None:
 
     Returns:
         Password or None if canceled.
+
     """
     key: str | None = None
     while key is None:
@@ -204,6 +207,7 @@ def confirm(
 
     Returns:
         bool True for yes, False for no
+
     """
     prompt = prompt or "Confirm"
     prompt += " [Y/n]: " if default else " [y/N]: "
@@ -245,6 +249,7 @@ def evaluate_real_statement(s: str | None, precision: int = 2) -> Decimal | None
 
     Returns:
         Evaluated statement
+
     """
     if s is None:
         return None
@@ -264,6 +269,7 @@ def parse_real(s: str | None, precision: int = 2) -> Decimal | None:
 
     Returns:
         String as number
+
     """
     if s is None:
         return None
@@ -284,6 +290,7 @@ def format_financial(x: Decimal, precision: int = 2, *, plus: bool = False) -> s
 
     Returns:
         x formatted similar to $1,000.00 or -$1,000.00
+
     """
     if x < 0:
         return f"-${-x:,.{precision}f}"
@@ -300,6 +307,7 @@ def parse_bool(s: str | None) -> bool | None:
 
     Returns:
         Parsed bool
+
     """
     if s is None or not s:
         return None
@@ -314,6 +322,7 @@ def parse_date(s: str | None) -> datetime.date | None:
 
     Returns:
         Date or None
+
     """
     if s is None or not s:
         return None
@@ -332,6 +341,7 @@ def format_days(days: int, labels: list[str] | None = None) -> str:
         x weeks
         x months
         x years
+
     """
     labels = labels or ["days", "weeks", "months", "years"]
     years = days / DAYS_IN_YEAR
@@ -366,6 +376,7 @@ def format_seconds(
         x weeks
         x months
         x years
+
     """
     labels = labels or ["seconds", "minutes", "hours"]
     hours = seconds / SECONDS_IN_HOUR
@@ -396,6 +407,7 @@ def range_date(
     Returns:
         [start, ..., end] if include_end is True
         [start, ..., end) if include_end is False
+
     """
     start_ord = start if isinstance(start, int) else start.toordinal()
     end_ord = end if isinstance(end, int) else end.toordinal()
@@ -413,6 +425,7 @@ def date_add_months(date: datetime.date, months: int) -> datetime.date:
 
     Returns:
         datetime.date(date.year, date.month + months, date.day)
+
     """
     m_sum = date.month + months - 1
     y = date.year + int(m_sum // 12)
@@ -431,6 +444,7 @@ def date_months_between(start: datetime.date, end: datetime.date) -> int:
 
     Returns:
         Number of months between, ignoring day of month
+
     """
     dm = end.month - start.month
     dy = end.year - start.year
@@ -446,6 +460,7 @@ def weekdays_in_month(weekday: int, month: datetime.date) -> int:
 
     Returns:
         Number of specific weekday fall inside month
+
     """
     y = month.year
     m = month.month
@@ -463,6 +478,7 @@ def start_of_month(date: datetime.date) -> datetime.date:
 
     Returns:
         datetime.date(date.year, date.month, 1)
+
     """
     return datetime.date(date.year, date.month, 1)
 
@@ -475,6 +491,7 @@ def end_of_month(date: datetime.date) -> datetime.date:
 
     Returns:
         datetime.date(date.year, date.month, 28 to 31)
+
     """
     y = date.year
     m = date.month
@@ -492,6 +509,7 @@ def period_months(start_ord: int, end_ord: int) -> dict[str, tuple[int, int]]:
         A dictionary of months and the ordinals that start and end them
         dict{"2000-01": (start_ord_0, end_ord_0), "2000-02": ...}
         Results will not fall outside of start_ord and end_ord
+
     """
     date = datetime.date.fromordinal(start_ord)
     y = date.year
@@ -523,6 +541,7 @@ def period_years(start_ord: int, end_ord: int) -> dict[str, tuple[int, int]]:
         A dictionary of years and the ordinals that start and end them
         dict{"2000": (start_ord_0, end_ord_0), "2001": ...}
         Results will not fall outside of start_ord and end_ord
+
     """
     year = datetime.date.fromordinal(start_ord).year
     end_year = datetime.date.fromordinal(end_ord).year
@@ -544,6 +563,7 @@ def round_list(list_: list[Decimal], precision: int = 6) -> list[Decimal]:
 
     Returns:
         List with rounded elements
+
     """
     residual = Decimal()
     l_rounded: list[Decimal] = []
@@ -568,6 +588,7 @@ def integrate(deltas: list[Decimal | None] | list[Decimal]) -> list[Decimal]:
         values[1] = sum(deltas[:2])
         ...
         values[n] = sum(deltas[:])
+
     """
     n = len(deltas)
     current = Decimal()
@@ -592,6 +613,7 @@ def interpolate_step(values: list[tuple[int, Decimal]], n: int) -> list[Decimal]
 
     Returns:
         list of interpolated values where result[i] = most recent values <= i
+
     """
     result = [Decimal()] * n
     if len(values) == 0:
@@ -626,6 +648,7 @@ def interpolate_linear(values: list[tuple[int, Decimal]], n: int) -> list[Decima
 
     Returns:
         list of interpolated values
+
     """
     result = [Decimal()] * n
     if len(values) == 0:
@@ -688,6 +711,7 @@ def twrr(values: list[Decimal], profit: list[Decimal]) -> list[Decimal]:
 
     Returns:
         List of profit ratio [-1, inf) for each day
+
     """
     n = len(values)
     current_ratio = Decimal(1)
@@ -724,6 +748,7 @@ def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal | None:
 
     Raises:
         TypeError: If optimize result is not float
+
     """
     if not any(values):
         return Decimal()
@@ -779,6 +804,7 @@ def pretty_table(table: list[list[str] | None]) -> list[str]:
     Raises:
         ValueError: If table has no rows
         ValueError: If first row is None
+
     """
     if len(table) < 1:
         msg = "Table has no rows"
@@ -872,6 +898,7 @@ def dedupe(strings: Iterable[str]) -> set[str]:
 
     Returns:
         Set of strings without similar items
+
     """
     strings = set(strings)
     unique: set[str] = set()
@@ -914,6 +941,7 @@ def clamp(
 
     Returns:
         value clamped to [c_min, c_max]
+
     """
     if value > c_max:
         return c_max
@@ -930,6 +958,7 @@ def strip_emojis(text: str) -> str:
 
     Returns:
         String without any emojis
+
     """
     tokens = list(emoji_mod.analyze(text, non_emoji=True))
     return "".join(t.value for t in tokens if isinstance(t.value, str)).strip()
@@ -955,6 +984,7 @@ class classproperty[T]:  # noqa: N801
         Raises:
             TypeError: If decorator is not on a class
             TypeError: If fget is not set
+
         """
         if cls is None:  # pragma: no cover
             # Don't need to test debug code
@@ -978,6 +1008,7 @@ def tokenize_search_str(search_str: str) -> Tokens:
 
     Raises:
         EmptySearchError: If cleaned search_str is too short
+
     """
     # Clean a bit
     for s in string.punctuation:
@@ -1031,6 +1062,7 @@ def low_pass(data: list[Decimal], rc: int) -> list[Decimal]:
 
     Returns:
         Smoothed data
+
     """
     a = 2 / Decimal(rc + 1)
 

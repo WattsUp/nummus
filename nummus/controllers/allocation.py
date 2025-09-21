@@ -12,9 +12,7 @@ from nummus.controllers import base
 from nummus.models import (
     Account,
     Asset,
-    AssetCategory,
     AssetSector,
-    USSector,
     YIELD_PER,
 )
 
@@ -23,6 +21,11 @@ if TYPE_CHECKING:
 
     import flask
     from sqlalchemy import orm
+
+    from nummus.models import (
+        AssetCategory,
+        USSector,
+    )
 
 
 class ChartAssetContext(TypedDict):
@@ -70,6 +73,7 @@ def page() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     with p.begin_session() as s:
@@ -89,6 +93,7 @@ def ctx_allocation(s: orm.Session, today: datetime.date) -> AllocationContext:
 
     Returns:
         Dictionary HTML context
+
     """
     today_ord = today.toordinal()
 

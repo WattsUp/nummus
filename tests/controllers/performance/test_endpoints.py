@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from nummus.models import Account, AccountCategory, AssetValuation, Transaction
+from nummus.models import AccountCategory
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
+    from nummus.models import Account, AssetValuation, Transaction
     from tests.controllers.conftest import WebClient
 
 

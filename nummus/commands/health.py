@@ -35,7 +35,7 @@ class Health(BaseCommand):
         clear_ignores: bool,
         no_description_typos: bool,
     ) -> None:
-        """Initize health check command.
+        """Initialize health check command.
 
         Args:
             path_db: Path to Portfolio DB
@@ -47,6 +47,7 @@ class Health(BaseCommand):
             no_ignores: True will print issues that have been ignored
             clear_ignores: True will unignore all issues
             no_description_typos: True will not check descriptions for typos
+
         """
         super().__init__(path_db, path_password)
         self._limit = limit
@@ -167,6 +168,7 @@ class Health(BaseCommand):
 
         Returns:
             First URI of issues or None if no issues
+
         """
         limit = max(1, self._limit)
         c = check_type(

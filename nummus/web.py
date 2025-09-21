@@ -32,6 +32,7 @@ class FlaskExtension:
 
         Args:
             app: Flask app to initialize
+
         """
         config = flask.Config(app.root_path)
         config.from_prefixed_env("NUMMUS")
@@ -167,6 +168,7 @@ class FlaskExtension:
 
         Returns:
             URL with better arg formatting
+
         """
         # Change snake case to kebab case
         # Change bools to "" if True, omit if False
@@ -199,6 +201,7 @@ def create_app() -> flask.Flask:
 
     Returns:
         NummusApp
+
     """
     app = flask.Flask(__name__)
     ext.init_app(app)

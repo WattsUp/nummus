@@ -19,7 +19,7 @@ from nummus import commands, version
 
 
 def main(command_line: list[str] | None = None) -> int:
-    """Main program entry.
+    """Execute main program.
 
     Args:
         command_line: command line arguments, None for sys.argv
@@ -27,6 +27,7 @@ def main(command_line: list[str] | None = None) -> int:
     Returns:
         0 on success
         non-zero on failure
+
     """
     desc = """A personal financial information aggregator and planning tool.
 Collects and categorizes transactions, manages budgets, tracks investments,

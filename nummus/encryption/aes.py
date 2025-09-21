@@ -33,6 +33,7 @@ class EncryptionAES(base.EncryptionInterface):
 
         Raises:
             UnknownEncryptionVersionError: If encryption version is unknown
+
         """
         super().__init__(key, config)
         key = key.encode() if isinstance(key, str) else bytes(key)
@@ -65,6 +66,7 @@ class EncryptionAES(base.EncryptionInterface):
 
         Returns:
             bytes hashed key
+
         """
         return SHA256.new(self._hased_key).digest()
 
@@ -76,6 +78,7 @@ class EncryptionAES(base.EncryptionInterface):
 
         Returns:
             AES cipher object
+
         """
         return AES.new(self._digest_key(), AES.MODE_CBC, iv)
 

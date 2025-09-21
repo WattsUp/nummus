@@ -11,7 +11,7 @@ from typing import override, TYPE_CHECKING
 
 import sqlalchemy
 from rapidfuzz import process
-from sqlalchemy import CheckConstraint, event, ForeignKey, Index, orm, Row
+from sqlalchemy import CheckConstraint, event, ForeignKey, Index, orm
 
 from nummus import exceptions as exc
 from nummus import utils
@@ -36,6 +36,8 @@ from nummus.models.utils import obj_session
 if TYPE_CHECKING:
     from decimal import Decimal
 
+    from sqlalchemy import Row
+
 
 class TransactionSplit(Base):
     """TransactionSplit model for storing an exchange of cash for an asset (or none).
@@ -58,6 +60,7 @@ class TransactionSplit(Base):
         asset: Asset exchanged for cash, primarily for instrument transactions
         asset_quantity: Number of units of Asset exchanged, Positive indicates
             Account gained Assets (inflow)
+
     """
 
     __table_id__ = 0x00000000
@@ -101,7 +104,7 @@ class TransactionSplit(Base):
 
     @orm.validates("payee", "memo", "text_fields")
     def validate_strings(self, key: str, field: str | None) -> str | None:
-        """Validates string fields satisfy constraints.
+        """Validate string fields satisfy constraints.
 
         Args:
             key: Field being updated
@@ -109,12 +112,13 @@ class TransactionSplit(Base):
 
         Returns:
             field
+
         """
         return self.clean_strings(key, field)
 
     @orm.validates("amount", "asset_quantity", "_asset_qty_unadjusted")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
-        """Validates decimal fields satisfy constraints.
+        """Validate decimal fields satisfy constraints.
 
         Args:
             key: Field being updated
@@ -122,6 +126,7 @@ class TransactionSplit(Base):
 
         Returns:
             field
+
         """
         return self.clean_decimals(key, field)
 
@@ -193,6 +198,7 @@ class TransactionSplit(Base):
         Raises:
             NonAssetTransactionError: If transaction does not have
                 asset_quantity_unadjusted
+
         """
         qty = self.asset_quantity_unadjusted
         if qty is None:
@@ -208,6 +214,7 @@ class TransactionSplit(Base):
         Raises:
             NonAssetTransactionError: If transaction does not have
                 asset_quantity_unadjusted
+
         """
         qty = self.asset_quantity
         if qty is None:
@@ -257,6 +264,7 @@ class TransactionSplit(Base):
 
         Returns:
             Ordered list of matches, from best to worst
+
         """
         query = query.join(TagLink, full=True)
         tokens_must, tokens_can, tokens_not = utils.tokenize_search_str(search_str)
@@ -387,6 +395,7 @@ def before_insert_transaction_split(
         mapper: Unused
         connection: Unused
         target: TransactionSplit being inserted
+
     """
     # If TransactionSplit has parent_tmp set, move it to real parent
     if hasattr(target, "_parent_tmp"):
@@ -411,6 +420,7 @@ class Transaction(Base):
         cleared: True when transaction has been imported from a bank source, False
             indicates transaction was manually created
         splits: List of TransactionSplits
+
     """
 
     __table_id__ = 0x00000000
@@ -437,7 +447,7 @@ class Transaction(Base):
 
     @orm.validates("statement", "payee")
     def validate_strings(self, key: str, field: str | None) -> str | None:
-        """Validates string fields satisfy constraints.
+        """Validate string fields satisfy constraints.
 
         Args:
             key: Field being updated
@@ -445,12 +455,13 @@ class Transaction(Base):
 
         Returns:
             field
+
         """
         return self.clean_strings(key, field)
 
     @orm.validates("amount")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
-        """Validates decimal fields satisfy constraints.
+        """Validate decimal fields satisfy constraints.
 
         Args:
             key: Field being updated
@@ -458,6 +469,7 @@ class Transaction(Base):
 
         Returns:
             field
+
         """
         return self.clean_decimals(key, field)
 
@@ -486,6 +498,7 @@ class Transaction(Base):
 
         Returns:
             Most similar Transaction.id_
+
         """
         s = obj_session(self)
 

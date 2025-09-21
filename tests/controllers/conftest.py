@@ -313,10 +313,11 @@ class HTMLValidator:
 
 @pytest.fixture(scope="session")
 def valid_html(today: datetime.date) -> Generator[HTMLValidator]:
-    """Returns a HTMLValidator.
+    """Return a HTMLValidator.
 
     Yields:
         HTMLValidator
+
     """
     html_validator = HTMLValidator()
     yield html_validator
@@ -338,6 +339,7 @@ class WebClient:
 
         Returns:
             URL
+
         """
         with self._flask_app.test_request_context():
             return flask.url_for(
@@ -354,6 +356,7 @@ class WebClient:
 
         Returns:
             Client session
+
         """
         return self._client.session_transaction()
 
@@ -377,6 +380,7 @@ class WebClient:
 
         Returns:
             (response.text, headers)
+
         """
         if isinstance(endpoint, str):
             url_args = {}
@@ -426,6 +430,7 @@ class WebClient:
 
         Returns:
             (response.text, headers)
+
         """
         return self.open_("GET", endpoint, rc=rc, content_type=content_type, **kwargs)
 
@@ -447,6 +452,7 @@ class WebClient:
 
         Returns:
             (response.text, headers)
+
         """
         return self.open_("PUT", endpoint, rc=rc, content_type=content_type, **kwargs)
 
@@ -468,6 +474,7 @@ class WebClient:
 
         Returns:
             (response.text, headers)
+
         """
         return self.open_("POST", endpoint, rc=rc, content_type=content_type, **kwargs)
 
@@ -489,6 +496,7 @@ class WebClient:
 
         Returns:
             (response.text, headers)
+
         """
         return self.open_(
             "DELETE",
@@ -501,10 +509,11 @@ class WebClient:
 
 @pytest.fixture
 def web_client(flask_app: flask.Flask, valid_html: HTMLValidator) -> WebClient:
-    """Returns a WebClient.
+    """Return a WebClient.
 
     Returns:
         WebClient
+
     """
     return WebClient(flask_app, valid_html)
 
@@ -531,10 +540,11 @@ def web_client_encrypted(
     valid_html: HTMLValidator,
     empty_portfolio_encrypted: tuple[Portfolio, str],
 ) -> WebClientEncrypted:
-    """Returns a WebClient.
+    """Return a WebClient.
 
     Returns:
         WebClient
+
     """
     _, key = empty_portfolio_encrypted
     # web key and portfolio key are the same

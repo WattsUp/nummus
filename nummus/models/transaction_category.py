@@ -42,6 +42,7 @@ class TransactionCategory(Base):
         asset_linked: True expects transactions to be linked to an Asset
         budget_group: Name of group in budget category is a part of
         budget_position: Position on budget page where category is located
+
     """
 
     __table_id__ = 0x00000000
@@ -85,7 +86,7 @@ class TransactionCategory(Base):
 
     @orm.validates("name", "emoji_name")
     def validate_strings(self, key: str, field: str | None) -> str | None:
-        """Validates string fields satisfy constraints.
+        """Validate string fields satisfy constraints.
 
         Args:
             key: Field being updated
@@ -93,12 +94,13 @@ class TransactionCategory(Base):
 
         Returns:
             field
+
         """
         return self.clean_strings(key, field)
 
     @orm.validates("essential_spending")
     def validate_essential_spending(self, _: str, field: object) -> bool:
-        """Validates income groups are not marked essential_spending.
+        """Validate income groups are not marked essential_spending.
 
         Args:
             field: Updated value
@@ -109,6 +111,7 @@ class TransactionCategory(Base):
         Raises:
             InvalidORMValueError: If field is essential_spending
             TypeError: If field is not bool
+
         """
         if not isinstance(field, bool):
             msg = f"field is not of type bool: {type(field)}"
@@ -130,6 +133,7 @@ class TransactionCategory(Base):
 
         Returns:
             Dictionary {name: category}
+
         """
         d: dict[str, TransactionCategory] = {}
 
@@ -246,7 +250,7 @@ class TransactionCategory(Base):
         *,
         no_asset_linked: bool = False,
     ) -> dict[int, str]:
-        """Mapping between id and names.
+        """Get mapping between id and names.
 
         Args:
             s: SQL session to use
@@ -257,6 +261,7 @@ class TransactionCategory(Base):
 
         Raises:
             KeyError if model does not have name property
+
         """
         query = (
             s.query(TransactionCategory)
@@ -277,7 +282,7 @@ class TransactionCategory(Base):
         *,
         no_asset_linked: bool = False,
     ) -> dict[int, str]:
-        """Mapping between id and names with emojis.
+        """Get mapping between id and names with emojis.
 
         Args:
             s: SQL session to use
@@ -288,6 +293,7 @@ class TransactionCategory(Base):
 
         Raises:
             KeyError if model does not have name property
+
         """
         query = (
             s.query(TransactionCategory)
@@ -314,6 +320,7 @@ class TransactionCategory(Base):
 
         Raises:
             ProtectedObjectNotFoundError: If not found
+
         """
         try:
             id_ = (
@@ -338,6 +345,7 @@ class TransactionCategory(Base):
 
         Raises:
             ProtectedObjectNotFound if not found
+
         """
         return cls._get_protected_id(s, "uncategorized")
 
@@ -353,6 +361,7 @@ class TransactionCategory(Base):
 
         Raises:
             ProtectedObjectNotFound if not found
+
         """
         return cls._get_protected_id(s, "emergency fund")
 
@@ -368,5 +377,6 @@ class TransactionCategory(Base):
 
         Raises:
             ProtectedObjectNotFound if not found
+
         """
         return cls._get_protected_id(s, "securities traded")

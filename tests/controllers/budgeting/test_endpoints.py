@@ -15,7 +15,6 @@ from nummus.models import (
     Target,
     TargetPeriod,
     TargetType,
-    Transaction,
     TransactionCategory,
 )
 
@@ -23,6 +22,9 @@ if TYPE_CHECKING:
     import flask
     from sqlalchemy import orm
 
+    from nummus.models import (
+        Transaction,
+    )
     from tests.controllers.conftest import WebClient
 
 

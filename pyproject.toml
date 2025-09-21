@@ -70,7 +70,7 @@ test = [
 ]
 dev = [
   "nummus-financial[deploy,test]",
-  "ruff>=0.12.0",
+  "ruff>=0.13.0",
   "codespell>=2.4.1",
   "black>=25.9",
   "isort",
@@ -159,6 +159,7 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["ALL"]
 preview = true
+future-annotations = true
 
 ignore = [
   "FIX002",  # Permit TODOs
@@ -171,15 +172,14 @@ ignore = [
   "PLR0915", # Too many statements
   "PLR0917", # Too many positional arguments
   "CPY001",  # No copyright
+  "D203",    # No blank line before pydocs
+  "D213",    # Summary on not on second line
 ]
 
 exclude = [
   # Ugly code only for testing
   "tools/make_test_portfolio.py",
 ]
-
-[tool.ruff.lint.pydocstyle]
-convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "nummus/commands/*.py" = [

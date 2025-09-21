@@ -19,6 +19,7 @@ def import_file() -> str | flask.Response:
 
     Returns:
         HTML response
+
     """
     p = web.portfolio
     if flask.request.method == "GET":

@@ -26,7 +26,6 @@ from nummus import importers, migrations, models, sql, utils
 from nummus.models import (
     Account,
     Asset,
-    Base,
     Config,
     ConfigKey,
     ImportedFile,
@@ -41,6 +40,9 @@ if TYPE_CHECKING:
     import contextlib
 
     from nummus.importers.base import TxnDict
+    from nummus.models import (
+        Base,
+    )
 
 
 class AssetUpdate(NamedTuple):
@@ -78,6 +80,7 @@ class Portfolio:
         Raises:
             FileNotFoundError: If database does not exist
             MigrationRequiredError: If migration is required
+
         """
         self._path_db = Path(path).resolve().with_suffix(".db")
         self._path_salt = self._path_db.with_suffix(".nacl")
@@ -128,6 +131,7 @@ class Portfolio:
 
         Raises:
             FileNotFoundError: If database or configuration does not exist
+
         """
         path_db = Path(path)
         if not path_db.exists():
@@ -156,6 +160,7 @@ class Portfolio:
 
         Raises:
             FileExistsError: If database already exists
+
         """
         path_db = Path(path).resolve()
         if path_db.exists():
@@ -241,6 +246,7 @@ class Portfolio:
         Raises:
             UnlockingError: If database file fails to open
             ProtectedObjectNotFoundError: If URI cipher is missing
+
         """
         try:
             with self.begin_session() as s:
@@ -279,6 +285,7 @@ class Portfolio:
 
         Returns:
             Open Session
+
         """
         return self._session_maker.begin()
 
@@ -293,6 +300,7 @@ class Portfolio:
 
         Raises:
             NotEncryptedError: If portfolio does not support encryption
+
         """
         if self._enc is None:
             raise exc.NotEncryptedError
@@ -309,6 +317,7 @@ class Portfolio:
 
         Raises:
             NotEncryptedError: If portfolio does not support encryption
+
         """
         if self._enc is None:
             raise exc.NotEncryptedError
@@ -322,6 +331,7 @@ class Portfolio:
 
         Returns:
             decoded string
+
         """
         return self.decrypt(enc_secret).decode()
 
@@ -334,6 +344,7 @@ class Portfolio:
 
         Raises:
             ProtectedObjectNotFoundError: If VERSION is not found
+
         """
         with self.begin_session() as s:
             try:
@@ -356,6 +367,7 @@ class Portfolio:
 
         Returns:
             Version to migrate to or None if migration not required
+
         """
         v_db = self.db_version if version_str is None else Version(version_str)
         for m in migrations.MIGRATORS[::-1]:
@@ -376,6 +388,7 @@ class Portfolio:
             FutureTransactionError: If transaction date is in the future
             FailedImportError: If importer encounters an error
             EmptyImportError: If importer returns no transactions
+
         """
         # Compute hash of file contents to check if already imported
         sha = hashlib.sha256()
@@ -628,6 +641,7 @@ class Portfolio:
 
         Raises:
             NoResultFound: if object not found
+
         """
         id_, name = cache.get(search, (None, None))
         if id_ is not None:
@@ -677,6 +691,7 @@ class Portfolio:
 
         Returns:
             (Path to newly created backup tar, backup version)
+
         """
         # Find latest backup file for this Portfolio
         i = 0
@@ -720,6 +735,7 @@ class Portfolio:
 
         Raises:
             InvalidBackupTarError: If backup is missing timestamp
+
         """
         backups: list[tuple[int, datetime.datetime]] = []
 
@@ -758,6 +774,7 @@ class Portfolio:
         Returns:
             Size of files in bytes:
             (portfolio before, portfolio after)
+
         """
         parent = self._path_db.parent
         name = self._path_db.with_suffix("").name
@@ -818,6 +835,7 @@ class Portfolio:
         Raises:
             FileNotFoundError: If backup does not exist
             InvalidBackupTarError: If backup is missing required files
+
         """
         path_db = Path(p._path_db if isinstance(p, Portfolio) else p)  # noqa: SLF001
         path_db = path_db.resolve()
@@ -881,6 +899,7 @@ class Portfolio:
 
         Raises:
             FileNotFoundError: if no backups exists
+
         """
         parent = path_db.parent
         stem = path_db.stem
@@ -901,6 +920,7 @@ class Portfolio:
 
         Args:
             path_db: Path to portfolio
+
         """
         path_db.unlink(missing_ok=True)
         path_db.with_suffix(".nacl").unlink(missing_ok=True)
@@ -918,6 +938,7 @@ class Portfolio:
         Returns:
             Assets that were updated
             [AssetUpdate for each]
+
         """
         today = datetime.datetime.now(datetime.UTC).date()
         today_ord = today.toordinal()
@@ -967,6 +988,7 @@ class Portfolio:
 
         Raises:
             InvalidKeyError: If key does not match minimum requirements
+
         """
         if len(key) < utils.MIN_PASS_LEN:
             msg = f"Password must be at least {utils.MIN_PASS_LEN} characters"
@@ -1050,6 +1072,7 @@ class Portfolio:
 
         Raises:
             InvalidKeyError: If key does not match minimum requirements
+
         """
         if len(key) < utils.MIN_PASS_LEN:
             msg = f"Password must be at least {utils.MIN_PASS_LEN} characters"

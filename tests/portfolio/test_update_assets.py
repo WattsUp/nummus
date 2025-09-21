@@ -3,12 +3,15 @@ from __future__ import annotations
 import datetime
 from typing import TYPE_CHECKING
 
-from nummus.models import Asset, AssetCategory, Transaction
-from nummus.portfolio import AssetUpdate, Portfolio
+from nummus.models import Asset, AssetCategory
+from nummus.portfolio import AssetUpdate
 
 if TYPE_CHECKING:
     import pytest
     from sqlalchemy import orm
+
+    from nummus.models import Transaction
+    from nummus.portfolio import Portfolio
 
 
 def test_empty(capsys: pytest.CaptureFixture, empty_portfolio: Portfolio) -> None:
