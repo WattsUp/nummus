@@ -87,7 +87,7 @@ const assets = {
    */
   confirmDelete: function (evt) {
     dialog.confirm(
-      "Delete Asset",
+      "Delete asset",
       "Delete",
       () => {
         htmx.trigger(evt.target, "delete");
@@ -102,7 +102,7 @@ const assets = {
    */
   confirmDeleteValuation: function (evt) {
     dialog.confirm(
-      "Delete Valuation",
+      "Delete valuation",
       "Delete",
       () => {
         htmx.trigger(evt.target, "delete");

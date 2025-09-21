@@ -209,6 +209,7 @@ def ctx_base(
                         else None
                     ),
                     "Categories": Page("category", "transaction_categories.page"),
+                    "Tags": Page("label", "tags.page"),
                     "Import file": Page(
                         "upload",
                         "import_file.import_file",

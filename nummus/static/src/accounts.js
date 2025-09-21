@@ -88,7 +88,7 @@ const accounts = {
    */
   confirmDelete: function (evt) {
     dialog.confirm(
-      "Delete Account",
+      "Delete account",
       "Delete",
       () => {
         htmx.trigger(evt.target, "delete");

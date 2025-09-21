@@ -1,8 +1,8 @@
 <label class="flex items-center justify-between py-0.5">
-  <div>{{ cat.name }}</div>
+  <div>#{{ tag.name }}</div>
   <button
     class="btn-text btn-sq"
-    hx-get="{{ url_for('transaction_categories.category', uri=cat.key) }}"
+    hx-get="{{ url_for('tags.tag', uri=tag.key) }}"
     hx-disabled-elt="this"
     hx-target="#dialog"
     hx-swap="innerHTML show:#dialog:top"
