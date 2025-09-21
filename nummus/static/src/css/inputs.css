@@ -429,13 +429,20 @@
   --toggle-bg-color: transparent;
 
   & > icon {
-    @apply ml-2 p-1 transition-colors;
+    @apply p-1 transition-colors;
     border-radius: 100em;
     background-color: var(--toggle-bg-color);
     color: var(--toggle-icon-color);
 
-    @variant nth-of-type-2 {
-      font-variation-settings: "FILL" 1;
+    @variant not-inverse {
+      @variant nth-of-type-2 {
+        font-variation-settings: "FILL" 1;
+      }
+    }
+    @variant inverse {
+      @variant nth-of-type-1 {
+        font-variation-settings: "FILL" 1;
+      }
     }
   }
 
