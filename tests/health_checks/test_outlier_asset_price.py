@@ -8,15 +8,18 @@ import pytest
 from nummus import utils
 from nummus.health_checks.outlier_asset_price import OutlierAssetPrice
 from nummus.models import (
-    Asset,
-    AssetValuation,
     HealthCheckIssue,
     query_count,
-    Transaction,
 )
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
+
+    from nummus.models import (
+        Asset,
+        AssetValuation,
+        Transaction,
+    )
 
 
 def test_empty(session: orm.Session) -> None:

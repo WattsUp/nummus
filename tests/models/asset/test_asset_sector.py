@@ -5,11 +5,12 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus import exceptions as exc
-from nummus.models import Asset, AssetSector, USSector
+from nummus.models import AssetSector, USSector
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
+    from nummus.models import Asset
     from tests.conftest import RandomRealGenerator
 
 

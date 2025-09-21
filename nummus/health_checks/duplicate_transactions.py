@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 from typing import override, TYPE_CHECKING
 
-from sqlalchemy import func, orm
+from sqlalchemy import func
 
 from nummus import utils
 from nummus.health_checks.base import Base
@@ -13,6 +13,8 @@ from nummus.models import Account, Transaction, YIELD_PER
 
 if TYPE_CHECKING:
     from decimal import Decimal
+
+    from sqlalchemy import orm
 
 
 class DuplicateTransactions(Base):

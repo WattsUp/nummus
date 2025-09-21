@@ -12,9 +12,7 @@ from nummus.controllers import base
 from nummus.models import (
     Account,
     Asset,
-    AssetCategory,
     AssetSector,
-    USSector,
     YIELD_PER,
 )
 
@@ -23,6 +21,11 @@ if TYPE_CHECKING:
 
     import flask
     from sqlalchemy import orm
+
+    from nummus.models import (
+        AssetCategory,
+        USSector,
+    )
 
 
 class ChartAssetContext(TypedDict):

@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 import sqlalchemy
 from sqlalchemy import (
     CheckConstraint,
-    Constraint,
     ForeignKeyConstraint,
     func,
     orm,
@@ -19,6 +18,10 @@ from nummus import exceptions as exc
 from nummus.models.base import YIELD_PER
 
 if TYPE_CHECKING:
+    from sqlalchemy import (
+        Constraint,
+    )
+
     from nummus.models.base import Base
 
 

@@ -5,10 +5,12 @@ from typing import TYPE_CHECKING
 
 from nummus import utils
 from nummus.health_checks.overdrawn_accounts import OverdrawnAccounts
-from nummus.models import Account, HealthCheckIssue, query_count, Transaction
+from nummus.models import HealthCheckIssue, query_count
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
+
+    from nummus.models import Account, Transaction
 
 
 def test_empty(session: orm.Session) -> None:

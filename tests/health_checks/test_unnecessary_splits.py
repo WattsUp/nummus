@@ -4,15 +4,18 @@ from typing import TYPE_CHECKING
 
 from nummus.health_checks.unnecessary_slits import UnnecessarySplits
 from nummus.models import (
-    Account,
     HealthCheckIssue,
     query_count,
-    Transaction,
     TransactionSplit,
 )
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
+
+    from nummus.models import (
+        Account,
+        Transaction,
+    )
 
 
 def test_empty(session: orm.Session) -> None:

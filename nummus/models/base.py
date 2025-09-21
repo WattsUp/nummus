@@ -6,7 +6,6 @@ import enum
 from decimal import Decimal
 from typing import override, TYPE_CHECKING
 
-import sqlalchemy
 from sqlalchemy import CheckConstraint, orm, sql, types
 
 from nummus import exceptions as exc
@@ -15,6 +14,8 @@ from nummus.models import base_uri
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
+
+    import sqlalchemy
 
 
 # Yield per instead of fetch all is faster

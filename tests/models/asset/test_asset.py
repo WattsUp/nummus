@@ -8,15 +8,12 @@ import pytest
 
 from nummus import exceptions as exc
 from nummus.models import (
-    Account,
     Asset,
     AssetCategory,
     AssetSector,
-    AssetSplit,
     AssetValuation,
     query_count,
     TagLink,
-    Transaction,
     update_rows,
     USSector,
 )
@@ -25,6 +22,11 @@ from tests import conftest
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
+    from nummus.models import (
+        Account,
+        AssetSplit,
+        Transaction,
+    )
     from tests.conftest import RandomStringGenerator
 
 

@@ -11,7 +11,7 @@ from typing import override, TYPE_CHECKING
 
 import sqlalchemy
 from rapidfuzz import process
-from sqlalchemy import CheckConstraint, event, ForeignKey, Index, orm, Row
+from sqlalchemy import CheckConstraint, event, ForeignKey, Index, orm
 
 from nummus import exceptions as exc
 from nummus import utils
@@ -35,6 +35,8 @@ from nummus.models.utils import obj_session
 
 if TYPE_CHECKING:
     from decimal import Decimal
+
+    from sqlalchemy import Row
 
 
 class TransactionSplit(Base):

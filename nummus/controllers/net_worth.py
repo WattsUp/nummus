@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
-from sqlalchemy import func, orm
+from sqlalchemy import func
 
 from nummus import web
 from nummus.controllers import base
@@ -17,6 +17,8 @@ from nummus.models import (
 )
 
 if TYPE_CHECKING:
+    from sqlalchemy import orm
+
     from nummus.controllers.base import Routes
 
 

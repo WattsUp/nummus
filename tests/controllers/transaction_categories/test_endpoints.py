@@ -6,7 +6,6 @@ import pytest
 
 from nummus.controllers import base
 from nummus.models import (
-    Transaction,
     TransactionCategory,
     TransactionCategoryGroup,
     TransactionSplit,
@@ -15,6 +14,9 @@ from nummus.models import (
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
+    from nummus.models import (
+        Transaction,
+    )
     from tests.controllers.conftest import WebClient
 
 

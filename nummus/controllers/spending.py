@@ -7,8 +7,7 @@ import operator
 from typing import NamedTuple, TYPE_CHECKING, TypedDict
 
 import flask
-import sqlalchemy
-from sqlalchemy import func, orm
+from sqlalchemy import func
 
 from nummus import utils, web
 from nummus.controllers import base
@@ -25,6 +24,9 @@ from nummus.models import (
 
 if TYPE_CHECKING:
     from decimal import Decimal
+
+    import sqlalchemy
+    from sqlalchemy import orm
 
 
 class OptionsContext(TypedDict):

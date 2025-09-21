@@ -5,10 +5,12 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus.health_checks.typos import Typos
-from nummus.models import Account, Asset, HealthCheckIssue, query_count, Transaction
+from nummus.models import HealthCheckIssue, query_count
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
+
+    from nummus.models import Account, Asset, Transaction
 
 
 def test_empty(session: orm.Session) -> None:

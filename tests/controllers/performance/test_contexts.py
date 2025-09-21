@@ -6,18 +6,21 @@ from typing import TYPE_CHECKING
 
 from nummus.controllers import base, performance
 from nummus.models import (
-    Account,
     AccountCategory,
     Asset,
     AssetCategory,
-    AssetValuation,
-    Transaction,
     YIELD_PER,
 )
 
 if TYPE_CHECKING:
 
     from sqlalchemy import orm
+
+    from nummus.models import (
+        Account,
+        AssetValuation,
+        Transaction,
+    )
 
 
 def test_ctx_chart_empty(

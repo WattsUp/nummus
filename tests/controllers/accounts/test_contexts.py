@@ -8,18 +8,21 @@ import pytest
 from nummus import utils
 from nummus.controllers import accounts, base
 from nummus.models import (
-    Account,
     AccountCategory,
-    Asset,
     AssetCategory,
-    AssetValuation,
-    Transaction,
 )
 
 if TYPE_CHECKING:
     import datetime
 
     from sqlalchemy import orm
+
+    from nummus.models import (
+        Account,
+        Asset,
+        AssetValuation,
+        Transaction,
+    )
 
 
 @pytest.mark.parametrize("skip_today", [False, True])

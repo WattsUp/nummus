@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus import exceptions as exc
-from nummus.encryption.base import EncryptionInterface
 
 if TYPE_CHECKING:
+    from nummus.encryption.base import EncryptionInterface
     from tests.conftest import RandomStringGenerator
 
 try:

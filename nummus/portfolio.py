@@ -26,7 +26,6 @@ from nummus import importers, migrations, models, sql, utils
 from nummus.models import (
     Account,
     Asset,
-    Base,
     Config,
     ConfigKey,
     ImportedFile,
@@ -41,6 +40,9 @@ if TYPE_CHECKING:
     import contextlib
 
     from nummus.importers.base import TxnDict
+    from nummus.models import (
+        Base,
+    )
 
 
 class AssetUpdate(NamedTuple):

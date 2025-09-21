@@ -4,7 +4,6 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import pytest
-import sqlalchemy
 from sqlalchemy import CheckConstraint, ForeignKeyConstraint, UniqueConstraint
 
 from nummus import exceptions as exc
@@ -22,6 +21,7 @@ from nummus.models import (
 if TYPE_CHECKING:
     import datetime
 
+    import sqlalchemy
     from sqlalchemy import orm
 
     from tests.conftest import RandomStringGenerator

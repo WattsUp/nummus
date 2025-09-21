@@ -5,11 +5,14 @@ from __future__ import annotations
 import csv
 import datetime
 import io
-from typing import override
+from typing import override, TYPE_CHECKING
 
 from nummus import exceptions as exc
 from nummus import utils
-from nummus.importers.base import TransactionImporter, TxnDict, TxnDicts
+from nummus.importers.base import TransactionImporter
+
+if TYPE_CHECKING:
+    from nummus.importers.base import TxnDict, TxnDicts
 
 
 class CSVTransactionImporter(TransactionImporter):

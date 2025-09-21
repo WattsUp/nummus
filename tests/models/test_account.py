@@ -6,11 +6,12 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus import exceptions as exc
-from nummus.models import Account, AccountCategory, Asset, AssetValuation, Transaction
+from nummus.models import Account, AccountCategory
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
+    from nummus.models import Asset, AssetValuation, Transaction
     from tests.conftest import RandomStringGenerator
 
 

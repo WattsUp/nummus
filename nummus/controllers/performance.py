@@ -4,15 +4,18 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
-from typing import TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 import flask
-from sqlalchemy import func, orm
+from sqlalchemy import func
 
 from nummus import utils, web
 from nummus.controllers import base
 from nummus.models import Account, AccountCategory, Asset, TransactionSplit
 from nummus.models.asset import AssetCategory
+
+if TYPE_CHECKING:
+    from sqlalchemy import orm
 
 _DEFAULT_INDEX = "S&P 500"
 

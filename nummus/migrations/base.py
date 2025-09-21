@@ -9,15 +9,17 @@ from typing import override, TYPE_CHECKING
 
 import sqlalchemy
 from packaging.version import Version
-from sqlalchemy import orm
 from sqlalchemy.schema import CreateTable
 
 from nummus import sql
-from nummus.models import Base, dump_table_configs, get_constraints
+from nummus.models import dump_table_configs, get_constraints
 from nummus.utils import classproperty
 
 if TYPE_CHECKING:
+    from sqlalchemy import orm
+
     from nummus import portfolio
+    from nummus.models import Base
 
 
 class Migrator(ABC):

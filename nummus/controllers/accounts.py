@@ -8,7 +8,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
-from sqlalchemy import func, orm
+from sqlalchemy import func
 
 from nummus import exceptions as exc
 from nummus import utils, web
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     import datetime
 
     import werkzeug
+    from sqlalchemy import orm
 
 
 class AccountContext(TypedDict):

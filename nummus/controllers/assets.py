@@ -8,8 +8,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
-import sqlalchemy
-from sqlalchemy import func, orm
+from sqlalchemy import func
 
 from nummus import exceptions as exc
 from nummus import utils, web
@@ -27,7 +26,9 @@ from nummus.models.asset import AssetSplit
 from nummus.models.transaction import TransactionSplit
 
 if TYPE_CHECKING:
+    import sqlalchemy
     import werkzeug
+    from sqlalchemy import orm
 
 
 PAGE_LEN = 50

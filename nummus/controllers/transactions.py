@@ -6,11 +6,10 @@ import datetime
 import operator
 from collections import defaultdict
 from decimal import Decimal
-from typing import NamedTuple, NotRequired, TypedDict
+from typing import NamedTuple, NotRequired, TYPE_CHECKING, TypedDict
 
 import flask
-import sqlalchemy
-from sqlalchemy import func, orm
+from sqlalchemy import func
 
 from nummus import exceptions as exc
 from nummus import utils, web
@@ -28,6 +27,10 @@ from nummus.models import (
     update_rows_list,
     YIELD_PER,
 )
+
+if TYPE_CHECKING:
+    import sqlalchemy
+    from sqlalchemy import orm
 
 PAGE_LEN = 25
 

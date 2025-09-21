@@ -17,7 +17,6 @@ from nummus import utils, web
 from nummus.controllers import base
 from nummus.models import (
     BudgetAssignment,
-    BudgetAvailableCategory,
     BudgetGroup,
     query_count,
     Target,
@@ -31,6 +30,10 @@ from nummus.models import (
 if TYPE_CHECKING:
     import werkzeug.datastructures
     from sqlalchemy import orm
+
+    from nummus.models import (
+        BudgetAvailableCategory,
+    )
 
 
 PERIOD_OPTIONS = {

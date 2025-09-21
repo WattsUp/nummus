@@ -9,8 +9,6 @@ import pytest
 from nummus import utils
 from nummus.controllers import emergency_fund
 from nummus.models import (
-    Account,
-    BudgetAssignment,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -18,6 +16,11 @@ from nummus.models import (
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
+
+    from nummus.models import (
+        Account,
+        BudgetAssignment,
+    )
 
 
 def test_empty(today: datetime.date, session: orm.Session) -> None:

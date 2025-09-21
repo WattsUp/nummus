@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import time_machine
 
-from nummus.commands.summarize import _Summary, Summarize
+from nummus.commands.summarize import Summarize
 
 if TYPE_CHECKING:
     import datetime
@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     import pytest
     from sqlalchemy import orm
 
+    from nummus.commands.summarize import _Summary
     from nummus.models import Account, Asset, AssetValuation, Transaction
     from nummus.portfolio import Portfolio
 

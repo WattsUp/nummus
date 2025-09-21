@@ -6,7 +6,7 @@ import pytest
 
 from nummus import utils
 from nummus.controllers import base
-from nummus.models import Asset, AssetCategory, AssetValuation, query_count, Transaction
+from nummus.models import Asset, AssetCategory, AssetValuation, query_count
 
 if TYPE_CHECKING:
     import datetime
@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy import orm
 
+    from nummus.models import Transaction
     from tests.controllers.conftest import WebClient
 
 
