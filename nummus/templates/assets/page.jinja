@@ -1,6 +1,6 @@
 <div
   hx-get="{{ url_for('assets.page', uri=asset.uri) }}"
-  hx-trigger="asset from:body, valuation from:body"
+  hx-trigger="asset from:body, valuation from:body, account from:body"
   hx-target="#main"
 >
   <h1>{{ asset.name }}</h1>
@@ -38,7 +38,35 @@
     {{ asset.description }}
   </div>
 {% endif %}
-{# TODO (WattsUp): #362 Add holdings info #}
+<h2>Today's holdings</h2>
+<div
+  class="mx-auto grid w-full max-w-sm grid-cols-[repeat(3,minmax(0,auto))_24px] gap-x-2"
+  hx-target="#main"
+  hx-swap="innerHTML show:window:top"
+  hx-swap-oob="{{ oob }}"
+  hx-push-url="true"
+>
+  <div
+    class="col-span-full grid grid-cols-subgrid py-1 pl-1 text-center font-bold"
+  >
+    <div class="grow">Name</div>
+    <div>Quantity</div>
+    <div>Value</div>
+  </div>
+  {% for account in asset.holdings %}
+    <a
+      class="hover:bg-surface-container-high odd:bg-surface-container col-span-full grid grid-cols-subgrid rounded py-1 pl-1"
+      href="{{ url_for('accounts.page', uri=account.uri) }}"
+      hx-get="{{ url_for('accounts.page', uri=account.uri) }}"
+      hx-disabled-elt="this"
+    >
+      <div>{{ account.name }}</div>
+      <div class="text-right">{{ account.qty | qty }}</div>
+      <div class="text-right">{{ account.value | money }}</div>
+      <icon>chevron_right</icon>
+    </a>
+  {% endfor %}
+</div>
 {% with ctx = asset.table %}
   {% include "assets/table-header.jinja" %}
   {% if asset.ticker %}
