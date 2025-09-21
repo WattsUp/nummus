@@ -24,7 +24,7 @@
       <select
         name="index"
         autocomplete="off"
-        hx-get="{{ url_for("performance.chart") }}"
+        hx-get="{{ url_for('performance.chart') }}"
         hx-disabled-elt="this"
       >
         {% for index in ctx.indices %}
