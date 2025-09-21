@@ -95,7 +95,7 @@ def test_ctx_txn(
 def test_ctx_split(
     session: orm.Session,
     transactions: list[Transaction],
-    rand_str: str,
+    tags: dict[str, int],
 ) -> None:
     query = session.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
     assets: dict[int, tuple[str, str | None]] = {
@@ -107,14 +107,14 @@ def test_ctx_split(
     ctx = txn_controller.ctx_split(
         t_split,
         assets,
-        {rand_str},
+        {tags["engineer"]: "engineer"},
     )
 
     assert ctx["parent_uri"] == txn.uri
     assert ctx["amount"] == t_split.amount
     assert ctx["category_uri"] == TransactionCategory.id_to_uri(t_split.category_id)
     assert ctx["memo"] == t_split.memo
-    assert ctx["tags"] == [rand_str]
+    assert ctx["tags"] == [base.NamePair(Tag.id_to_uri(tags["engineer"]), "engineer")]
     assert ctx.get("asset_name") is None
     assert ctx.get("asset_ticker") is None
     assert ctx.get("asset_price") is None
@@ -125,7 +125,7 @@ def test_ctx_split_asset(
     session: orm.Session,
     asset: Asset,
     transactions: list[Transaction],
-    rand_str: str,
+    tags: dict[str, int],
 ) -> None:
     query = session.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
     assets: dict[int, tuple[str, str | None]] = {
@@ -137,14 +137,14 @@ def test_ctx_split_asset(
     ctx = txn_controller.ctx_split(
         t_split,
         assets,
-        {rand_str},
+        {tags["engineer"]: "engineer"},
     )
 
     assert ctx["parent_uri"] == txn.uri
     assert ctx["amount"] == t_split.amount
     assert ctx["category_uri"] == TransactionCategory.id_to_uri(t_split.category_id)
     assert ctx["memo"] == t_split.memo
-    assert ctx["tags"] == [rand_str]
+    assert ctx["tags"] == [base.NamePair(Tag.id_to_uri(tags["engineer"]), "engineer")]
     assert ctx.get("asset_name") == asset.name
     assert ctx.get("asset_ticker") == asset.ticker
     assert ctx.get("asset_price") == Decimal(1)
@@ -155,7 +155,7 @@ def test_ctx_row(
     session: orm.Session,
     account: Account,
     transactions: list[Transaction],
-    rand_str: str,
+    tags: dict[str, int],
 ) -> None:
     query = session.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
     assets: dict[int, tuple[str, str | None]] = {
@@ -169,7 +169,7 @@ def test_ctx_row(
         assets,
         Account.map_name(session),
         TransactionCategory.map_name_emoji(session),
-        {rand_str},
+        {tags["engineer"]: "engineer"},
         set(),
     )
 
@@ -177,7 +177,7 @@ def test_ctx_row(
     assert ctx["amount"] == t_split.amount
     assert ctx["category_uri"] == TransactionCategory.id_to_uri(t_split.category_id)
     assert ctx["memo"] == t_split.memo
-    assert ctx["tags"] == [rand_str]
+    assert ctx["tags"] == [base.NamePair(Tag.id_to_uri(tags["engineer"]), "engineer")]
     assert ctx.get("asset_name") is None
     assert ctx.get("asset_ticker") is None
     assert ctx.get("asset_price") is None
@@ -373,7 +373,7 @@ def test_table_results(
                     accounts,
                     categories,
                     {
-                        tags[tag_id]
+                        tag_id: tags[tag_id]
                         for tag_id, in session.query(TagLink.tag_id).where(
                             TagLink.t_split_id == txn.splits[0].id_,
                         )

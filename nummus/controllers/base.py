@@ -102,6 +102,14 @@ class NamePair(NamedTuple):
     name: str
 
 
+class NamePairState(NamedTuple):
+    """Key & name pair plus state."""
+
+    key: str
+    name: str
+    state: bool
+
+
 LIMIT_DOWNSAMPLE = 400  # if n_days > LIMIT_DOWNSAMPLE then plot min/avg/max by month
 # else plot normally by days
 
@@ -791,7 +799,6 @@ def tranaction_category_groups(s: orm.Session) -> CategoryGroups:
     return category_groups
 
 
-# TODO (WattsUp): #392 Use for all charts
 @overload
 def chart_data(
     start_ord: int,

@@ -62,7 +62,7 @@
               name="exclude"
               type="checkbox"
               value="{{ account.uri }}"
-              {% if account.excluded %}
+              {% if account.state %}
                 checked
               {% endif %}
               autocomplete="off"

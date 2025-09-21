@@ -225,8 +225,8 @@
     >
       <chips>
         <div>
-          {% for value in split.tags %}
-            {% with name="tag-" + split_i | string %}
+          {% for item in split.tags %}
+            {% with name="tag-" + split_i | string, value=item.name %}
               {% include "shared/chip.jinja" %}
             {% endwith %}
           {% endfor %}

@@ -6,7 +6,7 @@ import datetime
 import math
 import operator
 from decimal import Decimal
-from typing import NamedTuple, TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 import flask
 from sqlalchemy import func
@@ -34,14 +34,6 @@ class AccountContext(TypedDict):
     mwrr: Decimal | None
 
 
-class AccountOption(NamedTuple):
-    """Type definition for an account option."""
-
-    name: str
-    uri: str
-    excluded: bool
-
-
 class AccountsContext(TypedDict):
     """Type definition for Accounts context."""
 
@@ -51,7 +43,7 @@ class AccountsContext(TypedDict):
     pnl: Decimal
     mwrr: Decimal | None
     accounts: list[AccountContext]
-    options: list[AccountOption]
+    options: list[base.NamePairState]
 
 
 class ChartData(base.ChartData):
@@ -242,12 +234,12 @@ def ctx_chart(
     query = s.query(Account).where(Account.id_.in_(acct_ids))
     mapping: dict[int, str] = {}
     acct_ids.clear()
-    account_options: list[AccountOption] = []
+    account_options: list[base.NamePairState] = []
     for acct in query.all():
         if acct.do_include(start_ord):
             excluded = acct.id_ in excluded_accounts
             account_options.append(
-                AccountOption(acct.name, acct.uri, excluded=excluded),
+                base.NamePairState(acct.name, acct.uri, state=excluded),
             )
             if not excluded:
                 mapping[acct.id_] = acct.name
