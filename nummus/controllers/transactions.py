@@ -41,8 +41,7 @@ class TxnContext(TypedDict):
     uri: str
     account: str
     account_uri: str
-    # list[(account uri, name, option disabled)]
-    accounts: list[tuple[str, str, bool]]
+    accounts: list[base.NamePairState]
     cleared: bool
     date: datetime.date
     date_max: datetime.date
@@ -64,7 +63,7 @@ class SplitContext(TypedDict):
     category_id: int
     category_uri: str
     memo: str | None
-    tags: list[str]
+    tags: list[base.NamePair]
     amount: Decimal | None
 
     asset_name: NotRequired[str | None]
@@ -313,7 +312,7 @@ def new() -> str | flask.Response:
             "account": "",
             "account_uri": flask.request.args.get("account") or "",
             "accounts": [
-                (Account.id_to_uri(acct_id), name, False)
+                base.NamePairState(Account.id_to_uri(acct_id), name, state=False)
                 for acct_id, name in accounts.items()
             ],
             "cleared": False,
@@ -368,7 +367,10 @@ def new() -> str | flask.Response:
                     "category_id": cat_id,
                     "category_uri": TransactionCategory.id_to_uri(cat_id),
                     "memo": memo,
-                    "tags": sorted(tags),
+                    "tags": sorted(
+                        [base.NamePair("", tag) for tag in tags],
+                        key=operator.itemgetter(1),
+                    ),
                     "amount": amount,
                 }
                 for cat_id, memo, tags, amount in zip(
@@ -630,7 +632,10 @@ def split(uri: str) -> str:
                 "category_id": 0,
                 "category_uri": cat_uri or uncategorized_uri,
                 "memo": memo,
-                "tags": sorted(tags),
+                "tags": sorted(
+                    [base.NamePair("", tag) for tag in tags],
+                    key=operator.itemgetter(1),
+                ),
                 "amount": amount,
                 "asset_name": None,
                 "asset_ticker": None,
@@ -887,7 +892,7 @@ def ctx_txn(
             ctx_split(
                 t_split,
                 assets,
-                {tags[tag_id] for tag_id in tag_links[t_split.id_]},
+                {tag_id: tags[tag_id] for tag_id in tag_links[t_split.id_]},
             )
             for t_split in txn.splits
         ]
@@ -910,7 +915,7 @@ def ctx_txn(
         "account": accounts[account_id][0],
         "account_uri": Account.id_to_uri(account_id),
         "accounts": [
-            (Account.id_to_uri(acct_id), name, closed)
+            base.NamePairState(Account.id_to_uri(acct_id), name, closed)
             for acct_id, (name, closed) in accounts.items()
         ],
         "cleared": txn.cleared,
@@ -931,7 +936,7 @@ def ctx_txn(
 def ctx_split(
     t_split: TransactionSplit,
     assets: dict[int, tuple[str, str | None]],
-    tags: set[str],
+    tags: dict[int, str],
 ) -> SplitContext:
     """Get the context to build the transaction edit dialog.
 
@@ -956,7 +961,13 @@ def ctx_split(
         "category_id": t_split.category_id,
         "category_uri": TransactionCategory.id_to_uri(t_split.category_id),
         "memo": t_split.memo,
-        "tags": sorted(tags),
+        "tags": sorted(
+            [
+                base.NamePair(Tag.id_to_uri(tag_id), name)
+                for tag_id, name in tags.items()
+            ],
+            key=operator.itemgetter(1),
+        ),
         "asset_name": asset_name,
         "asset_ticker": asset_ticker,
         "asset_price": abs(t_split.amount / qty) if qty else None,
@@ -969,7 +980,7 @@ def ctx_row(
     assets: dict[int, tuple[str, str | None]],
     accounts: dict[int, str],
     categories: dict[int, str],
-    tags: set[str],
+    tags: dict[int, str],
     split_parents: set[int],
 ) -> RowContext:
     """Get the context to build the transaction edit dialog.
@@ -1306,7 +1317,7 @@ def _table_results(
             assets,
             accounts,
             categories,
-            {tags[tag_id] for tag_id in tag_links[t_split.id_]},
+            {tag_id: tags[tag_id] for tag_id in tag_links[t_split.id_]},
             has_splits,
         )
         t_splits_flat.append(

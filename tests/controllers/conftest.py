@@ -86,7 +86,10 @@ class TreeNode(NamedTuple):
             return True
 
         if 'hx-target="#main"' in self.attributes:
-            if "hx-trigger" in self.attributes:
+            if (
+                "hx-trigger" in self.attributes
+                and "click consume" not in self.attributes
+            ):
                 # triggered updates don't move the page or push history
                 assert "hx-push-url" not in self.attributes
                 assert "hx-swap" not in self.attributes
