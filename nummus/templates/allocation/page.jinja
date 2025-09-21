@@ -1,10 +1,9 @@
 <div
-  class="flex items-center justify-between"
   hx-get="{{ url_for('allocation.page') }}"
   hx-trigger="account from:body, asset from:body, valuation from:body"
   hx-target="#main"
 >
-  <h1 class="text-primary font-serif text-3xl">Asset allocation</h1>
+  <h1>Asset allocation</h1>
 </div>
 <h2 class="text-primary font-serif text-2xl">By category</h2>
 <div class="relative mb-2 h-60 w-full md:h-96">

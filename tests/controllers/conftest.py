@@ -245,7 +245,7 @@ class HTMLValidator:
     def __init__(self) -> None:
         self._icons: set[str] = set()
 
-    def __call__(self, s: str) -> bool:
+    def __call__(self, s: str, *, is_page: bool = False) -> bool:
         nodes: list[TreeNode] = [
             TreeNode(m.group(1), m.group(2), m.start(0), m.end(0), None, [])
             for m in re.finditer(r"<(/?\w+)([^<>]*)>", s)
@@ -279,6 +279,17 @@ class HTMLValidator:
             if node.tag not in {"link", "meta", "path", "input", "hr", "rect"}:
                 # Tags without close tags
                 current_node = node
+
+        if is_page:
+            assert current_node.children
+            title_div = current_node.children[0]
+            assert title_div.tag == "div"
+            assert "class" not in title_div.attributes or "grid" in title_div.attributes
+
+            assert title_div.children
+            title = title_div.children[0]
+            assert title.tag == "h1"
+            assert "class" not in title.attributes
 
         # Got back up to the root element, hopefully
         assert current_node.tag in {"__root__", "html"}  # <html> might not be closed

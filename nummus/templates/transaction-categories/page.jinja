@@ -1,10 +1,9 @@
 <div
-  class="mb-2 flex items-center justify-between"
   hx-get="{{ url_for('transaction_categories.page') }}"
   hx-trigger="category from:body"
   hx-target="#main"
 >
-  <h1 class="text-primary font-serif text-3xl">Transaction categories</h1>
+  <h1>Transaction categories</h1>
   <button
     class="btn-tonal"
     hx-get="{{ url_for('transaction_categories.new') }}"

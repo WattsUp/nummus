@@ -1,5 +1,4 @@
 <div
-  class="flex items-center justify-between"
   hx-get="{{ url_for('transactions.page_all') }}"
   hx-trigger="transaction from:body, account from:body"
   hx-target="#main"
@@ -10,7 +9,7 @@
         If in search mode, fire update-transaction for first page only.
         This also fires for new & import
     #}
-  <h1 class="text-primary font-serif text-3xl">Transactions</h1>
+  <h1>Transactions</h1>
   <button
     class="btn-tonal"
     hx-get="{{ url_for('transactions.new') }}"

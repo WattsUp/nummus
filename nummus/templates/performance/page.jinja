@@ -1,10 +1,9 @@
 <div
-  class="flex items-center justify-between pb-1"
   hx-get="{{ url_for('performance.page') }}"
   hx-trigger="account from:body, asset from:body"
   hx-target="#main"
 >
-  <h1 class="text-primary font-serif text-3xl">Investing performance</h1>
+  <h1>Investing performance</h1>
 </div>
 <details class="bg-surface-container-high mx-auto mb-2 max-w-2xl rounded-md">
   <summary class="bg-tertiary-container flex items-center gap-2 rounded-md p-2">

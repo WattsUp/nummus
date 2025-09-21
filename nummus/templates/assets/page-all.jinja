@@ -1,10 +1,9 @@
 <div
-  class="mb-2 flex items-center justify-between"
   hx-get="{{ url_for('assets.page_all') }}"
   hx-trigger="asset from:body, valuation from:body, account from:body"
   hx-target="#main"
 >
-  <h1 class="text-primary font-serif text-3xl">Assets</h1>
+  <h1>Assets</h1>
   <button
     class="btn-tonal"
     hx-get="{{ url_for('assets.new') }}"
