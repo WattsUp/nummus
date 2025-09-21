@@ -3,11 +3,11 @@
     {% set header_class = "bg-error text-on-error" %}
     {% set icon = "error" %}
   {% else %}
-    {% set header_class = "bg-error-container" %}
+    {% set header_class = "bg-error-container text-on-error-container" %}
     {% set icon = "warning" %}
   {% endif %}
 {% else %}
-  {% set header_class = "bg-primary-container" %}
+  {% set header_class = "bg-primary-container text-on-primary-container" %}
   {% set icon = "check_circle" %}
 {% endif %}
 <summary class="{{ header_class }} flex items-center gap-2 rounded-md p-2">

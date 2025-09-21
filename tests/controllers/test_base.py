@@ -541,8 +541,6 @@ def test_template(valid_html: HTMLValidator, path: Path) -> None:
     # Since each template is tested, it ensures any HX actions require local targets
     assert valid_html(buf, is_page="page" in path.name)
 
-    # TODO (WattsUp): #412 Add a check for bg-pri/sec/tert has text-on-pri/sec/tert
-
 
 def test_chart_data() -> None:
     start = datetime.date(2023, 1, 10)
