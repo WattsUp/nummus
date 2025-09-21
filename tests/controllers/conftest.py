@@ -306,7 +306,9 @@ class HTMLValidator:
             assert title.tag == "h1"
             assert "class" not in title.attributes
 
-            # TODO (WattsUp): #400 No classes for direct h2s
+            for child in current_node.children:
+                if child.tag == "h2":
+                    assert "class" not in child.attributes
 
         # Got back up to the root element, hopefully
         assert current_node.tag in {"__root__", "html"}  # <html> might not be closed
