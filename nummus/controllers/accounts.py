@@ -68,9 +68,10 @@ class PerformanceContext(TypedDict):
     mwrr: Decimal | None
 
     labels: list[str]
-    date_mode: str
-    values: list[Decimal]
-    cost_bases: list[Decimal]
+    mode: str
+
+    avg: list[Decimal]
+    cost_basis: list[Decimal]
 
     period: str
     period_options: dict[str, str]
@@ -460,7 +461,6 @@ def ctx_performance(
     start, end = base.parse_period(period, today)
     end_ord = end.toordinal()
     start_ord = acct.opened_on_ord or end_ord if start is None else start.toordinal()
-    labels, date_mode = base.date_labels(start_ord, end_ord)
 
     query = s.query(TransactionCategory.id_, TransactionCategory.name).where(
         TransactionCategory.is_profit_loss.is_(True),
@@ -490,13 +490,20 @@ def ctx_performance(
             fees += value
 
     values, profits, asset_values = acct.get_value(start_ord, end_ord)
+    cost_basis = [v - p for v, p in zip(values, profits, strict=True)]
 
     cash = values[-1] - sum(v[-1] for v in asset_values.values())
 
-    n = len(labels)
+    n = len(values)
     twrr = utils.twrr(values, profits)[-1]
     twrr_per_annum = (
         Decimal(-1) if twrr < -1 else (1 + twrr) ** (utils.DAYS_IN_YEAR / n) - 1
+    )
+
+    chart_values, chart_cost_basis = base.chart_data(
+        start_ord,
+        end_ord,
+        (values, cost_basis),
     )
 
     return {
@@ -508,10 +515,10 @@ def ctx_performance(
         "cash": cash,
         "twrr": twrr_per_annum,
         "mwrr": utils.mwrr(values, profits),
-        "labels": labels,
-        "date_mode": date_mode,
-        "values": values,
-        "cost_bases": [v - p for v, p in zip(values, profits, strict=True)],
+        "labels": chart_values["labels"],
+        "mode": chart_values["mode"],
+        "avg": chart_values["avg"],
+        "cost_basis": chart_cost_basis["avg"],
         "period": period,
         "period_options": base.PERIOD_OPTIONS,
     }

@@ -8,10 +8,10 @@ const accounts = {
    */
   update: function (raw) {
     const labels = raw.labels;
-    const dateMode = raw.date_mode;
-    const values = raw.values;
-    const costBases = raw.cost_bases;
-    const minLine = values.map((v, i) => Math.min(v, costBases[i]));
+    const dateMode = raw.mode;
+    const avg = raw.avg.map((v) => Number(v));
+    const costBasis = raw.cost_basis.map((v) => Number(v));
+    const minLine = avg.map((v, i) => Math.min(v, costBasis[i]));
 
     const canvas = htmx.find("#account-chart-canvas");
     const ctx = canvas.getContext("2d");
@@ -19,14 +19,14 @@ const accounts = {
       {
         label: "Balance",
         type: "line",
-        data: values,
+        data: avg,
         borderColorRaw: "primary",
         backgroundColorRaw: ["primary-container", "80"],
         borderWidth: 2,
         pointRadius: 0,
         hoverRadius: 0,
         fill: {
-          target: 1,
+          target: 1, // cost basis
           aboveRaw: ["primary-container", "80"],
           belowRaw: ["error-container", "80"],
         },
@@ -34,7 +34,7 @@ const accounts = {
       {
         label: "Cost Basis",
         type: "line",
-        data: costBases,
+        data: costBasis,
         borderColorRaw: "outline",
         backgroundColorRaw: ["tertiary-container", "80"],
         borderWidth: 2,

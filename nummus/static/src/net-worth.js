@@ -36,7 +36,11 @@ const netWorth = {
           borderWidth: 2,
           pointRadius: 0,
           hoverRadius: 0,
-          fill: true,
+          fill: {
+            target: "origin",
+            aboveRaw: ["primary-container", "80"],
+            belowRaw: ["error-container", "80"],
+          },
         });
       } else {
         // Plot average as a line and fill between min/max
@@ -50,6 +54,7 @@ const netWorth = {
           pointRadius: 0,
           hoverRadius: 0,
           fill: 2,
+          order: 1,
         });
         datasets.push({
           label: "Average",
@@ -60,6 +65,7 @@ const netWorth = {
           borderWidth: 2,
           pointRadius: 0,
           hoverRadius: 0,
+          order: 0,
         });
         datasets.push({
           label: "Min",
@@ -70,6 +76,7 @@ const netWorth = {
           borderWidth: 0,
           pointRadius: 0,
           hoverRadius: 0,
+          order: 2,
         });
       }
 

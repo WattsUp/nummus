@@ -8,16 +8,19 @@ const assets = {
    */
   update: function (raw) {
     const labels = raw.labels;
-    const dateMode = raw.date_mode;
-    const values = raw.values;
+    const dateMode = raw.mode;
+    const avg = raw.avg.map((v) => Number(v));
+    const min = raw.min && raw.min.map((v) => Number(v));
+    const max = raw.max && raw.max.map((v) => Number(v));
 
     const canvas = htmx.find("#asset-chart-canvas");
     const ctx = canvas.getContext("2d");
-    const datasets = [
-      {
+    const datasets = [];
+    if (min == null) {
+      datasets.push({
         label: "Value",
         type: "line",
-        data: values,
+        data: avg,
         borderColorRaw: "primary",
         backgroundColorRaw: ["primary-container", "80"],
         borderWidth: 2,
@@ -28,8 +31,41 @@ const assets = {
           aboveRaw: ["primary-container", "80"],
           belowRaw: ["error-container", "80"],
         },
-      },
-    ];
+      });
+    } else {
+      // Plot average as a line and fill between min/max
+      datasets.push({
+        label: "Average",
+        type: "line",
+        data: avg,
+        borderColorRaw: "primary",
+        backgroundColorRaw: ["primary-container", "80"],
+        borderWidth: 2,
+        pointRadius: 0,
+        hoverRadius: 0,
+      });
+      datasets.push({
+        label: "Max",
+        type: "line",
+        data: max,
+        borderColorRaw: "primary",
+        backgroundColorRaw: ["primary-container", "80"],
+        borderWidth: 0,
+        pointRadius: 0,
+        hoverRadius: 0,
+        fill: 2,
+      });
+      datasets.push({
+        label: "Min",
+        type: "line",
+        data: min,
+        borderColorRaw: "primary",
+        backgroundColorRaw: ["primary-container", "80"],
+        borderWidth: 0,
+        pointRadius: 0,
+        hoverRadius: 0,
+      });
+    }
     if (this.chart) this.chart.destroy();
     this.ctx = ctx;
     this.chart = nummusChart.create(ctx, labels, dateMode, datasets);

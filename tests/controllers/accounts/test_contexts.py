@@ -90,7 +90,7 @@ def test_ctx_performance_empty(
     account: Account,
 ) -> None:
     start = utils.date_add_months(today, -12)
-    labels, date_mode = base.date_labels(start.toordinal(), today.toordinal())
+    labels, mode = base.date_labels(start.toordinal(), today.toordinal())
 
     ctx = accounts.ctx_performance(session, account, today, "1yr")
 
@@ -104,9 +104,9 @@ def test_ctx_performance_empty(
         "twrr": Decimal(),
         "mwrr": Decimal(),
         "labels": labels,
-        "date_mode": date_mode,
-        "values": [Decimal()] * len(labels),
-        "cost_bases": [Decimal()] * len(labels),
+        "mode": mode,
+        "avg": [Decimal()] * len(labels),
+        "cost_basis": [Decimal()] * len(labels),
         "period": "1yr",
         "period_options": base.PERIOD_OPTIONS,
     }
@@ -122,7 +122,7 @@ def test_ctx_performance(
 ) -> None:
     asset_valuation.date_ord -= 7
     session.commit()
-    labels, date_mode = base.date_labels(transactions[0].date_ord, today.toordinal())
+    labels, mode = base.date_labels(transactions[0].date_ord, today.toordinal())
 
     ctx = accounts.ctx_performance(session, account, today, "max")
 
@@ -140,9 +140,9 @@ def test_ctx_performance(
         "twrr": twrr_per_annum,
         "mwrr": utils.mwrr(values, profits),
         "labels": labels,
-        "date_mode": date_mode,
-        "values": values,
-        "cost_bases": [Decimal(100)] * len(labels),
+        "mode": mode,
+        "avg": values,
+        "cost_basis": [Decimal(100)] * len(labels),
         "period": "max",
         "period_options": base.PERIOD_OPTIONS,
     }
