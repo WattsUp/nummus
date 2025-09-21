@@ -1,7 +1,7 @@
 <div hx-target="#main" hx-swap="innerHTML show:window:top" hx-push-url="true">
   <a
-    href="{{ url_for("performance.page") }}"
-    hx-get="{{ url_for("performance.page") }}"
+    href="{{ url_for('performance.page') }}"
+    hx-get="{{ url_for('performance.page') }}"
     hx-disabled-elt="this"
   >
     <h1>Investing performance</h1>
@@ -24,8 +24,8 @@
   {% for index, twrr in ctx.indices.items() %}
     <a
       class="border-tertiary group relative flex border-l-4 pl-1"
-      href="{{ url_for("performance.page", index=index) }}"
-      hx-get="{{ url_for("performance.page", index=index) }}"
+      href="{{ url_for('performance.page', index=index) }}"
+      hx-get="{{ url_for('performance.page', index=index) }}"
       hx-disabled-elt="this"
     >
       <div class="grow truncate">{{ index }}</div>

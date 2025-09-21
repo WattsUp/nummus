@@ -1,18 +1,18 @@
 <div
   class="grid grid-flow-row-dense grid-cols-2 gap-2 pb-2 md:grid-cols-4"
-  hx-get="{{ url_for("budgeting.page", month=ctx.month) }}"
+  hx-get="{{ url_for('budgeting.page', month=ctx.month) }}"
   hx-trigger="account from:body, asset from:body, valuation from:body, budget from:body"
   hx-target="#main"
   hx-include="#budget-sidebar-uri"
 >
-  <h1 class="text-primary mr-auto font-serif text-3xl">Budgeting</h1>
+  <h1>Budgeting</h1>
   <div id="budget-status" class="w-md col-span-2 mx-auto max-w-full">
     {% include "budgeting/status.jinja" %}
   </div>
   <div class="flex h-9 items-center justify-end">
     <button
       class="btn-text btn-sq"
-      hx-get="{{ url_for("budgeting.page", month=ctx.month_prev) }}"
+      hx-get="{{ url_for('budgeting.page', month=ctx.month_prev) }}"
       hx-disabled-elt="this"
       hx-swap="innerHTML show:window:top"
       hx-push-url="true"
@@ -23,7 +23,7 @@
     <button
       class="btn-text btn-sq"
       {% if not ctx.month_next %}disabled{% endif %}
-      hx-get="{{ url_for("budgeting.page", month=ctx.month_next) }}"
+      hx-get="{{ url_for('budgeting.page', month=ctx.month_next) }}"
       hx-disabled-elt="this"
       hx-swap="innerHTML show:window:top"
       hx-push-url="true"
@@ -33,7 +33,9 @@
   </div>
 </div>
 <details class="bg-surface-container-high mx-auto mb-2 max-w-2xl rounded-md">
-  <summary class="bg-tertiary-container flex items-center gap-2 rounded-md p-2">
+  <summary
+    class="bg-tertiary-container text-on-tertiary-container flex items-center gap-2 rounded-md p-2"
+  >
     <icon>help</icon>
     <span class="mr-auto">About budgeting in nummus</span>
     <icon class="details-icon-open">keyboard_arrow_up</icon>
@@ -64,7 +66,7 @@
   <div
     id="budget-table"
     class="relative pb-8"
-    hx-put="{{ url_for("budgeting.reorder") }}"
+    hx-put="{{ url_for('budgeting.reorder') }}"
     hx-trigger="reorder"
     hx-target="#no-target"
     hx-include="this"
@@ -81,7 +83,7 @@
     </label>
     <button
       class="btn-filled not-edit:hidden mx-auto mb-2"
-      hx-post="{{ url_for("budgeting.new_group") }}"
+      hx-post="{{ url_for('budgeting.new_group') }}"
       hx-disabled-elt="this"
       hx-target="this"
       hx-swap="afterend"
@@ -104,7 +106,7 @@
 <div id="budget-button-bar">
   <input name="destination" type="hidden" />
   <button
-    hx-get="{{ url_for("budgeting.move", uri="income",month=ctx.month) }}"
+    hx-get="{{ url_for('budgeting.move', uri='income', month=ctx.month) }}"
     hx-disabled-elt="this"
     hx-target="#dialog"
     hx-swap="innerHTML show:#dialog:top"

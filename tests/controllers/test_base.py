@@ -532,15 +532,14 @@ def test_template(valid_html: HTMLValidator, path: Path) -> None:
     with path.open("r", encoding="utf-8") as file:
         buf = file.read()
 
+    re_jinja_template = re.compile(r'"\{\{ (.+?) \}\}"')
+    for endpoint in re_jinja_template.findall(buf):
+        assert '"' not in endpoint
+
     re_jinja = re.compile(r"(\{[{%#]).+?([#%}]\})")
     buf = valid_html.clean(re_jinja.sub("", buf))
     # Since each template is tested, it ensures any HX actions require local targets
-    assert valid_html(buf)
-
-    # TODO (WattsUp): #412 Add a check for each page.jinja has the same div/h1 combo
-    # and that direct headers have no class
-    # TODO (WattsUp): #412 Add a check for each url_for has single quotes only
-    # TODO (WattsUp): #412 Add a check for bg-pri/sec/tert has text-on-pri/sec/tert
+    assert valid_html(buf, is_page="page" in path.name)
 
 
 def test_chart_data() -> None:

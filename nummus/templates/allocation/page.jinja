@@ -1,10 +1,9 @@
 <div
-  class="flex items-center justify-between"
   hx-get="{{ url_for('allocation.page') }}"
   hx-trigger="account from:body, asset from:body, valuation from:body"
   hx-target="#main"
 >
-  <h1 class="text-primary font-serif text-3xl">Asset allocation</h1>
+  <h1>Asset allocation</h1>
 </div>
 <h2 class="text-primary font-serif text-2xl">By category</h2>
 <div class="relative mb-2 h-60 w-full md:h-96">
@@ -14,7 +13,7 @@
   {% for category in allocation.categories %}
     <details class="bg-surface-container-high mb-2 rounded-md" name="category">
       <summary
-        class="bg-secondary-container flex items-center gap-2 rounded-md p-2"
+        class="bg-secondary-container text-on-secondary-container flex items-center gap-2 rounded-md p-2"
       >
         <span>{{ category.name }}</span>
         <span class="ml-auto">{{ category.value | money }}</span>
@@ -35,7 +34,9 @@
   <canvas id="sector-chart-canvas" hx-preserve></canvas>
 </div>
 <details class="bg-surface-container-high mx-auto mb-2 max-w-2xl rounded-md">
-  <summary class="bg-tertiary-container flex items-center gap-2 rounded-md p-2">
+  <summary
+    class="bg-secondary-container text-on-secondary-container flex items-center gap-2 rounded-md p-2"
+  >
     <icon>help</icon>
     <span class="mr-auto">About U.S. sector allocation</span>
     <icon class="details-icon-open">keyboard_arrow_up</icon>
@@ -55,7 +56,7 @@
   {% for sector in allocation.sectors %}
     <details class="bg-surface-container-high mb-2 rounded-md" name="sector">
       <summary
-        class="bg-secondary-container flex items-center gap-2 rounded-md p-2"
+        class="bg-secondary-container text-on-secondary-container flex items-center gap-2 rounded-md p-2"
       >
         <span>{{ sector.name }}</span>
         <span class="ml-auto">{{ sector.value | money }}</span>

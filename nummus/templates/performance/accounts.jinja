@@ -19,8 +19,8 @@
   {% for account in accounts.accounts %}
     <a
       class="hover:bg-surface-container-high odd:bg-surface-container col-span-full grid grid-cols-subgrid rounded py-1 pl-1"
-      href="{{ url_for("accounts.page", uri=account.uri) }}"
-      hx-get="{{ url_for("accounts.page", uri=account.uri) }}"
+      href="{{ url_for('accounts.page', uri=account.uri) }}"
+      hx-get="{{ url_for('accounts.page', uri=account.uri) }}"
       hx-disabled-elt="this"
     >
       <div>{{ account.name }}</div>

@@ -1,10 +1,9 @@
 <div
-  class="mb-2 flex items-center justify-between"
   hx-get="{{ url_for('assets.page_all') }}"
   hx-trigger="asset from:body, valuation from:body, account from:body"
   hx-target="#main"
 >
-  <h1 class="text-primary font-serif text-3xl">Assets</h1>
+  <h1>Assets</h1>
   <button
     class="btn-tonal"
     hx-get="{{ url_for('assets.new') }}"
@@ -17,7 +16,9 @@
   </button>
 </div>
 <details class="bg-surface-container-high mx-auto mb-2 max-w-2xl rounded-md">
-  <summary class="bg-tertiary-container flex items-center gap-2 rounded-md p-2">
+  <summary
+    class="bg-tertiary-container text-on-tertiary-container flex items-center gap-2 rounded-md p-2"
+  >
     <icon>help</icon>
     <span class="mr-auto">About asset classification</span>
     <icon class="details-icon-open">keyboard_arrow_up</icon>

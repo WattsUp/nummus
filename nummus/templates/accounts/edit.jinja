@@ -12,7 +12,7 @@
     <input
       name="name"
       required
-      value="{{ acct.name or "" }}"
+      value="{{ acct.name or '' }}"
       placeholder=""
       autocomplete="off"
       spellcheck="true"
@@ -33,7 +33,7 @@
     <input
       name="institution"
       required
-      value="{{ acct.institution or "" }}"
+      value="{{ acct.institution or '' }}"
       placeholder=""
       autocomplete="off"
       spellcheck="true"
@@ -75,7 +75,7 @@
   <label class="input-outlined input-bg-surface-container-high col-span-2">
     <input
       name="number"
-      value="{{ acct.number or "" }}"
+      value="{{ acct.number or '' }}"
       placeholder=""
       autocomplete="off"
       enterkeyhint="next"

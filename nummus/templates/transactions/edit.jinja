@@ -97,7 +97,7 @@
     <input
       name="payee"
       required
-      value="{{ txn.payee or "" }}"
+      value="{{ txn.payee or '' }}"
       list="payees"
       placeholder=""
       autocomplete="off"
@@ -123,7 +123,7 @@
       name="date"
       required
       type="date"
-      value="{{ txn.date or "" }}"
+      value="{{ txn.date or '' }}"
       max="{{ txn.date_max }}"
       placeholder=""
       autocomplete="off"
@@ -203,7 +203,7 @@
     >
       <input
         name="memo"
-        value="{{ split.memo or "" }}"
+        value="{{ split.memo or '' }}"
         placeholder=""
         autocomplete="off"
         enterkeyhint="next"
@@ -316,7 +316,7 @@
       <button
         class="btn-text"
         disabled
-        hx-delete="{{ url_for('transactions.split', uri="arst") }}"
+        hx-delete="{{ url_for('transactions.split', uri='arst') }}"
         hx-disabled-elt="this"
       >
         Copy Similar

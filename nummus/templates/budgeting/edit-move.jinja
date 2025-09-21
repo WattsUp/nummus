@@ -26,7 +26,7 @@
         autocomplete="off"
         enterkeyhint="next"
         inputmode="tel"
-        hx-get="{{ url_for("budgeting.validation") }}"
+        hx-get="{{ url_for('budgeting.validation') }}"
         hx-trigger="input delay:200ms"
         hx-target="next error"
         hx-include="this"

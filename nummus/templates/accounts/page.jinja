@@ -1,11 +1,10 @@
 <div
-  class="flex items-center justify-between"
   hx-get="{{ url_for('accounts.page', uri=acct.uri) }}"
   hx-trigger="account from:body, valuation from:body, transaction from:body"
   hx-target="#main"
   {# TODO (WattsUp): #361 Just update transaction table on transaction event #}
 >
-  <h1 class="text-primary font-serif text-3xl">{{ acct.name }}</h1>
+  <h1>{{ acct.name }}</h1>
   <button
     class="btn-tonal"
     hx-get="{{ url_for('accounts.account', uri=acct.uri) }}"

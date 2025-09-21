@@ -1,4 +1,10 @@
-<h1 class="text-primary font-serif text-3xl">Emergency fund</h1>
+<div
+  hx-get="{{ url_for('emergency_fund.page') }}"
+  hx-trigger="account from:body, asset from:body, budget from:body"
+  hx-target="#main"
+>
+  <h1>Emergency fund</h1>
+</div>
 <div
   class="mb-2 grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-x-2 text-center font-bold"
 >
@@ -16,7 +22,9 @@
   </div>
 </div>
 <details class="bg-surface-container-high mx-auto mb-2 max-w-2xl rounded-md">
-  <summary class="bg-tertiary-container flex items-center gap-2 rounded-md p-2">
+  <summary
+    class="bg-tertiary-container text-on-tertiary-container flex items-center gap-2 rounded-md p-2"
+  >
     <icon>help</icon>
     <span class="mr-auto">About emergency funds</span>
     <icon class="details-icon-open">keyboard_arrow_up</icon>

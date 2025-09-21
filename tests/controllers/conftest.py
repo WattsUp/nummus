@@ -235,6 +235,20 @@ class TreeNode(NamedTuple):
 
         return True
 
+    def has_valid_classes(self, inner_html: str) -> bool:
+        if "class" not in self.attributes:
+            return True
+
+        re_bg = re.compile(r'bg-((?:primary|secondary|tertiary|error)[^ "]*)')
+        for bg in re_bg.findall(self.attributes):
+            bg: str
+            assert (
+                f"text-on-{bg.removesuffix('-dim')}" in self.attributes
+                or not inner_html
+            )
+
+        return True
+
 
 ResultType = dict[str, object] | str | bytes
 Queries = dict[str, str] | dict[str, str | bool | list[str | bool]]
@@ -245,7 +259,7 @@ class HTMLValidator:
     def __init__(self) -> None:
         self._icons: set[str] = set()
 
-    def __call__(self, s: str) -> bool:
+    def __call__(self, s: str, *, is_page: bool = False) -> bool:
         nodes: list[TreeNode] = [
             TreeNode(m.group(1), m.group(2), m.start(0), m.end(0), None, [])
             for m in re.finditer(r"<(/?\w+)([^<>]*)>", s)
@@ -262,6 +276,7 @@ class HTMLValidator:
 
                 inner_html = s[open_node.i_end : close_node.i_start]
                 assert open_node.has_valid_inner_html(inner_html)
+                assert open_node.has_valid_classes(inner_html)
 
                 if open_node.tag == "icon" and inner_html:
                     self._icons.add(inner_html)
@@ -279,6 +294,17 @@ class HTMLValidator:
             if node.tag not in {"link", "meta", "path", "input", "hr", "rect"}:
                 # Tags without close tags
                 current_node = node
+
+        if is_page:
+            assert current_node.children
+            title_div = current_node.children[0]
+            assert title_div.tag == "div"
+            assert "class" not in title_div.attributes or "grid" in title_div.attributes
+
+            assert title_div.children
+            title = title_div.children[0]
+            assert title.tag == "h1"
+            assert "class" not in title.attributes
 
         # Got back up to the root element, hopefully
         assert current_node.tag in {"__root__", "html"}  # <html> might not be closed
