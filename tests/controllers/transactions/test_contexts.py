@@ -281,6 +281,7 @@ def test_ctx_options_selected(
         (None, "all", None, None, None, False, "All Transactions"),
         (None, "2000-01", None, None, None, False, "2000-01 Transactions"),
         (None, "2000", None, None, None, False, "2000 Transactions"),
+        (None, "custom", None, None, None, False, "Transactions"),
         (
             None,
             "custom",

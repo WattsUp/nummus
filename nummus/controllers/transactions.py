@@ -1367,9 +1367,6 @@ def _table_title(
     Returns:
         Title string
 
-    Raises:
-        BadRequest: period is unknown
-
     """
     if not period:
         title = ""
@@ -1381,9 +1378,8 @@ def _table_title(
         title = f"from {start}"
     elif end:
         title = f"to {end}"
-    else:  # pragma: no cover
-        msg = "Invalid period option"
-        raise exc.http.BadRequest(msg)
+    else:
+        title = ""
     title += " Transactions"
 
     if account:
