@@ -1,5 +1,5 @@
 "use strict";
-const labels = {
+const nummusLabels = {
   /**
    * On click of delete label, confirm action
    *
