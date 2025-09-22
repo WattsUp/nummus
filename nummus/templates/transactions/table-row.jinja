@@ -49,7 +49,7 @@
         <span class="max-md:hidden">
           {% for label in txn.labels %}
             <a
-              class="underline"
+              class="btn-tonal btn-tight inline-block"
               href="{{ url_for('income.page' if txn.amount > 0 else 'spending.page', label=label.key) }}"
               hx-get="{{ url_for('income.page' if txn.amount > 0 else 'spending.page', label=label.key) }}"
               hx-trigger="click consume"
@@ -58,7 +58,7 @@
               hx-swap="innerHTML show:window:top"
               hx-push-url="true"
             >
-              #{{ label.name }}
+              {{ label.name }}
             </a>
           {% endfor %}
         </span>

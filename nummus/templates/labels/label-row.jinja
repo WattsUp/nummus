@@ -1,5 +1,5 @@
 <label class="flex items-center justify-between py-0.5">
-  <div>#{{ label.name }}</div>
+  <div>{{ label.name }}</div>
   <button
     class="btn-text btn-sq"
     hx-get="{{ url_for('labels.label', uri=label.key) }}"

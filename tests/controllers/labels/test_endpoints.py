@@ -44,7 +44,7 @@ def test_validation(
 def test_page(web_client: WebClient, labels: dict[str, int]) -> None:
     result, _ = web_client.GET("labels.page")
     for label in labels:
-        assert f"#{label}" in result
+        assert label in result
 
 
 def test_label_get(web_client: WebClient, labels: dict[str, int]) -> None:
