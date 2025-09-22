@@ -1,4 +1,4 @@
-"""Checks for split transactions with same payee, category, and tag."""
+"""Checks for split transactions with same payee and category."""
 
 from __future__ import annotations
 
@@ -24,9 +24,9 @@ class RawIssue(NamedTuple):
 
 
 class UnnecessarySplits(Base):
-    """Checks for split transactions with same payee, category, and tag."""
+    """Checks for split transactions with same payee and category."""
 
-    _DESC = "Checks for split transactions with same payee, category, and tag."
+    _DESC = "Checks for split transactions with same payee and category."
     _SEVERE = False
 
     @override

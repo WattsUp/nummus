@@ -16,10 +16,10 @@ from nummus.controllers import (
     health,
     import_file,
     income,
+    labels,
     net_worth,
     performance,
     spending,
-    tags,
     transaction_categories,
     transactions,
 )
@@ -54,7 +54,7 @@ def add_routes(app: flask.Flask) -> None:
         net_worth,
         performance,
         spending,
-        tags,
+        labels,
         transactions,
         transaction_categories,
     ]

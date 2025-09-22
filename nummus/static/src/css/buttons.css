@@ -188,6 +188,11 @@
   }
 }
 
+@utility btn-tight {
+  --btn-px: calc(var(--spacing) * 2);
+  --btn-py: 0;
+}
+
 @utility btn-size-lg {
   @apply text-2xl;
 

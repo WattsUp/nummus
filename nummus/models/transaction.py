@@ -29,7 +29,7 @@ from nummus.models.base import (
     string_column_args,
     YIELD_PER,
 )
-from nummus.models.tag import Tag, TagLink
+from nummus.models.label import Label, LabelLink
 from nummus.models.transaction_category import TransactionCategory
 from nummus.models.utils import obj_session
 
@@ -252,7 +252,7 @@ class TransactionSplit(Base):
         query: orm.Query[TransactionSplit],
         search_str: str,
         category_names: dict[int, str] | None = None,
-        tag_names: dict[int, str] | None = None,
+        label_names: dict[int, str] | None = None,
     ) -> list[int]:
         """Search TransactionSplit text fields.
 
@@ -260,31 +260,31 @@ class TransactionSplit(Base):
             query: Original query, could be partially filtered
             search_str: String to search
             category_names: Provide category_names to save an extra query
-            tag_names: Provide tag_names to save an extra query
+            label_names: Provide label_names to save an extra query
 
         Returns:
             Ordered list of matches, from best to worst
 
         """
-        query = query.join(TagLink, full=True)
+        query = query.join(LabelLink, full=True)
         tokens_must, tokens_can, tokens_not = utils.tokenize_search_str(search_str)
 
         category_names = category_names or TransactionCategory.map_name(query.session)
-        tag_names = tag_names or Tag.map_name(query.session)
-        tag_names = {k: v.lower() for k, v in tag_names.items()}
+        label_names = label_names or Label.map_name(query.session)
+        label_names = {k: v.lower() for k, v in label_names.items()}
 
-        query = cls._search_must(query, tokens_must, category_names, tag_names)
-        query = cls._search_not(query, tokens_not, category_names, tag_names)
+        query = cls._search_must(query, tokens_must, category_names, label_names)
+        query = cls._search_not(query, tokens_not, category_names, label_names)
 
         sub_query = query.with_entities(TransactionSplit.id_).scalar_subquery()
         query_modified = (
-            query.session.query(TagLink)
-            .with_entities(TagLink.t_split_id, TagLink.tag_id)
-            .where(TagLink.t_split_id.in_(sub_query))
+            query.session.query(LabelLink)
+            .with_entities(LabelLink.t_split_id, LabelLink.label_id)
+            .where(LabelLink.t_split_id.in_(sub_query))
         )
-        split_tags: dict[int, set[int]] = defaultdict(set)
-        for t_split_id, tag_id in query_modified.yield_per(YIELD_PER):
-            split_tags[t_split_id].add(tag_id)
+        split_labels: dict[int, set[int]] = defaultdict(set)
+        for t_split_id, label_id in query_modified.yield_per(YIELD_PER):
+            split_labels[t_split_id].add(label_id)
 
         query_modified = query.with_entities(
             TransactionSplit.id_,
@@ -306,7 +306,7 @@ class TransactionSplit(Base):
             text_fields: str | None
 
             full_text = f"{category_names[cat_id]} {text_fields or ''} " + " ".join(
-                tag_names[tag_id] for tag_id in split_tags[t_id]
+                label_names[label_id] for label_id in split_labels[t_id]
             )
 
             # Clean a bit
@@ -334,7 +334,7 @@ class TransactionSplit(Base):
         query: orm.Query[TransactionSplit],
         tokens_must: set[str],
         category_names: dict[int, str],
-        tag_names: dict[int, str],
+        label_names: dict[int, str],
     ) -> orm.Query[TransactionSplit]:
         # Add tokens_must as an OR for each category and text_fields
         for token in tokens_must:
@@ -346,11 +346,13 @@ class TransactionSplit(Base):
             }
             if categories:
                 clauses_or.append(TransactionSplit.category_id.in_(categories))
-            tags = {
-                tag_id for tag_id, tag_name in tag_names.items() if token in tag_name
+            labels = {
+                label_id
+                for label_id, label_name in label_names.items()
+                if token in label_name
             }
-            if tags:
-                clauses_or.append(TagLink.tag_id.in_(tags))
+            if labels:
+                clauses_or.append(LabelLink.label_id.in_(labels))
             clauses_or.append(TransactionSplit.text_fields.ilike(f"%{token}%"))
             query = query.where(sqlalchemy.or_(*clauses_or))
         return query
@@ -361,7 +363,7 @@ class TransactionSplit(Base):
         query: orm.Query[TransactionSplit],
         tokens_not: set[str],
         category_names: dict[int, str],
-        tag_names: dict[int, str],
+        label_names: dict[int, str],
     ) -> orm.Query[TransactionSplit]:
         # Add tokens_not as an NAND for each category and text_fields
         for token in tokens_not:
@@ -372,12 +374,14 @@ class TransactionSplit(Base):
             }
             if categories:
                 query = query.where(TransactionSplit.category_id.not_in(categories))
-            tags = {
-                tag_id for tag_id, tag_name in tag_names.items() if token in tag_name
+            labels = {
+                label_id
+                for label_id, label_name in label_names.items()
+                if token in label_name
             }
-            if tags:
+            if labels:
                 query = query.where(
-                    TagLink.tag_id.not_in(tags) | TagLink.tag_id.is_(None),
+                    LabelLink.label_id.not_in(labels) | LabelLink.label_id.is_(None),
                 )
             query = query.where(TransactionSplit.text_fields.not_ilike(f"%{token}%"))
         return query

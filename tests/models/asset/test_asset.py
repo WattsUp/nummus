@@ -12,8 +12,8 @@ from nummus.models import (
     AssetCategory,
     AssetSector,
     AssetValuation,
+    LabelLink,
     query_count,
-    TagLink,
     update_rows,
     USSector,
 )
@@ -241,7 +241,7 @@ def test_prune_valuations_first_txn(
     for i in to_delete:
         txn = transactions[i]
         for t_split in txn.splits:
-            session.query(TagLink).where(TagLink.t_split_id == t_split.id_).delete()
+            session.query(LabelLink).where(LabelLink.t_split_id == t_split.id_).delete()
             session.delete(t_split)
         session.delete(txn)
     _ = valuations_five

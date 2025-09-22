@@ -17,13 +17,13 @@ const spending = {
    * @param {Object} byAccount Spending by account from spending controller
    * @param {Object} byPayee Spending by payee from spending controller
    * @param {Object} byCategory Spending by category from spending controller
-   * @param {Object} byTag Spending by tag from spending controller
+   * @param {Object} byLabel Spending by label from spending controller
    */
-  update(byAccount, byPayee, byCategory, byTag) {
+  update(byAccount, byPayee, byCategory, byLabel) {
     this.updateOne("spending-by-account", byAccount);
     this.updateOne("spending-by-payee", byPayee);
     this.updateOne("spending-by-category", byCategory);
-    this.updateOne("spending-by-tag", byTag);
+    this.updateOne("spending-by-label", byLabel);
 
     updateColorSwatches();
   },

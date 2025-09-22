@@ -192,8 +192,7 @@ class Migrator(ABC):
         s.execute(sqlalchemy.text(stmt))
 
         # Drop old table
-        stmt = f'DROP TABLE "{name}"'
-        s.execute(sqlalchemy.text(stmt))
+        self.drop_table(s, name)
 
         # Rename new into old
         stmt = f'ALTER TABLE "migration_temp" RENAME TO "{name}"'
@@ -204,6 +203,18 @@ class Migrator(ABC):
         s.execute(sqlalchemy.text(stmt))
 
         self.pending_schema_updates.add(model)
+
+    @staticmethod
+    def drop_table(s: orm.Session, table_name: str) -> None:
+        """Drop a table.
+
+        Args:
+            s: SQL session to use
+            table_name: Name of table to drop
+
+        """
+        stmt = f'DROP TABLE "{table_name}"'
+        s.execute(sqlalchemy.text(stmt))
 
 
 class SchemaMigrator(Migrator):

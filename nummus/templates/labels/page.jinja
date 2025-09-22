@@ -1,22 +1,22 @@
 <div
-  hx-get="{{ url_for('tags.page') }}"
-  hx-trigger="tag from:body"
+  hx-get="{{ url_for('labels.page') }}"
+  hx-trigger="label from:body"
   hx-target="#main"
 >
-  <h1>Tags</h1>
+  <h1>Labels</h1>
 </div>
 <details class="bg-surface-container-high mx-auto mb-2 max-w-2xl rounded-md">
   <summary
     class="bg-tertiary-container text-on-tertiary-container flex items-center gap-2 rounded-md p-2"
   >
     <icon>help</icon>
-    <span class="mr-auto">About tags</span>
+    <span class="mr-auto">About labels</span>
     <icon class="details-icon-open">keyboard_arrow_up</icon>
     <icon class="details-icon-closed">keyboard_arrow_down</icon>
   </summary>
   <div class="prose mx-auto px-2">
     <p>
-      Tag transactions to group them together even if they aren't the same
+      label transactions to group them together even if they aren't the same
       category. Then use
       <a
         href="{{ url_for('income.page') }}"
@@ -41,11 +41,11 @@
       </a>
       pages to analyze the group.
     </p>
-    <p>Common tags include specific vacations, projects, vehicles, etc.</p>
+    <p>Common labels include specific vacations, projects, vehicles, etc.</p>
   </div>
 </details>
 <div class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
-  {% for tag in tags %}
-    {% include "tags/tag-row.jinja" %}
+  {% for label in labels %}
+    {% include "labels/label-row.jinja" %}
   {% endfor %}
 </div>

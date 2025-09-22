@@ -7,8 +7,8 @@ import pytest
 from nummus.controllers import base, spending
 from nummus.models import (
     Account,
+    Label,
     query_count,
-    Tag,
     TransactionCategory,
     TransactionCategoryGroup,
     TransactionSplit,
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
         "start",
         "end",
         "category",
-        "tag",
+        "label",
         "is_income",
         "target",
     ),
@@ -53,13 +53,13 @@ def test_data_query(
     account: Account,
     transactions_spending: list[Transaction],
     categories: dict[str, int],
-    tags: dict[str, int],
+    labels: dict[str, int],
     include_account: bool,
     period: str | None,
     start: str | None,
     end: str | None,
     category: str | None,
-    tag: str | None,
+    label: str | None,
     is_income: bool,
     target: tuple[int, bool],
 ) -> None:
@@ -71,7 +71,7 @@ def test_data_query(
         start,
         end,
         TransactionCategory.id_to_uri(categories[category]) if category else None,
-        Tag.id_to_uri(tags[tag]) if tag else None,
+        Label.id_to_uri(labels[label]) if label else None,
         is_income=is_income,
     )
     assert dat_query.any_filters == target[1]
@@ -84,7 +84,7 @@ def test_ctx_options(
     account: Account,
     transactions: list[Transaction],
     categories: dict[str, int],
-    tags: dict[str, int],
+    labels: dict[str, int],
 ) -> None:
     _ = transactions
     dat_query = spending.DataQuery(
@@ -98,7 +98,7 @@ def test_ctx_options(
         today,
         Account.map_name(session),
         base.tranaction_category_groups(session),
-        Tag.map_name(session),
+        Label.map_name(session),
     )
 
     assert ctx["options_account"] == [base.NamePair(account.uri, account.name)]
@@ -123,8 +123,8 @@ def test_ctx_options(
         ],
     }
     assert ctx["options_category"] == target
-    assert ctx["options_tag"] == [
-        base.NamePair(Tag.id_to_uri(tags["engineer"]), "engineer"),
+    assert ctx["options_label"] == [
+        base.NamePair(Label.id_to_uri(labels["engineer"]), "engineer"),
     ]
 
 
@@ -133,7 +133,7 @@ def test_ctx_options_selected(
     session: orm.Session,
     account: Account,
     categories: dict[str, int],
-    tags: dict[str, int],
+    labels: dict[str, int],
 ) -> None:
     dat_query = spending.DataQuery(
         session.query(TransactionSplit),
@@ -146,10 +146,10 @@ def test_ctx_options_selected(
         today,
         Account.map_name(session),
         base.tranaction_category_groups(session),
-        Tag.map_name(session),
+        Label.map_name(session),
         account.uri,
         TransactionCategory.id_to_uri(categories["other income"]),
-        Tag.id_to_uri(tags["engineer"]),
+        Label.id_to_uri(labels["engineer"]),
     )
 
     assert ctx["options_account"] == [base.NamePair(account.uri, account.name)]
@@ -165,8 +165,8 @@ def test_ctx_options_selected(
         ],
     }
     assert ctx["options_category"] == target
-    assert ctx["options_tag"] == [
-        base.NamePair(Tag.id_to_uri(tags["engineer"]), "engineer"),
+    assert ctx["options_label"] == [
+        base.NamePair(Label.id_to_uri(labels["engineer"]), "engineer"),
     ]
 
 
@@ -193,13 +193,13 @@ def test_ctx_chart_empty(
     assert ctx["selected_period"] is None
     assert ctx["selected_account"] is None
     assert ctx["selected_category"] is None
-    assert ctx["selected_tag"] is None
+    assert ctx["selected_label"] is None
     assert ctx["start"] is None
     assert ctx["end"] is None
     assert len(ctx["by_account"]) == 0
     assert len(ctx["by_payee"]) == 0
     assert len(ctx["by_category"]) == 0
-    assert len(ctx["by_tag"]) == 0
+    assert len(ctx["by_label"]) == 0
 
 
 def test_ctx_chart(
@@ -230,4 +230,4 @@ def test_ctx_chart(
     assert len(ctx["by_account"]) == 1
     assert len(ctx["by_payee"]) == 1
     assert len(ctx["by_category"]) == 2
-    assert len(ctx["by_tag"]) == 2
+    assert len(ctx["by_label"]) == 2

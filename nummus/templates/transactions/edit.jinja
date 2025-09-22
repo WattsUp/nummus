@@ -23,8 +23,8 @@
       <option value="{{ item | e }}">{{ item }}</option>
     {% endfor %}
   </datalist>
-  <datalist id="tags">
-    {% for item in txn.tags %}
+  <datalist id="labels">
+    {% for item in txn.labels %}
       <option value="{{ item | e }}">{{ item }}</option>
     {% endfor %}
   </datalist>
@@ -225,14 +225,14 @@
     >
       <chips>
         <div>
-          {% for item in split.tags %}
-            {% with name="tag-" + split_i | string, value=item.name %}
+          {% for item in split.labels %}
+            {% with name="label-" + split_i | string, value=item.name %}
               {% include "shared/chip.jinja" %}
             {% endwith %}
           {% endfor %}
           <input
-            name="tag"
-            list="tags"
+            name="label"
+            list="labels"
             placeholder=""
             autocomplete="off"
             enterkeyhint="next"
@@ -240,13 +240,13 @@
             hx-trigger="keyup[keyCode==13],input delay:200ms"
             hx-target="next error"
             hx-include="this"
-            hx-on::after-request="chips.append(event, 'tag-{{ split_i }}')"
+            hx-on::after-request="chips.append(event, 'label-{{ split_i }}')"
           />
         </div>
       </chips>
       {% if not is_split %}<icon>label</icon>{% endif %}
       <div>
-        <div>Tags (optional)</div>
+        <div>labels (optional)</div>
       </div>
       <div>
         <error></error>

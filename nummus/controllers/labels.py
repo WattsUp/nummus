@@ -1,4 +1,4 @@
-"""Tags controllers."""
+"""Labels controllers."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import flask
 from nummus import exceptions as exc
 from nummus import web
 from nummus.controllers import base
-from nummus.models import Tag, TagLink
+from nummus.models import Label, LabelLink
 from nummus.models.base import YIELD_PER
 
 if TYPE_CHECKING:
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 def page() -> flask.Response:
-    """GET /tags.
+    """GET /labels.
 
     Returns:
         string HTML response
@@ -27,17 +27,17 @@ def page() -> flask.Response:
 
     with p.begin_session() as s:
         return base.page(
-            "tags/page.jinja",
-            "Tags",
-            tags=ctx_tags(s),
+            "labels/page.jinja",
+            "Labels",
+            labels=ctx_labels(s),
         )
 
 
-def tag(uri: str) -> str | flask.Response:
-    """GET, PUT, & DELETE /h/tags/t/<uri>.
+def label(uri: str) -> str | flask.Response:
+    """GET, PUT, & DELETE /h/labels/t/<uri>.
 
     Args:
-        uri: Tag URI
+        uri: Label URI
 
     Returns:
         string HTML response
@@ -45,29 +45,29 @@ def tag(uri: str) -> str | flask.Response:
     """
     p = web.portfolio
     with p.begin_session() as s:
-        tag = base.find(s, Tag, uri)
+        label = base.find(s, Label, uri)
 
         if flask.request.method == "GET":
             ctx: dict[str, object] = {
                 "uri": uri,
-                "name": tag.name,
+                "name": label.name,
             }
 
             return flask.render_template(
-                "tags/edit.jinja",
-                tag=ctx,
+                "labels/edit.jinja",
+                label=ctx,
             )
 
         if flask.request.method == "DELETE":
 
-            s.query(TagLink).where(
-                TagLink.tag_id == tag.id_,
+            s.query(LabelLink).where(
+                LabelLink.label_id == label.id_,
             ).delete()
-            s.delete(tag)
+            s.delete(label)
 
             return base.dialog_swap(
-                event="tag",
-                snackbar=f"Deleted tag {tag.name}",
+                event="label",
+                snackbar=f"Deleted label {label.name}",
             )
 
         form = flask.request.form
@@ -75,18 +75,18 @@ def tag(uri: str) -> str | flask.Response:
 
         try:
             with s.begin_nested():
-                tag.name = name
+                label.name = name
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return base.error(e)
 
         return base.dialog_swap(
-            event="tag",
+            event="label",
             snackbar="All changes saved",
         )
 
 
 def validation() -> str:
-    """GET /h/tags/validation.
+    """GET /h/labels/validation.
 
     Returns:
         string HTML response
@@ -101,15 +101,15 @@ def validation() -> str:
                 args["name"],
                 is_required=True,
                 session=s,
-                no_duplicates=Tag.name,
-                no_duplicate_wheres=([Tag.id_ != Tag.uri_to_id(uri)]),
+                no_duplicates=Label.name,
+                no_duplicate_wheres=([Label.id_ != Label.uri_to_id(uri)]),
             )
 
     raise NotImplementedError
 
 
-def ctx_tags(s: orm.Session) -> list[base.NamePair]:
-    """Get the context required to build the tags table.
+def ctx_labels(s: orm.Session) -> list[base.NamePair]:
+    """Get the context required to build the labels table.
 
     Args:
         s: SQL session to use
@@ -118,12 +118,14 @@ def ctx_tags(s: orm.Session) -> list[base.NamePair]:
         List of HTML context
 
     """
-    query = s.query(Tag).order_by(Tag.name)
-    return [base.NamePair(tag.uri, tag.name) for tag in query.yield_per(YIELD_PER)]
+    query = s.query(Label).order_by(Label.name)
+    return [
+        base.NamePair(label.uri, label.name) for label in query.yield_per(YIELD_PER)
+    ]
 
 
 ROUTES: base.Routes = {
-    "/tags": (page, ["GET"]),
-    "/h/tags/t/<path:uri>": (tag, ["GET", "PUT", "DELETE"]),
-    "/h/tags/validation": (validation, ["GET"]),
+    "/labels": (page, ["GET"]),
+    "/h/labels/t/<path:uri>": (label, ["GET", "PUT", "DELETE"]),
+    "/h/labels/validation": (validation, ["GET"]),
 }
