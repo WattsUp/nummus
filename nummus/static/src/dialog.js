@@ -64,30 +64,13 @@ const dialog = {
     htmx.findAll(d, "[required]").forEach((e) => {
       htmx.on(e, "input", this.updateSave.bind(this));
     });
-    const focusNext = function (start) {
-      const results = htmx.findAll(
-        d,
-        "input:not(:disabled), textarea:not(:disabled), select:not(:disabled)",
-      );
-      for (const next of results) {
-        if (
-          next.compareDocumentPosition(start) ===
-          Node.DOCUMENT_POSITION_PRECEDING
-        ) {
-          next.focus({ preventScroll: true });
-          next.selectionStart = 0;
-          next.selectionEnd = next.value.length;
-          return;
-        }
-      }
-    };
     htmx.findAll(d, "input, textarea, select").forEach((e) => {
       htmx.on(e, "input", this.changes.bind(this));
-      if (e.attributes["enterkeyhint"] == "next") {
+      if (e.getAttribute("name") != "label") {
         htmx.on(e, "keydown", (evt) => {
           if (evt.key == "Enter") {
             evt.preventDefault();
-            focusNext(e);
+            this.focusNext(e);
           }
         });
       }
@@ -97,6 +80,30 @@ const dialog = {
         e.scrollIntoView({ block: "nearest" });
       });
     });
+  },
+  /**
+   * Focus the next dialog input
+   *
+   * @param {Element} start - Starting element to search from
+   */
+  focusNext(start) {
+    const d = htmx.find("#dialog");
+    const results = htmx.findAll(
+      d,
+      "input:not(:disabled), textarea:not(:disabled), select:not(:disabled)",
+    );
+    for (const next of results) {
+      if (
+        next.compareDocumentPosition(start) === Node.DOCUMENT_POSITION_PRECEDING
+      ) {
+        next.focus({ preventScroll: true });
+        if (next.getAttribute("type") != "date") {
+          next.selectionStart = 0;
+          next.selectionEnd = next.value.length;
+        }
+        return;
+      }
+    }
   },
   /**
    * On load of a dialog, addListeners and autofocus
