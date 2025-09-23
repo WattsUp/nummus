@@ -237,7 +237,7 @@
             autocomplete="off"
             enterkeyhint="next"
             hx-get="{{ url_for('transactions.validation') }}"
-            hx-trigger="keyup[keyCode==13],input delay:200ms"
+            hx-trigger="keydown[keyCode==13],input delay:200ms"
             hx-target="next error"
             hx-include="this"
             hx-on::after-request="chips.append(event, 'label-{{ split_i }}')"

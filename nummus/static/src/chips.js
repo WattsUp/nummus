@@ -12,10 +12,13 @@ const chips = {
     // If validation response, ignore event
     if (evt.detail.xhr.response) return;
     // If not enter key event, ignore event
-    if (evt.detail.requestConfig.triggeringEvent.type !== "keyup") return;
+    if (evt.detail.requestConfig.triggeringEvent.type !== "keydown") return;
 
     const tgt = evt.target;
-    if (!tgt.value) return;
+    if (!tgt.value) {
+      dialog.focusNext(tgt);
+      return;
+    }
 
     // Create a chip
     const chip = document.createElement("div");
