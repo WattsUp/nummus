@@ -294,10 +294,7 @@ def new() -> str | flask.Response:
         )
 
         query = s.query(Label.name)
-        labels = sorted(
-            (item for item, in query.distinct()),
-            key=lambda item: item.lower(),
-        )
+        labels = sorted(item for item, in query.distinct())
 
         empty_split: SplitContext = {
             "parent_uri": "",
@@ -927,7 +924,7 @@ def ctx_txn(
         "splits": ctx_splits,
         "category_groups": base.tranaction_category_groups(s),
         "payees": payees,
-        "labels": list(labels.values()),
+        "labels": sorted(labels.values()),
         "similar_uri": similar_uri,
         "any_asset_splits": any_asset_splits,
     }

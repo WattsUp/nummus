@@ -353,7 +353,7 @@ def ctx_options(
             base.NamePair(Label.id_to_uri(label_id), labels[label_id])
             for label_id, in query_options.yield_per(YIELD_PER)
         ],
-        key=operator.itemgetter(0),
+        key=operator.itemgetter(1),
     )
     if len(options_label) == 0 and selected_label:
         label_id = Label.uri_to_id(selected_label)
