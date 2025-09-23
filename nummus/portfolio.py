@@ -99,7 +99,7 @@ class Portfolio:
         else:
             msg = f"Portfolio at {self._path_db} does not have salt file"
             raise FileNotFoundError(msg)
-        self._session_maker = orm.sessionmaker(sql.get_engine(self._path_db, self._enc))
+        self._session_maker = orm.sessionmaker(self.get_engine())
         configs = self._unlock()
 
         self._importers = importers.get_importers(self._path_importers)
@@ -113,6 +113,11 @@ class Portfolio:
     def path(self) -> Path:
         """Path to Portfolio database."""
         return self._path_db
+
+    @property
+    def path_salt(self) -> Path:
+        """Path to Portfolio salt database."""
+        return self._path_salt
 
     @property
     def importers_path(self) -> Path:
@@ -201,7 +206,7 @@ class Portfolio:
                 # Set new portfolio to max of nummus version and MIGRATORS
                 v = max(
                     Version(__version__),
-                    *[m.min_version for m in migrations.MIGRATORS],
+                    *[m.min_version() for m in migrations.MIGRATORS],
                 )
 
                 c_version = Config(
@@ -279,6 +284,15 @@ class Portfolio:
         models.load_cipher(base64.b64decode(cipher_b64))
         # All good :)
         return configs
+
+    def get_engine(self) -> sqlalchemy.Engine:
+        """Get SQL Engine to the database.
+
+        Returns:
+            Engine
+
+        """
+        return sql.get_engine(self._path_db, self._enc)
 
     def begin_session(self) -> contextlib.AbstractContextManager[orm.Session]:
         """Get SQL Session to the database.
@@ -371,8 +385,9 @@ class Portfolio:
         """
         v_db = self.db_version if version_str is None else Version(version_str)
         for m in migrations.MIGRATORS[::-1]:
-            if v_db < m.min_version:
-                return m.min_version
+            v_m = m.min_version()
+            if v_db < v_m:
+                return v_m
         return None
 
     def import_file(self, path: Path, path_debug: Path, *, force: bool = False) -> None:
@@ -739,7 +754,7 @@ class Portfolio:
         """
         backups: list[tuple[int, datetime.datetime]] = []
 
-        path_db = Path(p._path_db if isinstance(p, Portfolio) else p)  # noqa: SLF001
+        path_db = Path(p.path if isinstance(p, Portfolio) else p)
         path_db = path_db.resolve().with_suffix(".db")
         parent = path_db.parent
         name = path_db.with_suffix("").name
@@ -837,7 +852,7 @@ class Portfolio:
             InvalidBackupTarError: If backup is missing required files
 
         """
-        path_db = Path(p._path_db if isinstance(p, Portfolio) else p)  # noqa: SLF001
+        path_db = Path(p.path if isinstance(p, Portfolio) else p)
         path_db = path_db.resolve()
         parent = path_db.parent
         stem = path_db.stem
@@ -998,8 +1013,8 @@ class Portfolio:
         path_new = self._path_db.with_suffix(".new.db")
         dst = Portfolio.create(path_new, key)
 
-        engine_src = sql.get_engine(self._path_db, self._enc)
-        engine_dst = sql.get_engine(dst._path_db, dst._enc)  # noqa: SLF001
+        engine_src = self.get_engine()
+        engine_dst = dst.get_engine()
 
         exclude_tables = {"config"}
 
@@ -1054,11 +1069,11 @@ class Portfolio:
 
         # Move new database into existing
         shutil.copyfile(dst.path, self.path)
-        shutil.copyfile(dst._path_salt, self._path_salt)  # noqa: SLF001
+        shutil.copyfile(dst.path_salt, self.path_salt)
 
         # Test unlock
         self._enc = dst._enc  # noqa: SLF001
-        self._session_maker = orm.sessionmaker(sql.get_engine(self._path_db, self._enc))
+        self._session_maker = orm.sessionmaker(self.get_engine())
         self._unlock()
 
         # And delete temporary

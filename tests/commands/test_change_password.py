@@ -106,7 +106,7 @@ def test_get_keys_input(
     monkeypatch.setattr("getpass.getpass", mock_get_pass)
 
     c = ChangePassword(empty_portfolio.path, None, None)
-    new_db_key, new_web_key = c._get_keys()  # noqa: SLF001
+    new_db_key, new_web_key = c._get_keys()
 
     assert new_db_key == target_db
     assert new_web_key == target_web
@@ -122,7 +122,7 @@ def test_get_keys_file(
         file.write("web:01010101\n")
 
     c = ChangePassword(empty_portfolio.path, None, path_password_new)
-    new_db_key, new_web_key = c._get_keys()  # noqa: SLF001
+    new_db_key, new_web_key = c._get_keys()
 
     assert new_db_key == "12345678"
     assert new_web_key == "01010101"

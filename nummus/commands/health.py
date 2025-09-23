@@ -130,7 +130,7 @@ class Health(BaseCommand):
             if r:
                 first_uri = first_uri or r
                 any_issues = True
-                any_severe_issues = check_type.is_severe or any_severe_issues
+                any_severe_issues = check_type.is_severe() or any_severe_issues
         if any_issues:
             print(f"{Fore.MAGENTA}Use web interface to fix issues")
             print(
@@ -179,14 +179,14 @@ class Health(BaseCommand):
             c.test(s)
         n_issues = len(c.issues)
         if n_issues == 0:
-            print(f"{Fore.GREEN}Check '{c.name}' has no issues")
+            print(f"{Fore.GREEN}Check '{c.name()}' has no issues")
             if self._always_descriptions:
-                print(f"{Fore.CYAN}{textwrap.indent(c.description, '    ')}")
+                print(f"{Fore.CYAN}{textwrap.indent(c.description(), '    ')}")
             return None
-        color = Fore.RED if c.is_severe else Fore.YELLOW
+        color = Fore.RED if c.is_severe() else Fore.YELLOW
 
-        print(f"{color}Check '{c.name}'")
-        print(f"{Fore.CYAN}{textwrap.indent(c.description, '    ')}")
+        print(f"{color}Check '{c.name()}'")
+        print(f"{Fore.CYAN}{textwrap.indent(c.description(), '    ')}")
         print(f"{color}  Has the following issues:")
         first_uri = ""
         # coverage wants to see c.issues be empty but that is checked above

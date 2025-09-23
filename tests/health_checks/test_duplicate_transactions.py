@@ -55,7 +55,7 @@ def test_duplicate(
     assert query_count(session.query(HealthCheckIssue)) == 1
 
     i = session.query(HealthCheckIssue).one()
-    assert i.check == c.name
+    assert i.check == c.name()
     amount_raw = Transaction.amount.type.process_bind_param(txn.amount, None)
     assert i.value == f"{txn.account_id}.{txn.date_ord}.{amount_raw}"
     uri = i.uri

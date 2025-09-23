@@ -13,7 +13,6 @@ from sqlalchemy.schema import CreateTable
 
 from nummus import sql
 from nummus.models import dump_table_configs, get_constraints
-from nummus.utils import classproperty
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -44,15 +43,15 @@ class Migrator(ABC):
 
         """
 
-    @classproperty
-    def min_version(self) -> Version:
+    @classmethod
+    def min_version(cls) -> Version:
         """Minimum version that satisfies migrator.
 
         Returns:
             Version
 
         """
-        return Version(self._VERSION)
+        return Version(cls._VERSION)
 
     def add_column(
         self,

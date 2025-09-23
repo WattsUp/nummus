@@ -68,7 +68,7 @@ def test_migration_required(capsys: pytest.CaptureFixture, data_path: Path) -> N
 
     captured = capsys.readouterr()
     assert not captured.out
-    v = migrations.MIGRATORS[-1].min_version
+    v = migrations.MIGRATORS[-1].min_version()
     target = (
         f"{Fore.RED}Portfolio requires migration to v{v}\n"
         f"{Fore.YELLOW}Run 'nummus migrate' to resolve\n"

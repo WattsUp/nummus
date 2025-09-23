@@ -34,7 +34,7 @@ class Derived(base.BaseEnum):
     SEAFOAM_GREEN = 3
 
     @classmethod
-    def _lut(cls) -> Mapping[str, Derived]:
+    def lut(cls) -> Mapping[str, Derived]:
         return {"r": cls.RED, "b": cls.BLUE}
 
 

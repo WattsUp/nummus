@@ -195,13 +195,9 @@ class Cipher:
             Loaded Cipher
 
         Raises:
-            TypeError: if buf is not bytes
             ValueError: if Cipher fails to load
 
         """
-        if not isinstance(buf, bytes):
-            msg = f"Expected bytes, got: {type(buf)}"
-            raise TypeError(msg)
         n = ID_BYTES * _ROUNDS + 256 + ID_BITS
         if len(buf) != n:
             msg = f"Buf is {len(buf)}B long, expected {n}B"
@@ -226,7 +222,7 @@ def load_cipher(buf: bytes) -> None:
         buf: Bytes to load
 
     """
-    global _CIPHER  # noqa: PLW0603
+    global _CIPHER
     _CIPHER = Cipher.from_bytes(buf)
 
 

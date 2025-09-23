@@ -42,7 +42,7 @@ def test_mispelled_proper_noun(
     assert query_count(session.query(HealthCheckIssue)) == 1
 
     i = session.query(HealthCheckIssue).one()
-    assert i.check == c.name
+    assert i.check == c.name()
     assert i.value == account.institution
     uri = i.uri
 
@@ -64,7 +64,7 @@ def test_mispelled(
     assert query_count(session.query(HealthCheckIssue)) == 1
 
     i = session.query(HealthCheckIssue).one()
-    assert i.check == c.name
+    assert i.check == c.name()
     assert i.value == "mispel"
     uri = i.uri
 

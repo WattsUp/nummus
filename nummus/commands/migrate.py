@@ -59,8 +59,8 @@ class Migrate(BaseCommand):
         try:
             pending_schema_updates: set[type[Base]] = set()
             for m_class in MIGRATORS:
-                m_v = m_class.min_version
-                if v_db >= m_v:
+                v_m = m_class.min_version()
+                if v_db >= v_m:
                     continue
                 m = m_class()
                 any_migrated = True
@@ -68,7 +68,7 @@ class Migrate(BaseCommand):
                 for line in comments:
                     print(f"{Fore.CYAN}{line}")
 
-                print(f"{Fore.GREEN}Portfolio migrated to v{m_v}")
+                print(f"{Fore.GREEN}Portfolio migrated to v{v_m}")
                 pending_schema_updates.update(m.pending_schema_updates)
 
             if pending_schema_updates:
@@ -79,7 +79,7 @@ class Migrate(BaseCommand):
             with p.begin_session() as s:
                 v = max(
                     Version(__version__),
-                    *[m.min_version for m in MIGRATORS],
+                    *[m.min_version() for m in MIGRATORS],
                 )
 
                 s.query(Config).where(Config.key == ConfigKey.VERSION).update(

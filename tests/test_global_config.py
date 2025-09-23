@@ -17,7 +17,7 @@ def test_get_non_existant(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> No
     # Config file doesn't exist so expect defaults
     config = global_config.get()
     assert isinstance(config, dict)
-    for k, v in global_config._DEFAULTS.items():  # noqa: SLF001
+    for k, v in global_config._DEFAULTS.items():
         assert config.pop(k) == v
     assert len(config) == 0
 
@@ -31,7 +31,7 @@ def test_get_empty(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # Empty section should still be defaults
     config = global_config.get()
     assert isinstance(config, dict)
-    for k, v in global_config._DEFAULTS.items():  # noqa: SLF001
+    for k, v in global_config._DEFAULTS.items():
         assert config.pop(k) == v
     assert len(config) == 0
 

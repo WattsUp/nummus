@@ -320,7 +320,7 @@ def test_table_title(
     uncleared: bool,
     target: str,
 ) -> None:
-    title = txn_controller._table_title(  # noqa: SLF001
+    title = txn_controller._table_title(
         account,
         period,
         start,
@@ -339,7 +339,7 @@ def test_table_results_empty(
         r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
     }
 
-    result = txn_controller._table_results(  # noqa: SLF001
+    result = txn_controller._table_results(
         session.query(TransactionSplit),
         assets,
         Account.map_name(session),
@@ -362,7 +362,7 @@ def test_table_results(
     labels = Label.map_name(session)
     categories = TransactionCategory.map_name_emoji(session)
 
-    result = txn_controller._table_results(  # noqa: SLF001
+    result = txn_controller._table_results(
         session.query(TransactionSplit).order_by(TransactionSplit.date_ord),
         assets,
         accounts,

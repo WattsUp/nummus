@@ -215,11 +215,11 @@ class BaseEnum(enum.IntEnum):
             s = value.upper().strip().replace(" ", "_")
             if s in cls._member_names_:
                 return cls[s]
-            return cls._lut().get(s.lower())
+            return cls.lut().get(s.lower())
         return super()._missing_(value)
 
     @classmethod
-    def _lut(cls) -> Mapping[str, BaseEnum]:
+    def lut(cls) -> Mapping[str, BaseEnum]:
         """Look up table, mapping of strings to matching Enums.
 
         Returns:

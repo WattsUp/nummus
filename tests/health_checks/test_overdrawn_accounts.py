@@ -42,7 +42,7 @@ def test_check(
     assert query_count(session.query(HealthCheckIssue)) == 1
 
     i = session.query(HealthCheckIssue).one()
-    assert i.check == c.name
+    assert i.check == c.name()
     assert i.value == f"{account.id_}.{t_split.date_ord}"
     uri = i.uri
 

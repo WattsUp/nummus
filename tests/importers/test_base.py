@@ -42,7 +42,7 @@ def test_init_with_raw_buf(data_path: Path) -> None:
     with path.open("rb") as file:
         buf = file.read()
     i = Derived(buf=buf)
-    assert i._buf == buf  # noqa: SLF001
+    assert i._buf == buf
 
 
 def test_init_with_pdf_buf(data_path: Path) -> None:
@@ -50,7 +50,7 @@ def test_init_with_pdf_buf(data_path: Path) -> None:
     with path.open("rb") as file:
         buf_pdf = file.read().decode().splitlines()
     i = Derived(buf_pdf=buf_pdf)
-    assert i._buf_pdf == buf_pdf  # noqa: SLF001
+    assert i._buf_pdf == buf_pdf
 
 
 @pytest.mark.parametrize(

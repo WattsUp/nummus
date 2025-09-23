@@ -51,7 +51,7 @@ class USSector(BaseEnum):
 
     @override
     @classmethod
-    def _lut(cls) -> Mapping[str, BaseEnum]:
+    def lut(cls) -> Mapping[str, BaseEnum]:
         return {
             "realestate": USSector.REAL_ESTATE,
         }

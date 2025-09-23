@@ -231,7 +231,7 @@ class TransactionSplit(Base):
     @parent.setter
     def parent(self, parent: Transaction) -> None:
         if parent.id_ is None:
-            self._parent_tmp = parent
+            self.parent_tmp = parent
             return
         super().__setattr__("parent_id", parent.id_)
         super().__setattr__("date_ord", parent.date_ord)
@@ -402,9 +402,9 @@ def before_insert_transaction_split(
 
     """
     # If TransactionSplit has parent_tmp set, move it to real parent
-    if hasattr(target, "_parent_tmp"):
-        target.parent = target._parent_tmp  # noqa: SLF001
-        delattr(target, "_parent_tmp")
+    if hasattr(target, "parent_tmp"):
+        target.parent = target.parent_tmp
+        delattr(target, "parent_tmp")
 
 
 class Transaction(Base):

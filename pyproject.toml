@@ -182,12 +182,19 @@ exclude = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"docker/*.py" = [
+  "INP001", # Implicit namespace
+  "S104",   # binding to 0.0.0.0
+]
 "nummus/commands/*.py" = [
   "T201",    # Allow printing for commands
   "PLC0415", # Allow imports outside of top for faster time to main
 ]
+"nummus/models/base_uri.py" = [
+  "PLW0603", # Allow global CIPHER
+]
 "nummus/migrations/v*.py" = [
-  "N801", # Allow underscore in class name
+  "N801", # Allow underscore in class name for version names
 ]
 "tests/*.py" = [
   "D100",    # Disable missing docstrings in tests
@@ -206,9 +213,13 @@ exclude = [
   "PLR2004", # Uses magic numbers in pytest
   "FBT001",  # Boolean positional arguments
   "T201",    # Allow printing for extra context
+  "SLF001",  # Allow access to privates
 ]
 "tests/controllers/*.py" = [
   "N802", # Allow CAPS methods
+]
+"tests/mock*.py" = [
+  "TRY002", # Allow base Exception
 ]
 
 [tool.ruff.lint.flake8-annotations]

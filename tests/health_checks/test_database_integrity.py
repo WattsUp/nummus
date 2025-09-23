@@ -49,7 +49,7 @@ def test_corrupt(session: orm.Session) -> None:
 
     i = session.query(HealthCheckIssue).first()
     assert i is not None
-    assert i.check == c.name
+    assert i.check == c.name()
     assert i.value == "0"
 
     # The balanced $100 transfer also on this day will not show up

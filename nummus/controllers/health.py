@@ -137,7 +137,7 @@ def ctx_checks(s: orm.Session, *, run: bool) -> HealthContext:
 
     checks: list[HealthCheckContext] = []
     for check_type in health_checks.CHECKS:
-        name = check_type.name
+        name = check_type.name()
 
         if run:
             c = check_type()
@@ -150,8 +150,8 @@ def ctx_checks(s: orm.Session, *, run: bool) -> HealthContext:
             {
                 "name": name,
                 "uri": name.replace(" ", "-").lower(),
-                "description": check_type.description,
-                "is_severe": check_type.is_severe,
+                "description": check_type.description(),
+                "is_severe": check_type.is_severe(),
                 "issues": dict(sorted(c_issues.items(), key=operator.itemgetter(1))),
             },
         )

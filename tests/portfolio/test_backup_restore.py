@@ -177,7 +177,7 @@ def test_restore_path(empty_portfolio: Portfolio) -> None:
     assert empty_portfolio.path.exists()
 
     with pytest.raises(exc.ProtectedObjectNotFoundError):
-        empty_portfolio._unlock()  # noqa: SLF001
+        empty_portfolio._unlock()
 
 
 def test_restore_version_not_found(empty_portfolio: Portfolio) -> None:

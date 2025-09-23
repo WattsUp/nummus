@@ -53,7 +53,7 @@ class MockTicker:
         assert raise_errors
         if self._symbol not in {"BANANA", "^BANANA"}:
             msg = f"{self._symbol}: No timezone found, symbol may be delisted"
-            raise Exception(msg)  # noqa: TRY002
+            raise Exception(msg)
 
         # Create close prices = date_ord
         # Create a split every monday

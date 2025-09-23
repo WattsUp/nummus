@@ -48,7 +48,7 @@ def test_no_account_number(
     assert query_count(session.query(HealthCheckIssue)) == 1
 
     i = session.query(HealthCheckIssue).one()
-    assert i.check == c.name
+    assert i.check == c.name()
     assert i.value == f"{account.uri}.number"
     uri = i.uri
 
@@ -69,7 +69,7 @@ def test_no_asset_description(
     assert query_count(session.query(HealthCheckIssue)) == 1
 
     i = session.query(HealthCheckIssue).one()
-    assert i.check == c.name
+    assert i.check == c.name()
     assert i.value == f"{asset.uri}.description"
     uri = i.uri
 
@@ -90,7 +90,7 @@ def test_no_txn_payee(
     assert query_count(session.query(HealthCheckIssue)) == 1
 
     i = session.query(HealthCheckIssue).one()
-    assert i.check == c.name
+    assert i.check == c.name()
     assert i.value == f"{txn.uri}.payee"
     uri = i.uri
 
@@ -111,7 +111,7 @@ def test_uncategorized(
     assert query_count(session.query(HealthCheckIssue)) == 1
 
     i = session.query(HealthCheckIssue).one()
-    assert i.check == c.name
+    assert i.check == c.name()
     assert i.value == f"{t_split.uri}.category"
     uri = i.uri
 

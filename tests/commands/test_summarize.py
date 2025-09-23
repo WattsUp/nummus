@@ -23,7 +23,7 @@ def test_empty_summary(
     empty_portfolio: Portfolio,
 ) -> None:
     c = Summarize(empty_portfolio.path, None, include_all=False)
-    result = c._get_summary()  # noqa: SLF001
+    result = c._get_summary()
 
     target: _Summary = {
         "n_accounts": 0,
@@ -52,7 +52,7 @@ def test_non_empty_summary(
 
     utc = utc.replace(tzinfo=zoneinfo.ZoneInfo("UTC"))
     with time_machine.travel(utc):
-        result = c._get_summary()  # noqa: SLF001
+        result = c._get_summary()
 
     target: _Summary = {
         "n_accounts": 1,
@@ -97,7 +97,7 @@ def test_exclude_empty(
     _ = asset
 
     c = Summarize(empty_portfolio.path, None, include_all=False)
-    result = c._get_summary()  # noqa: SLF001
+    result = c._get_summary()
 
     target: _Summary = {
         "n_accounts": 1,
