@@ -53,7 +53,7 @@ class MockTicker:
         assert raise_errors
         if self._symbol not in {"BANANA", "^BANANA"}:
             msg = f"{self._symbol}: No timezone found, symbol may be delisted"
-            raise Exception(msg)  # noqa: TRY002
+            raise Exception(msg)
 
         # Create close prices = date_ord
         # Create a split every monday
@@ -82,4 +82,7 @@ class MockTicker:
 
             dt += datetime.timedelta(days=1)
 
-        return pd.DataFrame(index=dates, data={"Close": close, "Stock Splits": split})  # type: ignore[attr-defined]
+        return pd.DataFrame(
+            index=pd.to_datetime(dates),
+            data={"Close": close, "Stock Splits": split},
+        )

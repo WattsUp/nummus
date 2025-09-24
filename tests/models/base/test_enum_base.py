@@ -16,7 +16,7 @@ class Derived(base.BaseEnum):
     SEAFOAM_GREEN = 3
 
     @classmethod
-    def _lut(cls) -> Mapping[str, Derived]:
+    def lut(cls) -> Mapping[str, Derived]:
         return {"r": cls.RED, "b": cls.BLUE}
 
 
@@ -50,7 +50,7 @@ def test_missing_each_enum(e: Derived) -> None:
     assert Derived(e.value) == e
 
 
-@pytest.mark.parametrize(("s", "e"), Derived._lut().items())  # noqa: SLF001
+@pytest.mark.parametrize(("s", "e"), Derived.lut().items())
 def test_missing_each_lut(s: str, e: Derived) -> None:
     assert Derived(s.upper()) == e
 

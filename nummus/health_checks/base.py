@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import ClassVar, TYPE_CHECKING
 
 from nummus import utils
 from nummus.models import HealthCheckIssue, update_rows, YIELD_PER
-from nummus.utils import classproperty
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -16,8 +15,8 @@ if TYPE_CHECKING:
 class Base(ABC):
     """Base health check class."""
 
-    _DESC: str = ""
-    _SEVERE: bool = False
+    _DESC: ClassVar[str]
+    _SEVERE: ClassVar[bool]
 
     def __init__(
         self,
@@ -37,8 +36,8 @@ class Base(ABC):
         self._issues: dict[str, str] = {}
         self._no_ignores = no_ignores
 
-    @classproperty
-    def name(cls) -> str:  # noqa: N805
+    @classmethod
+    def name(cls) -> str:
         """Health check name.
 
         Returns:
@@ -47,8 +46,8 @@ class Base(ABC):
         """
         return utils.camel_to_snake(cls.__name__).replace("_", " ").capitalize()
 
-    @classproperty
-    def description(cls) -> str:  # noqa: N805
+    @classmethod
+    def description(cls) -> str:
         """Health check description.
 
         Returns:
@@ -67,8 +66,8 @@ class Base(ABC):
         """True if check found any issues."""
         return len(self._issues) != 0
 
-    @classproperty
-    def is_severe(cls) -> bool:  # noqa: N805
+    @classmethod
+    def is_severe(cls) -> bool:
         """Check if issues are severe.
 
         Returns:
@@ -99,7 +98,7 @@ class Base(ABC):
         (
             s.query(HealthCheckIssue)
             .where(
-                HealthCheckIssue.check == cls.name,
+                HealthCheckIssue.check == cls.name(),
                 HealthCheckIssue.value.in_(values),
             )
             .update({"ignore": True})
@@ -114,17 +113,17 @@ class Base(ABC):
 
         """
         query = s.query(HealthCheckIssue.value).where(
-            HealthCheckIssue.check == self.name,
+            HealthCheckIssue.check == self.name(),
             HealthCheckIssue.ignore.is_(True),
         )
         ignored = {r[0] for r in query.yield_per(YIELD_PER)}
 
         updates: dict[object, dict[str, object]] = {
-            value: {"check": self.name, "ignore": value in ignored, "msg": msg}
+            value: {"check": self.name(), "ignore": value in ignored, "msg": msg}
             for value, msg in issues.items()
         }
         query = s.query(HealthCheckIssue).where(
-            HealthCheckIssue.check == self.name,
+            HealthCheckIssue.check == self.name(),
         )
         update_rows(s, HealthCheckIssue, query, "value", updates)
         s.flush()
@@ -133,7 +132,7 @@ class Base(ABC):
             s.query(HealthCheckIssue)
             .with_entities(HealthCheckIssue.id_, HealthCheckIssue.msg)
             .where(
-                HealthCheckIssue.check == self.name,
+                HealthCheckIssue.check == self.name(),
             )
         )
         if not self._no_ignores:

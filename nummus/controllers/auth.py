@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import flask
+import flask.typing
 import flask_login
 
 from nummus import exceptions as exc
@@ -14,12 +15,11 @@ from nummus.controllers import base
 from nummus.models import Config, ConfigKey
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
 
     import werkzeug
 
 
-def login_exempt(func: Callable) -> Callable:
+def login_exempt(func: flask.typing.RouteCallable) -> flask.typing.RouteCallable:
     """Dectorator to exclude route from requiring authentication.
 
     Args:
@@ -29,6 +29,7 @@ def login_exempt(func: Callable) -> Callable:
         Decorated function
 
     """
+    # login_exempt is not an attribute of RouteCallable
     func.login_exempt = True  # type: ignore[attr-defined]
     return func
 

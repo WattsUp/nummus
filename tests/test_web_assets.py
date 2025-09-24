@@ -13,7 +13,7 @@ def test_tailwindcss_filter() -> None:
     f = web_assets.TailwindCSSFilter()
 
     out = io.StringIO()
-    f.output(None, out)  # type: ignore[attr-defined]
+    f.output(io.StringIO(), out)
     buf = out.getvalue()
     assert "/*! tailwindcss" in buf
     assert "*,:after,:before" in buf

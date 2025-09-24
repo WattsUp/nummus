@@ -100,6 +100,7 @@ class FlaskExtension:
         login_manager = flask_login.LoginManager()
         login_manager.init_app(app)
         login_manager.user_loader(auth.get_user)
+        # LoginManager.login_view not typed to str | None
         login_manager.login_view = "auth.page_login"  # type: ignore[attr-defined]
 
         if p.is_encrypted:

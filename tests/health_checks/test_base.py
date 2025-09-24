@@ -32,7 +32,7 @@ def issues(
     value_1 = rand_str_generator()
     c = MockCheck()
     d = {value_0: "msg 0", value_1: "msg 1"}
-    c._commit_issues(session, d)  # noqa: SLF001
+    c._commit_issues(session, d)
     c.ignore(session, [value_0])
 
     return [(i.value, i.id_) for i in session.query(HealthCheckIssue).all()]
@@ -40,16 +40,16 @@ def issues(
 
 def test_init_properties() -> None:
     c = MockCheck()
-    assert c.name == "Mock check"
-    assert c.description == MockCheck._DESC  # noqa: SLF001
+    assert c.name() == "Mock check"
+    assert c.description() == MockCheck._DESC
     assert not c.any_issues
-    assert c.is_severe
+    assert c.is_severe()
 
 
 def test_any_issues(rand_str: str) -> None:
     c = MockCheck()
     d = {"0": rand_str}
-    c._issues = d  # noqa: SLF001
+    c._issues = d
     assert c.any_issues
     assert c.issues == d
 
@@ -64,18 +64,18 @@ def test_commit_issues(
     value_1 = rand_str_generator()
     c = MockCheck(no_ignores=no_ignores)
     d = {value_0: "msg 0", value_1: "msg 1"}
-    c._commit_issues(session, d)  # noqa: SLF001
+    c._commit_issues(session, d)
     c.ignore(session, [value_0])
     # Refresh c.issues
-    c._commit_issues(session, d)  # noqa: SLF001
+    c._commit_issues(session, d)
 
     i_0 = session.query(HealthCheckIssue).where(HealthCheckIssue.value == value_0).one()
-    assert i_0.check == MockCheck.name
+    assert i_0.check == MockCheck.name()
     assert i_0.msg == "msg 0"
     assert i_0.ignore
 
     i_1 = session.query(HealthCheckIssue).where(HealthCheckIssue.value == value_1).one()
-    assert i_1.check == MockCheck.name
+    assert i_1.check == MockCheck.name()
     assert i_1.msg == "msg 1"
     assert not i_1.ignore
 
@@ -102,7 +102,7 @@ def test_ignore(
         .where(HealthCheckIssue.id_ == issues[0][1])
         .one()
     )
-    assert i.check == MockCheck.name
+    assert i.check == MockCheck.name()
     assert i.value == issues[0][0]
     assert i.msg == "msg 0"
     assert i.ignore
@@ -112,7 +112,7 @@ def test_ignore(
         .where(HealthCheckIssue.id_ == issues[1][1])
         .one()
     )
-    assert i.check == MockCheck.name
+    assert i.check == MockCheck.name()
     assert i.value == issues[1][0]
     assert i.msg == "msg 1"
     assert not i.ignore
@@ -120,4 +120,4 @@ def test_ignore(
 
 @pytest.mark.parametrize("check", CHECKS)
 def test_descriptions(check: type[Base]) -> None:
-    assert check.description[-1] == "."
+    assert check.description()[-1] == "."

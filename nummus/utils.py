@@ -964,39 +964,6 @@ def strip_emojis(text: str) -> str:
     return "".join(t.value for t in tokens if isinstance(t.value, str)).strip()
 
 
-class classproperty[T]:  # noqa: N801
-    """Decorator for @property but on classes not instances."""
-
-    def __init__(self, fget: Callable) -> None:
-        """Initialize classproperty."""
-        self.fget = fget
-        self.__doc__ = fget.__doc__
-
-    def __get__(self, _: object, cls: type | None = None) -> T:
-        """Get classproperty value.
-
-        Args:
-            cls: Class to get value from
-
-        Returns:
-            Value
-
-        Raises:
-            TypeError: If decorator is not on a class
-            TypeError: If fget is not set
-
-        """
-        if cls is None:  # pragma: no cover
-            # Don't need to test debug code
-            msg = "Decorator not on a class"
-            raise TypeError(msg)
-        if self.fget is None:  # pragma: no cover
-            # Don't need to test debug code
-            msg = "No fget set"
-            raise TypeError(msg)
-        return self.fget(cls)
-
-
 def tokenize_search_str(search_str: str) -> Tokens:
     """Parse a search string into tokens.
 

@@ -14,6 +14,7 @@ from nummus.models import (
     AssetValuation,
     LabelLink,
     query_count,
+    query_to_dict,
     update_rows,
     USSector,
 )
@@ -358,7 +359,7 @@ def test_update_sectors(
         .with_entities(AssetSector.sector, AssetSector.weight)
         .where(AssetSector.asset_id == asset.id_)
     )
-    sectors: dict[USSector, Decimal] = dict(query.all())  # type: ignore[attr-defined]
+    sectors: dict[USSector, Decimal] = query_to_dict(query)
     assert sectors == target
 
 

@@ -48,7 +48,7 @@ def test_no_valuations(
     assert query_count(session.query(HealthCheckIssue)) == 1
 
     i = session.query(HealthCheckIssue).one()
-    assert i.check == c.name
+    assert i.check == c.name()
     assert i.value == asset.uri
     uri = i.uri
 
@@ -68,7 +68,7 @@ def test_no_valuations_before_txn(
     assert query_count(session.query(HealthCheckIssue)) == 1
 
     i = session.query(HealthCheckIssue).one()
-    assert i.check == c.name
+    assert i.check == c.name()
     assert i.value == asset.uri
     uri = i.uri
 

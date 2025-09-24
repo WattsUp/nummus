@@ -13,7 +13,6 @@ from sqlalchemy.schema import CreateTable
 
 from nummus import sql
 from nummus.models import dump_table_configs, get_constraints
-from nummus.utils import classproperty
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -44,15 +43,15 @@ class Migrator(ABC):
 
         """
 
-    @classproperty
-    def min_version(self) -> Version:
+    @classmethod
+    def min_version(cls) -> Version:
         """Minimum version that satisfies migrator.
 
         Returns:
             Version
 
         """
-        return Version(self._VERSION)
+        return Version(cls._VERSION)
 
     def add_column(
         self,
@@ -153,8 +152,8 @@ class Migrator(ABC):
         drop = drop or set()
         # In SQLite we can do the hacky way or recreate the table
         # Opt for recreate
-        table: sqlalchemy.Table = model.__table__  # type: ignore[attr-defined]
-        name: str = model.__tablename__  # type: ignore[attr-defined]
+        table: sqlalchemy.Table = model.sql_table()
+        name: str = model.__tablename__
 
         if create_stmt:
             new_config = create_stmt.splitlines()
@@ -234,7 +233,7 @@ class SchemaMigrator(Migrator):
     def migrate(self, p: portfolio.Portfolio) -> list[str]:
         for model in self.pending_schema_updates:
             with p.begin_session() as s:
-                table: sqlalchemy.Table = model.__table__  # type: ignore[attr-defined]
+                table: sqlalchemy.Table = model.sql_table()
                 create_stmt = CreateTable(table).compile(s.get_bind()).string.strip()
                 self.recreate_table(s, model, create_stmt=create_stmt)
         return []

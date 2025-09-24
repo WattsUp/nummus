@@ -28,7 +28,7 @@ class MockMigrator(migrations.Migrator):
 
 def test_version() -> None:
     m = MockMigrator()
-    assert m.min_version == Version(m._VERSION)  # noqa: SLF001
+    assert m.min_version() == Version("999.0.0")
 
 
 def test_drop_column(session: orm.Session) -> None:

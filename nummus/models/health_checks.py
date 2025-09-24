@@ -18,6 +18,7 @@ class HealthCheckIssue(Base):
 
     """
 
+    __tablename__ = "health_check_issue"
     __table_id__ = 0x00000000
 
     check: ORMStr

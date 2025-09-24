@@ -198,7 +198,7 @@ def test_evaluate_real_statement(s: str | None, target: Decimal | None) -> None:
 
 def test_eval_node_unknown() -> None:
     with pytest.raises(exc.EvaluationError):
-        utils._eval_node(ast.expr())  # noqa: SLF001
+        utils._eval_node(ast.expr())
 
 
 @pytest.mark.parametrize(
@@ -919,21 +919,6 @@ def test_clamp_custom_min() -> None:
 @pytest.mark.parametrize("suffix", ["", "😀"])
 def test_strip_emojis(rand_str: str, suffix: str) -> None:
     assert utils.strip_emojis(rand_str + suffix) == rand_str
-
-
-class _Color:
-
-    @utils.classproperty
-    def name(cls) -> str:  # noqa: N805
-        return "RED"
-
-
-def test_classproperty_get_on_class() -> None:
-    assert _Color.name == "RED"
-
-
-def test_classproperty_get_on_object() -> None:
-    assert _Color().name == "RED"
 
 
 def test_tokenize_search_str_only_symbols() -> None:

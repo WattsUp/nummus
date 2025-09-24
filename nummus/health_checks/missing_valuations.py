@@ -8,7 +8,7 @@ from typing import override, TYPE_CHECKING
 from sqlalchemy import func
 
 from nummus.health_checks.base import Base
-from nummus.models import Asset, AssetValuation, TransactionSplit, YIELD_PER
+from nummus.models import Asset, AssetValuation, query_to_dict, TransactionSplit
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -34,7 +34,7 @@ class MissingAssetValuations(Base):
             .where(TransactionSplit.asset_id.isnot(None))
             .group_by(TransactionSplit.asset_id)
         )
-        first_date_ords: dict[int, int] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
+        first_date_ords: dict[int | None, int] = query_to_dict(query)
 
         query = (
             s.query(AssetValuation)
@@ -44,9 +44,11 @@ class MissingAssetValuations(Base):
             )
             .group_by(AssetValuation.asset_id)
         )
-        first_valuations: dict[int, int] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
+        first_valuations: dict[int, int] = query_to_dict(query)
 
         for a_id, date_ord in first_date_ords.items():
+            if a_id is None:
+                raise TypeError
             uri = Asset.id_to_uri(a_id)
 
             date_ord_v = first_valuations.get(a_id)

@@ -44,7 +44,7 @@ def test_missing_link(
     assert query_count(session.query(HealthCheckIssue)) == 1
 
     i = session.query(HealthCheckIssue).one()
-    assert i.check == c.name
+    assert i.check == c.name()
     assert i.value == t_split.uri
     uri = i.uri
 
@@ -71,7 +71,7 @@ def test_extra_link(
     assert query_count(session.query(HealthCheckIssue)) == 1
 
     i = session.query(HealthCheckIssue).one()
-    assert i.check == c.name
+    assert i.check == c.name()
     assert i.value == t_split.uri
     uri = i.uri
 

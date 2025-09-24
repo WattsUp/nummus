@@ -41,6 +41,7 @@ from nummus.models.utils import (
     one_or_none,
     paginate,
     query_count,
+    query_to_dict,
     update_rows,
     update_rows_list,
 )
@@ -86,6 +87,7 @@ __all__ = [
     "one_or_none",
     "paginate",
     "query_count",
+    "query_to_dict",
     "update_rows",
     "update_rows_list",
 ]
@@ -129,7 +131,7 @@ def metadata_create_all(s: orm.Session) -> None:
         s: Session to create tables for
 
     """
-    Base.metadata.create_all(s.get_bind(), [m.__table__ for m in _MODELS])  # type: ignore[attr-defined]
+    Base.metadata.create_all(s.get_bind(), [m.sql_table() for m in _MODELS])
     s.commit()
 
 

@@ -27,6 +27,7 @@ class Config(Base):
 
     """
 
+    __tablename__ = "config"
     __table_id__ = None
 
     key: orm.Mapped[ConfigKey] = orm.mapped_column(SQLEnum(ConfigKey), unique=True)

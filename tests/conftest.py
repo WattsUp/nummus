@@ -124,7 +124,7 @@ def rand_real(rand_real_generator: RandomRealGenerator) -> Decimal:
 def sql_engine_args() -> None:
     """Change all engines to NullPool so timing isn't an issue."""
     # Needed specifically for DatabaseIntegrity test
-    sql._ENGINE_ARGS["poolclass"] = pool.NullPool  # noqa: SLF001
+    sql._ENGINE_ARGS["poolclass"] = pool.NullPool
 
 
 class EmptyPortfolioGenerator:
@@ -225,13 +225,13 @@ def session(empty_portfolio: Portfolio) -> orm.Session:
 @pytest.fixture(autouse=True)
 def uri_cipher() -> None:
     """Generate a URI cipher."""
-    base_uri._CIPHER = base_uri.Cipher.generate()  # noqa: SLF001
+    base_uri._CIPHER = base_uri.Cipher.generate()
 
 
 @pytest.fixture(autouse=True)
 def clear_config_cache() -> None:
     """Clear global config cache."""
-    global_config._CACHE.clear()  # noqa: SLF001
+    global_config._CACHE.clear()
 
 
 @pytest.fixture(scope="session")
@@ -736,7 +736,7 @@ class FlaskAppGenerator:
         # Just swap out portfolio reference, quicker than making a new app
         # Since all use the same empty_portfolio_generator,
         # the SECRET_KEY will be identical
-        web.ext._portfolio = p  # noqa: SLF001
+        web.ext._portfolio = p
         return self._flask_app
 
 

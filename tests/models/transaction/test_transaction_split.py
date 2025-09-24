@@ -103,7 +103,7 @@ def test_unset_asset_quantity(
     transactions: list[Transaction],
 ) -> None:
     t_split = transactions[1].splits[0]
-    t_split._asset_qty_unadjusted = None  # noqa: SLF001
+    t_split._asset_qty_unadjusted = None
     with pytest.raises(exc.IntegrityError):
         session.commit()
 

@@ -72,6 +72,7 @@ class Account(Base):
 
     """
 
+    __tablename__ = "account"
     __table_id__ = 0x00000000
 
     name: ORMStr = orm.mapped_column(unique=True)

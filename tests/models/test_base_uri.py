@@ -66,13 +66,13 @@ def cipher() -> Cipher:
 )
 def test_reverse_box_invalid(box: list[int], target: str) -> None:
     with pytest.raises(ValueError, match=target):
-        Cipher._reverse_box(box)  # noqa:SLF001
+        Cipher._reverse_box(box)
 
 
 def test_reverse_box_valid(rand_str: str) -> None:
     box = list(range(len(rand_str)))
     random.shuffle(box)
-    box_rev = Cipher._reverse_box(box)  # noqa: SLF001
+    box_rev = Cipher._reverse_box(box)
     assert sorted(box) == sorted(box_rev)
 
     pt = rand_str
@@ -182,17 +182,12 @@ def test_from_bytes_empty() -> None:
         Cipher.from_bytes(b"")
 
 
-def test_from_bytes_empty_str() -> None:
-    with pytest.raises(TypeError):
-        Cipher.from_bytes("")  # type: ignore[attr-defined]
-
-
 def test_load_cipher(cipher: Cipher) -> None:
     pt = 0xDEADBEEF
     ct = cipher.encode(pt)
 
     base_uri.load_cipher(cipher.to_bytes())
-    ct_hex = ct.to_bytes(base_uri.ID_BYTES, base_uri._ORDER).hex()  # noqa: SLF001
+    ct_hex = ct.to_bytes(base_uri.ID_BYTES, base_uri._ORDER).hex()
     uri = base_uri.id_to_uri(pt)
     assert uri == ct_hex
 

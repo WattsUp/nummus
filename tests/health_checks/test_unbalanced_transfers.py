@@ -77,7 +77,7 @@ def test_wrong_amount(
     assert query_count(session.query(HealthCheckIssue)) == 1
 
     i = session.query(HealthCheckIssue).one()
-    assert i.check == c.name
+    assert i.check == c.name()
     assert i.value == today.isoformat()
     uri = i.uri
 
@@ -111,7 +111,7 @@ def test_one_pair(
     assert query_count(session.query(HealthCheckIssue)) == 1
 
     i = session.query(HealthCheckIssue).one()
-    assert i.check == c.name
+    assert i.check == c.name()
     assert i.value == today.isoformat()
     uri = i.uri
 
@@ -157,7 +157,7 @@ def test_wrong_date(
         .where(HealthCheckIssue.value == today.isoformat())
         .one()
     )
-    assert i.check == c.name
+    assert i.check == c.name()
     lines = (
         f"{today}: Sum of transfers on this day are non-zero",
         f"  {account.name}: {utils.format_financial(Decimal(100), plus=True):>14} "
@@ -170,7 +170,7 @@ def test_wrong_date(
         .where(HealthCheckIssue.value == tomorrow.isoformat())
         .one()
     )
-    assert i.check == c.name
+    assert i.check == c.name()
     assert i.value == tomorrow.isoformat()
     lines = (
         f"{tomorrow}: Sum of transfers on this day are non-zero",

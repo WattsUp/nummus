@@ -10,7 +10,13 @@ from sqlalchemy import func
 
 from nummus import utils
 from nummus.health_checks.base import Base
-from nummus.models import Account, AccountCategory, TransactionSplit, YIELD_PER
+from nummus.models import (
+    Account,
+    AccountCategory,
+    query_to_dict,
+    TransactionSplit,
+    YIELD_PER,
+)
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -35,7 +41,7 @@ class OverdrawnAccounts(Base):
             .with_entities(Account.id_, Account.name)
             .where(Account.category.not_in(categories_exclude))
         )
-        accounts: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]
+        accounts: dict[int, str] = query_to_dict(query)
         acct_ids = set(accounts)
 
         issues: list[tuple[str, str, str]] = []

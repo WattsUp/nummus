@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import subprocess
+import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -14,10 +16,12 @@ if TYPE_CHECKING:
 
 def test_entrypoints() -> None:
     # Check can execute entrypoint
-    with subprocess.Popen(
-        ["nummus", "--version"],  # noqa: S607
+    path = Path(sys.executable).with_name("nummus")
+    with subprocess.Popen(  # noqa: S603
+        [str(path), "--version"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        shell=False,
     ) as process:
         stdout, stderr = process.communicate()
         stdout = stdout.decode().strip("\r\n").strip("\n")

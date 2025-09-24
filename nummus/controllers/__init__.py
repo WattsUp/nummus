@@ -62,11 +62,11 @@ def add_routes(app: flask.Flask) -> None:
     urls: set[str] = set()
     for m in module:
         routes: Routes = m.ROUTES
-        for url, (controller, methods) in routes.items():
-            endpoint = f"{m.__name__[n_trim:]}.{controller.__name__}"
+        for url, (view_func, methods) in routes.items():
+            endpoint = f"{m.__name__[n_trim:]}.{view_func.__name__}"
             if url in urls:  # pragma: no cover
                 raise exc.DuplicateURLError(url, endpoint)
             if url.startswith("/d/") and not app.debug:
                 continue
             urls.add(url)
-            app.add_url_rule(url, endpoint, controller, methods=methods)
+            app.add_url_rule(url, endpoint, view_func, methods=methods)

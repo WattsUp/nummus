@@ -1,4 +1,4 @@
-"""Gunicorn configuration."""  # noqa: INP001
+"""Gunicorn configuration."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def when_ready(_) -> None:
     """When gunicorn server is ready, start metrics server."""
     GunicornPrometheusMetrics.start_http_server_when_ready(
         int(os.getenv("WEB_PORT_METRICS") or 8001),
-        host="0.0.0.0",  # noqa: S104
+        host="0.0.0.0",
     )
 
 
