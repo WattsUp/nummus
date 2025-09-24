@@ -18,6 +18,7 @@ class ImportedFile(Base):
 
     """
 
+    __tablename__ = "imported_file"
     __table_id__ = None
 
     hash_: ORMStr = orm.MappedColumn(unique=True)

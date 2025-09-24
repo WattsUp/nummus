@@ -39,6 +39,7 @@ class Derived(base.BaseEnum):
 
 
 class Parent(base.Base):
+    __tablename__ = "parent"
     __table_id__ = 0xF0000000
 
     generic_column: base.ORMIntOpt
@@ -63,6 +64,7 @@ class Parent(base.Base):
 
 
 class Child(base.Base):
+    __tablename__ = "child"
     __table_id__ = 0xE0000000
 
     parent_id: base.ORMInt = orm.mapped_column(ForeignKey("parent.id_"))
@@ -78,6 +80,7 @@ class Child(base.Base):
 
 
 class NoURI(base.Base):
+    __tablename__ = "no_uri"
     __table_id__ = None
 
 
@@ -96,7 +99,7 @@ def session(tmp_path: Path) -> orm.Session:
     s = orm.Session(sql.get_engine(path, None))
     base.Base.metadata.create_all(
         s.get_bind(),
-        tables=[Parent.__table__, Child.__table__],  # type: ignore[attr-defined]
+        tables=[Parent.sql_table(), Child.sql_table()],
     )
     s.commit()
     return s

@@ -28,7 +28,7 @@ class MigratorV0_13(Migrator):
         with p.begin_session() as s:
             Base.metadata.create_all(
                 s.get_bind(),
-                [Label.__table__, LabelLink.__table__],  # type: ignore[attr-defined]
+                [Label.sql_table(), LabelLink.sql_table()],
             )
 
         # Move existing tags to Label & LabelLink

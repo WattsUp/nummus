@@ -291,29 +291,29 @@ def make_assets(p: Portfolio) -> dict[str, int]:
         )
 
         # Name: [Asset, current price, growth mean, growth stddev]
-        stocks: dict[str, list[Asset | Decimal]] = {
-            "growth": [growth, Decimal(100), Decimal("0.07"), Decimal("0.2")],
-            "value": [value, Decimal(100), Decimal("0.05"), Decimal("0.05")],
+        stocks: dict[str, tuple[Asset, Decimal, Decimal, Decimal]] = {
+            "growth": (growth, Decimal(100), Decimal("0.07"), Decimal("0.2")),
+            "value": (value, Decimal(100), Decimal("0.05"), Decimal("0.05")),
         }
-        real_estate: dict[str, list[Asset | Decimal]] = {
-            "house_main": [
+        real_estate: dict[str, tuple[Asset, Decimal, Decimal, Decimal]] = {
+            "house_main": (
                 house_main,
                 Decimal("1.5e3"),
                 Decimal("0.05"),
                 Decimal("0.02"),
-            ],
-            "house_second": [
+            ),
+            "house_second": (
                 house_second,
                 Decimal("3e3"),
                 Decimal("0.06"),
                 Decimal("0.02"),
-            ],
-            "house_third": [
+            ),
+            "house_third": (
                 house_third,
                 Decimal("5e3"),
                 Decimal("0.07"),
                 Decimal("0.02"),
-            ],
+            ),
         }
         s.add_all(v[0] for v in stocks.values())
         s.add_all(v[0] for v in real_estate.values())
@@ -332,11 +332,11 @@ def make_assets(p: Portfolio) -> dict[str, int]:
                 date += datetime.timedelta(days=1)
             date_ord = date.toordinal()
 
-            for item in stocks.values():
-                a: Asset = item[0]  # type: ignore[attr-defined]
-                current: Decimal = item[1]  # type: ignore[attr-defined]
-                mean: Decimal = item[2]  # type: ignore[attr-defined]
-                stddev: Decimal = item[3]  # type: ignore[attr-defined]
+            for key, item in list(stocks.items()):
+                a: Asset = item[0]
+                current: Decimal = item[1]
+                mean: Decimal = item[2]
+                stddev: Decimal = item[3]
 
                 rate = rng_normal(mean / 252, stddev / Decimal(np.sqrt(252)))
                 v = round(current * (1 + rate), 2)
@@ -344,7 +344,7 @@ def make_assets(p: Portfolio) -> dict[str, int]:
                 valuation = AssetValuation(asset_id=a.id_, value=v, date_ord=date_ord)
                 s.add(valuation)
 
-                item[1] = v
+                stocks[key] = (a, v, mean, stddev)
 
             date += datetime.timedelta(days=1)
         s.flush()
@@ -355,11 +355,11 @@ def make_assets(p: Portfolio) -> dict[str, int]:
         end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
         while date <= end:
             date_ord = date.toordinal()
-            for item in real_estate.values():
-                a: Asset = item[0]  # type: ignore[attr-defined]
-                current: Decimal = item[1]  # type: ignore[attr-defined]
-                mean: Decimal = item[2]  # type: ignore[attr-defined]
-                stddev: Decimal = item[3]  # type: ignore[attr-defined]
+            for key, item in list(real_estate.items()):
+                a: Asset = item[0]
+                current: Decimal = item[1]
+                mean: Decimal = item[2]
+                stddev: Decimal = item[3]
 
                 rate = rng_normal(mean / 12, stddev / Decimal(np.sqrt(12)))
                 v = round(current * (1 + rate), 2)
@@ -367,7 +367,7 @@ def make_assets(p: Portfolio) -> dict[str, int]:
                 valuation = AssetValuation(asset_id=a.id_, value=v, date_ord=date_ord)
                 s.add(valuation)
 
-                item[1] = v
+                real_estate[key] = (a, v, mean, stddev)
 
             y = date.year
             m = date.month
@@ -375,9 +375,9 @@ def make_assets(p: Portfolio) -> dict[str, int]:
         s.flush()
         print(f"{Fore.CYAN}  Valued real estate")
 
-        assets = {k: v[0].id_ for k, v in stocks.items()}  # type: ignore[attr-defined]
+        assets = {k: v[0].id_ for k, v in stocks.items()}
         for k, v in real_estate.items():
-            assets[k] = v[0].id_  # type: ignore[attr-defined]
+            assets[k] = v[0].id_
         assets["S&P 500"] = sp500.id_
         assets["Apple Inc."] = apple.id_
 
@@ -396,7 +396,7 @@ def generate_early_savings(p: Portfolio, accts: dict[str, int]) -> None:
     with p.begin_session() as s:
         categories = {cat.name: cat for cat in s.query(TransactionCategory).all()}
 
-        acct: Account = s.query(Account).where(Account.id_ == accts["savings"]).scalar()  # type: ignore[attr-defined]
+        acct: Account = s.query(Account).where(Account.id_ == accts["savings"]).one()
         for age in range(8, 18):
             date = birthday("self", age)
             txn = Transaction(
@@ -433,8 +433,8 @@ def generate_income(
     with p.begin_session() as s:
         categories = {cat.name: cat for cat in s.query(TransactionCategory).all()}
 
-        a_growth: Asset = s.query(Asset).where(Asset.id_ == assets["growth"]).scalar()  # type: ignore[attr-defined]
-        a_value: Asset = s.query(Asset).where(Asset.id_ == assets["value"]).scalar()  # type: ignore[attr-defined]
+        a_growth: Asset = s.query(Asset).where(Asset.id_ == assets["growth"]).one()
+        a_value: Asset = s.query(Asset).where(Asset.id_ == assets["value"]).one()
         a_values_start = datetime.date(BIRTH_YEAR, 1, 1)
         a_values_end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
         a_values_start_ord = a_values_start.toordinal()
@@ -443,13 +443,13 @@ def generate_income(
         a_value_values = a_value.get_value(a_values_start_ord, a_values_end_ord)
 
         acct_savings: Account = (
-            s.query(Account).where(Account.id_ == accts["savings"]).scalar()
+            s.query(Account).where(Account.id_ == accts["savings"]).one()
         )
         acct_checking: Account = (
-            s.query(Account).where(Account.id_ == accts["checking"]).scalar()
+            s.query(Account).where(Account.id_ == accts["checking"]).one()
         )
         acct_retirement: Account = (
-            s.query(Account).where(Account.id_ == accts["retirement"]).scalar()
+            s.query(Account).where(Account.id_ == accts["retirement"]).one()
         )
 
         for age in range(16, min(60, FINAL_AGE) + 1):
@@ -1025,7 +1025,9 @@ def generate_housing(
             # Adds a repair cost 25% of the time with an average cost target_price
             # per month
             target_price = payment * Decimal("0.05")
-            repair_cost = round(target_price / np.sqrt(rng_uniform(1e-5, 1)), 2)  # type: ignore[attr-defined]
+            repair_cost = round(
+                target_price / (rng_uniform(1e-5, 1) ** Decimal("0.5")), 2
+            )
             if repair_cost > (2 * target_price):
                 acct = acct_cc_0
                 if repair_cost > (10 * target_price):
@@ -1509,7 +1511,9 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
             # Interest on the average balance
             i_start = (date - a_values_start).days
             i_end = (next_date - a_values_start).days
-            avg_value = sum(values[i_start:i_end]) / (i_end - i_start) + total_interest  # type: ignore[attr-defined]
+            avg_value = (
+                Decimal(sum(values[i_start:i_end]) / (i_end - i_start)) + total_interest
+            )
 
             if avg_value < 0:
                 msg = (

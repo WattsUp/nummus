@@ -30,6 +30,7 @@ from nummus.models import (
     ConfigKey,
     ImportedFile,
     one_or_none,
+    query_to_dict,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -95,7 +96,7 @@ class Portfolio:
         elif self._path_salt.exists():
             with self._path_salt.open("rb") as file:
                 enc_config = file.read()
-            self._enc = encryption.Encryption(key, enc_config)  # type: ignore[attr-defined]
+            self._enc = encryption.Encryption(key, enc_config)
         else:
             msg = f"Portfolio at {self._path_db} does not have salt file"
             raise FileNotFoundError(msg)
@@ -256,7 +257,7 @@ class Portfolio:
         try:
             with self.begin_session() as s:
                 query = s.query(Config).with_entities(Config.key, Config.value)
-                configs: dict[ConfigKey, str] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
+                configs: dict[ConfigKey, str] = query_to_dict(query)
         except exc.DatabaseError as e:
             msg = f"Failed to open database {self._path_db}"
             raise exc.UnlockingError(msg) from e

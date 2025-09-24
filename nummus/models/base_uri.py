@@ -22,7 +22,7 @@ _ORDER = "big"
 _ROUNDS = 3
 
 
-_CIPHER: Cipher = None  # type: ignore[attr-defined]
+_CIPHER: Cipher
 
 
 class Cipher:

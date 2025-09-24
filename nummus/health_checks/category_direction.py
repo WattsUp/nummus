@@ -8,8 +8,14 @@ from typing import override, TYPE_CHECKING
 
 from nummus import utils
 from nummus.health_checks.base import Base
-from nummus.models import Account, TransactionCategory, TransactionSplit, YIELD_PER
-from nummus.models.transaction_category import TransactionCategoryGroup
+from nummus.models import (
+    Account,
+    query_to_dict,
+    TransactionCategory,
+    TransactionCategoryGroup,
+    TransactionSplit,
+    YIELD_PER,
+)
 
 if TYPE_CHECKING:
     from decimal import Decimal
@@ -42,14 +48,14 @@ class CategoryDirection(Base):
         ).where(
             TransactionCategory.group == TransactionCategoryGroup.INCOME,
         )
-        cat_income_ids: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]
+        cat_income_ids: dict[int, str] = query_to_dict(query)
         query = s.query(
             TransactionCategory.id_,
             TransactionCategory.emoji_name,
         ).where(
             TransactionCategory.group == TransactionCategoryGroup.EXPENSE,
         )
-        cat_expense_ids: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]
+        cat_expense_ids: dict[int, str] = query_to_dict(query)
 
         query = (
             s.query(TransactionSplit)

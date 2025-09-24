@@ -25,6 +25,21 @@ if TYPE_CHECKING:
     from nummus.models.base import Base
 
 
+def query_to_dict[K, V](query: orm.query.RowReturningQuery[tuple[K, V]]) -> dict[K, V]:
+    """Fetch results from query and return a dict.
+
+    Args:
+        query: Query that returns 2 columns
+
+    Returns:
+        dict{first column: second column}
+
+    """
+    # pyright is happier with comprehension
+    # ruff is happier with dict()
+    return dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
+
+
 def query_count(query: orm.Query) -> int:
     """Count the number of result a query will return.
 
@@ -34,11 +49,17 @@ def query_count(query: orm.Query) -> int:
     Returns:
         Number of instances query will return upon execution
 
+    Raises:
+        TypeError: if query.statement is not a Select
+
     """
     # From here:
     # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
     col_one = sqlalchemy.literal_column("1")
-    counter = query.statement.with_only_columns(  # type: ignore[attr-defined]
+    stmt = query.statement
+    if not isinstance(stmt, sqlalchemy.Select):
+        raise TypeError
+    counter = stmt.with_only_columns(
         func.count(col_one),
         maintain_column_froms=True,
     )

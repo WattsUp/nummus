@@ -26,12 +26,16 @@ def test_backup(utc_frozen: datetime.datetime, empty_portfolio: Portfolio) -> No
     assert tar_ver == 1
 
     with tarfile.open(path_tar, "r") as tar:
-        buf_backup = tar.extractfile(path_db.name).read()  # type: ignore[attr-defined]
+        file = tar.extractfile(path_db.name)
+        assert file is not None
+        buf_backup = file.read()
         with path_db.open("rb") as file:
             buf = file.read()
         assert buf_backup == buf
 
-        buf_ts = tar.extractfile("_timestamp").read()  # type: ignore[attr-defined]
+        file = tar.extractfile("_timestamp")
+        assert file is not None
+        buf_ts = file.read()
         assert buf_ts == utc_frozen.isoformat().encode()
 
         assert path_salt.name not in tar.getnames()
@@ -93,7 +97,9 @@ def test_backup_encrypted(empty_portfolio_encrypted: tuple[Portfolio, str]) -> N
     assert tar_ver == 1
 
     with tarfile.open(path_tar, "r") as tar:
-        buf_backup = tar.extractfile(path_db.name).read()  # type: ignore[attr-defined]
+        file = tar.extractfile(path_db.name)
+        assert file is not None
+        buf_backup = file.read()
         with path_db.open("rb") as file:
             buf = file.read()
         assert buf_backup == buf

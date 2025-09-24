@@ -9,9 +9,8 @@ from nummus.models.base import (
     ORMInt,
     ORMStr,
     string_column_args,
-    YIELD_PER,
 )
-from nummus.models.utils import update_rows
+from nummus.models.utils import query_to_dict, update_rows
 
 
 class LabelLink(Base):
@@ -23,6 +22,7 @@ class LabelLink(Base):
 
     """
 
+    __tablename__ = "label_link"
     __table_id__ = None
 
     label_id: ORMInt = orm.mapped_column(ForeignKey("label.id_"))
@@ -56,7 +56,7 @@ class LabelLink(Base):
             .with_entities(Label.name, Label.id_)
             .where(Label.name.in_(label_names))
         )
-        mapping: dict[str, int] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
+        mapping: dict[str, int] = query_to_dict(query)
 
         to_add = [Label(name=name) for name in label_names if name not in mapping]
         if to_add:
@@ -83,6 +83,7 @@ class Label(Base):
 
     """
 
+    __tablename__ = "label"
     __table_id__ = 0x00000000
 
     name: ORMStr = orm.mapped_column(unique=True)

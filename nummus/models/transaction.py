@@ -63,6 +63,7 @@ class TransactionSplit(Base):
 
     """
 
+    __tablename__ = "transaction_split"
     __table_id__ = 0x00000000
 
     amount: ORMReal = orm.mapped_column(Decimal6)
@@ -427,6 +428,7 @@ class Transaction(Base):
 
     """
 
+    __tablename__ = "transaction"
     __table_id__ = 0x00000000
 
     account_id: ORMInt = orm.mapped_column(ForeignKey("account.id_"))

@@ -8,6 +8,7 @@ from collections import defaultdict
 from decimal import Decimal
 from typing import override, TYPE_CHECKING
 
+import pandas as pd
 import yfinance
 import yfinance.exceptions
 from sqlalchemy import CheckConstraint, ForeignKey, func, Index, orm, UniqueConstraint
@@ -67,6 +68,7 @@ class AssetSector(Base):
 
     """
 
+    __tablename__ = "asset_sector"
     __table_id__ = None
 
     asset_id: ORMInt = orm.mapped_column(ForeignKey("asset.id_"))
@@ -93,6 +95,7 @@ class AssetSplit(Base):
 
     """
 
+    __tablename__ = "asset_split"
     __table_id__ = None
 
     asset_id: ORMInt = orm.mapped_column(ForeignKey("asset.id_"))
@@ -138,6 +141,7 @@ class AssetValuation(Base):
 
     """
 
+    __tablename__ = "asset_valuation"
     __table_id__ = 0x00000000
 
     asset_id: ORMInt = orm.mapped_column(ForeignKey("asset.id_"))
@@ -206,6 +210,7 @@ class Asset(Base):
 
     """
 
+    __tablename__ = "asset"
     __table_id__ = 0x00000000
 
     name: ORMStr = orm.mapped_column(unique=True)
@@ -543,6 +548,7 @@ class Asset(Base):
         Raises:
             NoAssetWebSourceError: If Asset has no ticker
             AssetWebError: If failed to download data
+            TypeError: If returned DataFrame indices aren't Timestamps
 
         """
         if self.ticker is None:
@@ -588,9 +594,12 @@ class Asset(Base):
             # yfinance raises Exception if no data found
             raise exc.AssetWebError(e) from e
 
-        valuations: dict[int, float] = {
-            k.to_pydatetime().date().toordinal(): v for k, v in raw["Close"].items()  # type: ignore[attr-defined]
-        }
+        valuations: dict[int, float] = {}
+        for k, v in raw["Close"].items():
+            if not isinstance(k, pd.Timestamp):
+                raise TypeError
+            valuations[k.to_pydatetime().date().toordinal()] = float(v)
+
         query = s.query(AssetValuation).where(AssetValuation.asset_id == self.id_)
         update_rows(
             s,
@@ -606,7 +615,7 @@ class Asset(Base):
 
         raw_splits = raw.loc[raw["Stock Splits"] != 0]["Stock Splits"]
         splits: dict[int, float] = {
-            k.to_pydatetime().date().toordinal(): v for k, v in raw_splits.items()  # type: ignore[attr-defined]
+            k.to_pydatetime().date().toordinal(): v for k, v in raw_splits.items()
         }
         query = s.query(AssetSplit).where(AssetSplit.asset_id == self.id_)
         update_rows(

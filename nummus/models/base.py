@@ -6,6 +6,7 @@ import enum
 from decimal import Decimal
 from typing import override, TYPE_CHECKING
 
+import sqlalchemy
 from sqlalchemy import CheckConstraint, orm, sql, types
 
 from nummus import exceptions as exc
@@ -14,8 +15,6 @@ from nummus.models import base_uri
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
-
-    import sqlalchemy
 
 
 # Yield per instead of fetch all is faster
@@ -40,13 +39,22 @@ class Base(orm.DeclarativeBase):
 
     """
 
-    @orm.declared_attr  # type: ignore[attr-defined]
-    @classmethod
-    @override
-    def __tablename__(cls) -> str:
-        return utils.camel_to_snake(cls.__name__)
-
     __table_id__: int | None
+
+    @classmethod
+    def sql_table(cls) -> sqlalchemy.Table:
+        """Get the SQL table.
+
+        Returns:
+            Table
+
+        Raises:
+            TypeError: if __table__ is not a Table
+
+        """
+        if isinstance(cls.__table__, sqlalchemy.Table):
+            return cls.__table__
+        raise TypeError
 
     id_: ORMInt = orm.mapped_column(primary_key=True, autoincrement=True)
 
@@ -136,11 +144,12 @@ class Base(orm.DeclarativeBase):
             KeyError: if model does not have name property
 
         """
-        if not hasattr(cls, "name"):
+        attr = getattr(cls, "name", None)
+        if not attr:
             msg = f"{cls.__name__} does not have name column"
             raise KeyError(msg)
 
-        query = s.query(cls).with_entities(cls.id_, cls.name)  # type: ignore[attr-defined]
+        query = s.query(cls).with_entities(cls.id_, attr)
         return dict(query.all())
 
     @classmethod
@@ -171,7 +180,7 @@ class Base(orm.DeclarativeBase):
         if not field:
             return None
         if short_check and len(field) < utils.MIN_STR_LEN:
-            table: str = cls.__tablename__  # type: ignore[attr-defined]
+            table: str = cls.__tablename__
             table = table.replace("_", " ").capitalize()
             msg = f"{table} {key} must be at least {utils.MIN_STR_LEN} characters long"
             raise exc.InvalidORMValueError(msg)

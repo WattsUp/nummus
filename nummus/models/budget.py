@@ -28,6 +28,7 @@ from nummus.models.transaction_category import (
     TransactionCategory,
     TransactionCategoryGroup,
 )
+from nummus.models.utils import query_to_dict
 
 
 class BudgetAvailableCategory(NamedTuple):
@@ -66,6 +67,7 @@ class BudgetGroup(Base):
 
     """
 
+    __tablename__ = "budget_group"
     __table_id__ = 0x00000000
 
     name: ORMStr = orm.mapped_column(unique=True)
@@ -98,6 +100,7 @@ class BudgetAssignment(Base):
 
     """
 
+    __tablename__ = "budget_assignment"
     __table_id__ = None
 
     month_ord: ORMInt
@@ -181,7 +184,7 @@ class BudgetAssignment(Base):
             .with_entities(BudgetAssignment.category_id, BudgetAssignment.amount)
             .where(BudgetAssignment.month_ord == month_ord)
         )
-        categories_assigned: dict[int, Decimal] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
+        categories_assigned: dict[int, Decimal] = query_to_dict(query)
 
         # Prior months' assignment
         min_month_ord = month_ord
@@ -263,7 +266,7 @@ class BudgetAssignment(Base):
             )
             .group_by(TransactionSplit.category_id)
         )
-        categories_activity: dict[int, Decimal] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
+        categories_activity: dict[int, Decimal] = query_to_dict(query)
 
         categories: dict[int, BudgetAvailableCategory] = {}
         query = s.query(TransactionCategory).with_entities(
@@ -318,12 +321,12 @@ class BudgetAssignment(Base):
         n = end_ord - start_ord + 1
         n_smoothing = 15
 
-        accounts: dict[int, str] = dict(
-            s.query(Account)  # type: ignore[attr-defined]
+        query = (
+            s.query(Account)
             .with_entities(Account.id_, Account.name)
             .where(Account.budgeted)
-            .all(),
         )
+        accounts: dict[int, str] = query_to_dict(query)
 
         t_cat_id, _ = TransactionCategory.emergency_fund(s)
 
@@ -523,6 +526,7 @@ class Target(Base):
 
     """
 
+    __tablename__ = "target"
     __table_id__ = 0x00000000
 
     category_id: ORMInt = orm.mapped_column(

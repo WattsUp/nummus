@@ -21,6 +21,7 @@ from nummus.models import (
     LabelLink,
     obj_session,
     query_count,
+    query_to_dict,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -283,7 +284,7 @@ def new() -> str | flask.Response:
             .where(Account.closed.is_(False))
             .order_by(Account.name)
         )
-        accounts: dict[int, str] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
+        accounts: dict[int, str] = query_to_dict(query)
 
         uncategorized_id, uncategorized_uri = TransactionCategory.uncategorized(s)
 
@@ -873,7 +874,7 @@ def ctx_txn(
         r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
     }
     query = s.query(Label.id_, Label.name)
-    labels: dict[int, str] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
+    labels: dict[int, str] = query_to_dict(query)
 
     query = (
         s.query(LabelLink)

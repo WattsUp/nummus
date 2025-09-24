@@ -6,12 +6,12 @@ import datetime
 import json
 import re
 import textwrap
-from collections.abc import Callable
 from decimal import Decimal
 from pathlib import Path
 from typing import NamedTuple, overload, TYPE_CHECKING, TypedDict
 
 import flask
+import flask.typing
 
 from nummus import __version__
 from nummus import exceptions as exc
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     import sqlalchemy
     from sqlalchemy import orm
 
-type Routes = dict[str, tuple[Callable, list[str]]]
+type Routes = dict[str, tuple[flask.typing.RouteCallable, list[str]]]
 
 
 class LinkType(BaseEnum):
@@ -854,7 +854,9 @@ def chart_data(
                     values_sliced = v[i_start : i_end + 1]
                     values_min[i].append(min(values_sliced))
                     values_max[i].append(max(values_sliced))
-                    values_avg[i].append(sum(values_sliced) / len(values_sliced))  # type: ignore[attr-defined]
+                    values_avg[i].append(
+                        Decimal(sum(values_sliced) / len(values_sliced)),
+                    )
 
             return tuple(
                 ChartData(
@@ -883,7 +885,7 @@ def chart_data(
 
             v_min.append(min(values_sliced))
             v_max.append(max(values_sliced))
-            v_avg.append(sum(values_sliced) / len(values_sliced))  # type: ignore[attr-defined]
+            v_avg.append(Decimal(sum(values_sliced) / len(values_sliced)))
 
         return ChartData(
             labels=labels,

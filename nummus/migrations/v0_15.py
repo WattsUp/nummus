@@ -35,12 +35,13 @@ class MigratorV0_15(Migrator):
                 return comments
             Base.metadata.create_all(
                 s.get_bind(),
-                [Label.__table__, LabelLink.__table__],  # type: ignore[attr-defined]
+                [Label.sql_table(), LabelLink.sql_table()],
             )
 
         # Move existing tags to labels
         with p.begin_session() as s:
             stmt = "SELECT id_, name FROM tag"
+            # Hand crafted SQL statement can't use query_to_dict
             tags: dict[int, str] = dict(s.execute(sqlalchemy.text(stmt)).all())  # type: ignore[attr-defined]
 
             labels = [Label(id_=tag_id, name=name) for tag_id, name in tags.items()]

@@ -130,6 +130,9 @@ exclude_lines = [
 
   # Overloads have branch issues
   "@overload",
+
+  # TypeErrors are just typing insurance, should never get reached
+  "TypeError",
 ]
 
 [tool.djlint]

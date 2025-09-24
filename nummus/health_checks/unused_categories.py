@@ -5,7 +5,12 @@ from __future__ import annotations
 from typing import override, TYPE_CHECKING
 
 from nummus.health_checks.base import Base
-from nummus.models import BudgetAssignment, TransactionCategory, TransactionSplit
+from nummus.models import (
+    BudgetAssignment,
+    query_to_dict,
+    TransactionCategory,
+    TransactionSplit,
+)
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -25,7 +30,7 @@ class UnusedCategories(Base):
             .with_entities(TransactionCategory.id_, TransactionCategory.emoji_name)
             .where(TransactionCategory.locked.is_(False))
         )
-        categories: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]
+        categories: dict[int, str] = query_to_dict(query)
         if len(categories) == 0:
             self._commit_issues(s, {})
             return

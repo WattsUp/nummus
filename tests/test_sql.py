@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import override, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import pytest
 from sqlalchemy import orm
@@ -12,10 +12,6 @@ if TYPE_CHECKING:
 
 
 class ORMBase(orm.DeclarativeBase):
-    @orm.declared_attr  # type: ignore[attr-defined]
-    @override
-    def __tablename__(self) -> str:
-        return self.__name__.lower()
 
     id_: orm.Mapped[int] = orm.mapped_column(primary_key=True, autoincrement=True)
 
@@ -27,7 +23,7 @@ class ORMBase(orm.DeclarativeBase):
 
 
 class Child(ORMBase):
-    pass
+    __tablename__ = "child"
 
 
 def test_get_engine_unencrypted(tmp_path: Path) -> None:

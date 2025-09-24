@@ -18,6 +18,7 @@ from nummus.models import (
     AccountCategory,
     Asset,
     AssetCategory,
+    query_to_dict,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -465,7 +466,7 @@ def ctx_performance(
     query = s.query(TransactionCategory.id_, TransactionCategory.name).where(
         TransactionCategory.is_profit_loss.is_(True),
     )
-    pnl_categories: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]
+    pnl_categories: dict[int, str] = query_to_dict(query)
 
     # Calculate total cost basis
     total_cost_basis = Decimal()
