@@ -1013,7 +1013,7 @@ def ctx_target(
     if tar.period == TargetPeriod.ONCE:
         # This is a BALANCE target
         n_months = max(0, utils.date_months_between(month, due_date))
-        target_assigned = (tar.amount - leftover) / (n_months + 1)
+        target_assigned = round((tar.amount - leftover) / (n_months + 1), 2)
         target_available = leftover + target_assigned
         total_to_go = tar.amount - available
         return {
@@ -1052,7 +1052,7 @@ def ctx_target(
     total_to_go = tar.amount - total_assigned
 
     n_months = utils.date_months_between(month, due_date)
-    target_assigned /= n_months + 1
+    target_assigned = round(target_assigned / (n_months + 1), 2)
 
     return {
         "target_assigned": target_assigned,
