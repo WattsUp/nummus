@@ -55,9 +55,12 @@ const emergencyFund = {
         hoverRadius: 0,
       },
     ];
-    if (this.chart) this.chart.destroy();
-    this.ctx = ctx;
-    this.chart = nummusChart.create(ctx, labels, dateMode, datasets);
+    if (this.chart && ctx == this.chart.ctx) {
+      nummusChart.update(this.chart, labels, dateMode, datasets);
+    } else {
+      this.ctx = ctx;
+      this.chart = nummusChart.create(ctx, labels, dateMode, datasets);
+    }
   },
   /**
    * Create Emergency Fund Dashboard Chart
@@ -113,12 +116,15 @@ const emergencyFund = {
         hoverRadius: 0,
       },
     ];
-    if (this.chart) this.chart.destroy();
-    this.ctx = ctx;
-    this.chart = nummusChart.create(ctx, labels, dateMode, datasets, null, {
-      scales: {
-        y: { ticks: { display: false }, grid: { drawTicks: false } },
-      },
-    });
+    if (this.chart && ctx == this.chart.ctx) {
+      nummusChart.update(this.chart, labels, dateMode, datasets);
+    } else {
+      this.ctx = ctx;
+      this.chart = nummusChart.create(ctx, labels, dateMode, datasets, null, {
+        scales: {
+          y: { ticks: { display: false }, grid: { drawTicks: false } },
+        },
+      });
+    }
   },
 };
