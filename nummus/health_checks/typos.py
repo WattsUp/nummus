@@ -45,7 +45,6 @@ class Typos(Base):
         """Initialize Base health check.
 
         Args:
-            p: Portfolio to test
             no_ignores: True will print issues that have been ignored
             no_description_typos: True will not check descriptions or memos for typos
 

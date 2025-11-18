@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime
 
 import pandas as pd
-import yfinance
 import yfinance.exceptions
 
 

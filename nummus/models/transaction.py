@@ -397,8 +397,6 @@ def before_insert_transaction_split(
     """Handle event before insert of TransactionSplit.
 
     Args:
-        mapper: Unused
-        connection: Unused
         target: TransactionSplit being inserted
 
     """

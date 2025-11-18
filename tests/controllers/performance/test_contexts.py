@@ -144,7 +144,7 @@ def test_ctx_chart(
             },
         ],
         "options": [
-            base.NamePairState(account.name, account.uri, state=False),
+            base.NamePairState(account.uri, account.name, state=False),
         ],
     }
 
@@ -208,7 +208,7 @@ def test_ctx_chart_exclude(
         "mwrr": Decimal(),
         "accounts": [],
         "options": [
-            base.NamePairState(account.name, account.uri, state=True),
+            base.NamePairState(account.uri, account.name, state=True),
         ],
     }
 
