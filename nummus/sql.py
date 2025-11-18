@@ -47,7 +47,6 @@ def get_engine(
 
     Args:
         path: Path to database file
-        config: Configuration provider
         enc: Encryption object storing the key
 
     Returns:

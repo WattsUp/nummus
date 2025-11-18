@@ -239,7 +239,7 @@ def ctx_chart(
         if acct.do_include(start_ord):
             excluded = acct.id_ in excluded_accounts
             account_options.append(
-                base.NamePairState(acct.name, acct.uri, state=excluded),
+                base.NamePairState(acct.uri, acct.name, state=excluded),
             )
             if not excluded:
                 mapping[acct.id_] = acct.name
