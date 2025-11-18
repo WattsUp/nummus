@@ -19,7 +19,7 @@ const performance = {
     const mwrr = raw.mwrr && raw.mwrr.map((v) => Number(v) * 100);
 
     {
-      const canvas = document.getElementById("performance-chart-canvas");
+      const canvas = htmx.find("#performance-chart-canvas");
       const ctx = canvas.getContext("2d");
       const datasets = [];
       if (min == null) {

@@ -66,9 +66,12 @@ const assets = {
         hoverRadius: 0,
       });
     }
-    if (this.chart) this.chart.destroy();
-    this.ctx = ctx;
-    this.chart = nummusChart.create(ctx, labels, dateMode, datasets);
+    if (this.chart && ctx == this.chart.ctx) {
+      nummusChart.update(this.chart, labels, dateMode, datasets);
+    } else {
+      this.ctx = ctx;
+      this.chart = nummusChart.create(ctx, labels, dateMode, datasets);
+    }
   },
   /**
    * On change of period select, hide or show date input

@@ -97,7 +97,7 @@
     });
 
     function onLoad(func) {
-      if (domLoaded) func();
+      if (domLoaded) setTimeout(func, 20);
       else document.addEventListener("DOMContentLoaded", func);
     }
     onLoad(() => {
