@@ -1,5 +1,5 @@
 @utility dashboard {
-  @apply grid grid-flow-dense grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-2;
+  @apply grid grid-flow-dense grid-cols-[repeat(auto-fill,minmax(330px,1fr))] gap-2;
 
   & > div {
     @apply min-h-64 rounded-xl p-2;
