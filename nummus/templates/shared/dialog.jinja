@@ -13,17 +13,3 @@
     });
   </script>
 {% endif %}
-{% if clear_history %}
-  <script id="history-script" hx-swap-oob="true">
-    onLoad(() => {
-      nummusClearHistory();
-    });
-  </script>
-{% endif %}
-{% if reset_dialog %}
-  <script id="dialog-script" hx-swap-oob="true">
-    onLoad(() => {
-      dialog.reset();
-    });
-  </script>
-{% endif %}

@@ -361,8 +361,11 @@ function nummusResponseError(evt) {
  * On changes, clear all page history and force a cache miss
  */
 function nummusClearHistory() {
-  sessionStorage.removeItem("htmx-history-cache");
+  setTimeout(() => {
+    sessionStorage.removeItem("htmx-history-cache");
+  }, 100);
 }
+htmx.on("clear-history", nummusClearHistory);
 
 /**
  * On key press of a select label, go to the matching element, ignoring emojis

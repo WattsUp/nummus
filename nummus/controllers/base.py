@@ -288,14 +288,12 @@ def dialog_swap(
         oob=True,
         content=content or "",
         snackbar=snackbar,
-        # Triggering events should clear history
-        clear_history=event is not None,
-        # Triggering events should reset dialog
-        reset_dialog=event is not None,
     )
     response = flask.make_response(html)
     if event:
-        response.headers["HX-Trigger"] = event
+        # # Triggering events should reset dialog & clear history
+        events = ["reset-dialog", "clear-history", event]
+        response.headers["HX-Trigger"] = ",".join(events)
     return response
 
 

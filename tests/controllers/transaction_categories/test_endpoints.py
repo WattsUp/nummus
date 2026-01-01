@@ -75,7 +75,7 @@ def test_new(
     result, headers = web_client.POST("transaction_categories.new", data=form)
     assert "snackbar.show" in result
     assert f"Created category {rand_str}" in result
-    assert headers["HX-Trigger"] == "category"
+    assert "category" in headers["HX-Trigger"]
 
     t_cat = (
         session.query(TransactionCategory)
@@ -152,7 +152,7 @@ def test_category_delete_unlocked(
     )
     assert "snackbar.show" in result
     assert "Deleted category Groceries" in result
-    assert headers["HX-Trigger"] == "category"
+    assert "category" in headers["HX-Trigger"]
 
     t_cat = (
         session.query(TransactionCategory)
@@ -178,7 +178,7 @@ def test_category_edit_unlocked(
     )
     assert "snackbar.show" in result
     assert "All changes saved" in result
-    assert headers["HX-Trigger"] == "category"
+    assert "category" in headers["HX-Trigger"]
 
     t_cat = (
         session.query(TransactionCategory)
@@ -204,7 +204,7 @@ def test_category_edit_locked(
     )
     assert "snackbar.show" in result
     assert "All changes saved" in result
-    assert headers["HX-Trigger"] == "category"
+    assert "category" in headers["HX-Trigger"]
 
     t_cat = (
         session.query(TransactionCategory)

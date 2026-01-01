@@ -86,7 +86,7 @@ def test_import_file(
         data={"file": (path, path.name)},
     )
     assert "File successfully imported" in result
-    assert headers["HX-Trigger"] == "account"
+    assert "account" in headers["HX-Trigger"]
 
 
 def test_duplicate(
@@ -134,4 +134,4 @@ def test_duplicate_force(
     )
 
     assert "File successfully imported" in result
-    assert headers["HX-Trigger"] == "account"
+    assert "account" in headers["HX-Trigger"]

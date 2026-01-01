@@ -311,7 +311,7 @@ def test_dialog_swap(
     assert content in html
     assert "snackbar" in html
     assert snackbar in html
-    assert response.headers["HX-Trigger"] == event
+    assert event in response.headers["HX-Trigger"]
 
 
 def test_error_str(
