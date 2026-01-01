@@ -167,3 +167,4 @@ const dialog = {
 };
 
 htmx.on(window, "hashchange", dialog.onHashChange.bind(dialog));
+htmx.on("reset-dialog", dialog.reset.bind(dialog));

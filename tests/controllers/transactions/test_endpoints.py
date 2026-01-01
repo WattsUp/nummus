@@ -174,7 +174,7 @@ def test_new(
     )
     assert "snackbar.show" in result
     assert "Transaction created" in result
-    assert headers["HX-Trigger"] == "account"
+    assert "account" in headers["HX-Trigger"]
 
     txn = session.query(Transaction).one()
     assert txn.account_id == account.id_
@@ -222,7 +222,7 @@ def test_new_split(
     )
     assert "snackbar.show" in result
     assert "Transaction created" in result
-    assert headers["HX-Trigger"] == "account"
+    assert "account" in headers["HX-Trigger"]
 
     txn = session.query(Transaction).one()
     assert txn.account_id == account.id_
@@ -382,7 +382,7 @@ def test_transaction_delete_uncleared(
     result, headers = web_client.DELETE(("transactions.transaction", {"uri": txn.uri}))
     assert "snackbar.show" in result
     assert f"Transaction on {txn.date} deleted" in result
-    assert headers["HX-Trigger"] == "account"
+    assert "account" in headers["HX-Trigger"]
 
     t = session.query(Transaction).where(Transaction.id_ == txn.id_).one_or_none()
     assert t is None
@@ -428,7 +428,7 @@ def test_transaction_edit(
     )
     assert "snackbar.show" in result
     assert "All changes saved" in result
-    assert headers["HX-Trigger"] == "transaction"
+    assert "transaction" in headers["HX-Trigger"]
 
     session.refresh(txn)
     assert txn.date == today

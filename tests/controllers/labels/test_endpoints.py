@@ -69,7 +69,7 @@ def test_label_delete(
     )
     assert "snackbar.show" in result
     assert "Deleted label engineer" in result
-    assert headers["HX-Trigger"] == "label"
+    assert "label" in headers["HX-Trigger"]
 
     n = query_count(session.query(LabelLink))
     assert n == 0
@@ -88,7 +88,7 @@ def test_label_edit(
     )
     assert "snackbar.show" in result
     assert "All changes saved" in result
-    assert headers["HX-Trigger"] == "label"
+    assert "label" in headers["HX-Trigger"]
 
     label = session.query(Label).where(Label.name == "new label").one()
     assert label.id_ == labels["engineer"]

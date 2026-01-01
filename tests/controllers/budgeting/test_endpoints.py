@@ -50,7 +50,7 @@ def test_validation(
 ) -> None:
     result, headers = web_client.GET(("budgeting.validation", {prop: value}))
     assert not result
-    assert headers["HX-Trigger"] == "target-desc"
+    assert "target-desc" in headers["HX-Trigger"]
 
 
 def test_assign_new(
@@ -218,7 +218,7 @@ def test_move_overspending(
     )
     assert "snackbar.show" in result
     assert "$30.00 reallocated" in result
-    assert headers["HX-Trigger"] == "budget"
+    assert "budget" in headers["HX-Trigger"]
 
     session.refresh(a)
     assert a.month_ord == month.toordinal()
@@ -242,7 +242,7 @@ def test_move_to_income(
     )
     assert "snackbar.show" in result
     assert "$10.00 reallocated" in result
-    assert headers["HX-Trigger"] == "budget"
+    assert "budget" in headers["HX-Trigger"]
 
     session.refresh(a)
     assert a.month_ord == month.toordinal()
@@ -527,7 +527,7 @@ def test_target_new(
 
     assert "snackbar.show" in result
     assert "Groceries target created" in result
-    assert headers["HX-Trigger"] == "budget"
+    assert "budget" in headers["HX-Trigger"]
 
     tar = session.query(Target).one()
     assert tar.category_id == t_cat_id
@@ -566,7 +566,7 @@ def test_target_put(
     )
     assert "snackbar.show" in result
     assert "All changes saved" in result
-    assert headers["HX-Trigger"] == "budget"
+    assert "budget" in headers["HX-Trigger"]
 
     session.refresh(budget_target)
     assert budget_target.amount == Decimal(10)
@@ -582,7 +582,7 @@ def test_target_delete(
     )
     assert "snackbar.show" in result
     assert "Emergency Fund target deleted" in result
-    assert headers["HX-Trigger"] == "budget"
+    assert "budget" in headers["HX-Trigger"]
 
     tar = session.query(Target).one_or_none()
     assert tar is None

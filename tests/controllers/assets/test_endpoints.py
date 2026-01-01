@@ -66,7 +66,7 @@ def test_new(
     )
     assert "snackbar.show" in result
     assert "All changes saved" in result
-    assert headers["HX-Trigger"] == "asset"
+    assert "asset" in headers["HX-Trigger"]
 
     a = session.query(Asset).one()
     assert a.name == "New name"
@@ -129,7 +129,7 @@ def test_asset_edit(web_client: WebClient, session: orm.Session, asset: Asset) -
     )
     assert "snackbar.show" in result
     assert "All changes saved" in result
-    assert headers["HX-Trigger"] == "asset"
+    assert "asset" in headers["HX-Trigger"]
 
     session.refresh(asset)
     assert asset.name == "New name"
@@ -251,7 +251,7 @@ def test_new_valuation(
     )
     assert "snackbar.show" in result
     assert "All changes saved" in result
-    assert headers["HX-Trigger"] == "valuation"
+    assert "valuation" in headers["HX-Trigger"]
 
     v = session.query(AssetValuation).one()
     assert v.asset_id == asset.id_
@@ -322,7 +322,7 @@ def test_valuation_delete(
     )
     assert "snackbar.show" in result
     assert f"{asset_valuation.date} valuation deleted" in result
-    assert headers["HX-Trigger"] == "valuation"
+    assert "valuation" in headers["HX-Trigger"]
 
     v = session.query(AssetValuation).one_or_none()
     assert v is None
@@ -344,7 +344,7 @@ def test_valuation_edit(
     )
     assert "snackbar.show" in result
     assert "All changes saved" in result
-    assert headers["HX-Trigger"] == "valuation"
+    assert "valuation" in headers["HX-Trigger"]
 
     session.refresh(asset_valuation)
     assert asset_valuation.date == tomorrow
@@ -454,7 +454,7 @@ def test_update(
     result, headers = web_client.POST("assets.update")
     assert "snackbar.show" in result
     assert "1 asset updated" in result
-    assert headers["HX-Trigger"] == "valuation"
+    assert "valuation" in headers["HX-Trigger"]
 
 
 def test_update_error(

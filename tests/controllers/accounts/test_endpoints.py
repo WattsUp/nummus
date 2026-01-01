@@ -128,7 +128,7 @@ def test_new(
     )
     assert "snackbar.show" in result
     assert "All changes saved" in result
-    assert headers["HX-Trigger"] == "account"
+    assert "account" in headers["HX-Trigger"]
 
     account = session.query(Account).one()
     assert account.name == "New name"
@@ -196,7 +196,7 @@ def test_account_edit(
     )
     assert "snackbar.show" in result
     assert "All changes saved" in result
-    assert headers["HX-Trigger"] == "account"
+    assert "account" in headers["HX-Trigger"]
 
     session.refresh(account)
     assert account.name == "New name"
