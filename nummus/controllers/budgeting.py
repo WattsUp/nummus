@@ -194,10 +194,10 @@ def validation() -> flask.Response | str:
         response.headers["HX-Trigger"] = "target-desc"
         return response
 
-    if "date" in args:
+    if "due" in args:
         return (
             base.validate_date(
-                args["date"],
+                args["due"],
                 base.today_client(),
                 is_required=True,
                 max_future=None,
