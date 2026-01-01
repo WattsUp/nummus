@@ -34,8 +34,7 @@ def test_export_empty(
     assert captured.out == target
     assert not captured.err
 
-    with path_csv.open("r", encoding="utf-8") as file:
-        buf = file.read().splitlines()
+    buf = path_csv.read_text("utf-8").splitlines()
     target = [
         "Date,Account,Payee,Memo,Category,Amount",
     ]
@@ -64,11 +63,12 @@ def test_export(
     assert captured.out == target
     assert not captured.err
 
-    with path_csv.open("r", encoding="utf-8") as file:
-        buf = file.read().splitlines()
+    buf = path_csv.read_text("utf-8").splitlines()
     target = [
         "Date,Account,Payee,Memo,Category,Amount",
-        f"{txn.date},{account.name},{txn.payee or ''},{t_split.memo or ''},"
-        f"Other Income,{utils.format_financial(txn.amount)}",
+        (
+            f"{txn.date},{account.name},{txn.payee or ''},{t_split.memo or ''},"
+            f"Other Income,{utils.format_financial(txn.amount)}"
+        ),
     ]
     assert buf == target

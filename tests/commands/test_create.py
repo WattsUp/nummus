@@ -117,8 +117,7 @@ def test_create_encrypted_pass_file(
     monkeypatch.setattr("nummus.portfolio.Portfolio", MockPortfolio)
 
     path_password = tmp_path / "password.secret"
-    with path_password.open("w", encoding="utf-8") as file:
-        file.write(rand_str)
+    path_password.write_text(rand_str, "utf-8")
 
     c = Create(path, path_password, force=False, no_encrypt=False)
     assert c.run() == 0

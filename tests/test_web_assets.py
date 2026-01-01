@@ -47,14 +47,12 @@ def test_build_bundles_debug() -> None:
     assert path_dist_css.exists()
     assert path_dist_js.exists()
 
-    with path_dist_css.open("r", encoding="utf-8") as file:
-        buf = file.read()
+    buf = path_dist_css.read_text("utf-8")
     assert "/*! tailwindcss" in buf
     # With debug, there should be spaces
     assert "*, :after, :before" in buf
 
-    with path_dist_js.open("r", encoding="utf-8") as file:
-        buf = file.read()
+    buf = path_dist_js.read_text("utf-8")
     # With debug, there should be comments
     assert "/**" in buf
 
@@ -75,13 +73,11 @@ def test_build_bundles_release() -> None:
     assert path_dist_css.exists()
     assert path_dist_js.exists()
 
-    with path_dist_css.open("r", encoding="utf-8") as file:
-        buf = file.read()
+    buf = path_dist_css.read_text("utf-8")
     assert "/*! tailwindcss" in buf
     assert "*,:after,:before" in buf
 
-    with path_dist_js.open("r", encoding="utf-8") as file:
-        buf = file.read()
+    buf = path_dist_js.read_text("utf-8")
     # Without debug, there should not be comments
     assert "/**" not in buf
 
@@ -104,12 +100,10 @@ def test_build_assets() -> None:
     assert path_dist_css.exists()
     assert path_dist_js.exists()
 
-    with path_dist_css.open("r", encoding="utf-8") as file:
-        buf = file.read()
+    buf = path_dist_css.read_text("utf-8")
     assert "/*! tailwindcss" in buf
     assert "*,:after,:before" in buf
 
-    with path_dist_js.open("r", encoding="utf-8") as file:
-        buf = file.read()
+    buf = path_dist_js.read_text("utf-8")
     # Without debug, there should not be comments
     assert "/**" not in buf

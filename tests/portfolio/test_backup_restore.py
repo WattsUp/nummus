@@ -29,9 +29,7 @@ def test_backup(utc_frozen: datetime.datetime, empty_portfolio: Portfolio) -> No
         file = tar.extractfile(path_db.name)
         assert file is not None
         buf_backup = file.read()
-        with path_db.open("rb") as file:
-            buf = file.read()
-        assert buf_backup == buf
+        assert buf_backup == path_db.read_bytes()
 
         file = tar.extractfile("_timestamp")
         assert file is not None
@@ -100,9 +98,7 @@ def test_backup_encrypted(empty_portfolio_encrypted: tuple[Portfolio, str]) -> N
         file = tar.extractfile(path_db.name)
         assert file is not None
         buf_backup = file.read()
-        with path_db.open("rb") as file:
-            buf = file.read()
-        assert buf_backup == buf
+        assert buf_backup == path_db.read_bytes()
 
         assert path_salt.name in tar.getnames()
 

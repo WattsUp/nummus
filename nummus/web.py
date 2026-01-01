@@ -69,8 +69,7 @@ class FlaskExtension:
             path_key = config.get("KEY_PATH")
             path_key = Path(path_key).expanduser().absolute() if path_key else None
             if path_key and path_key.exists():
-                with path_key.open("r", encoding="utf-8") as file:
-                    key = file.read().strip()
+                key = path_key.read_text("utf-8").strip()
 
         return Portfolio(path, key)
 

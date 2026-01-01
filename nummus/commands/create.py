@@ -78,8 +78,7 @@ class Create(BaseCommand):
         key: str | None = None
         if not self._no_encrypt:
             if self._path_password is not None and self._path_password.exists():
-                with self._path_password.open(encoding="utf-8") as file:
-                    key = file.read().strip()
+                key = self._path_password.read_text("utf-8").strip()
 
             # Get key from user is password file empty
             key = key or utils.get_password()

@@ -66,8 +66,7 @@ def test_all_used() -> None:
         re.MULTILINE,
     )
     for path in folder.glob("**/test_*.py"):
-        with path.open(encoding="utf-8") as file:
-            buf = file.read()
+        buf = path.read_text("utf-8")
         result.update(re_raises.findall(buf))
 
     assert result == target

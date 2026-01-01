@@ -85,8 +85,7 @@ def test_unlock_encrypted_path(
 ) -> None:
     p, key = empty_portfolio_encrypted
     path_password = tmp_path / "password.secret"
-    with path_password.open("w", encoding="utf-8") as file:
-        file.write(key)
+    path_password.write_text(key, "utf-8")
 
     MockCommand(p.path, path_password)
 
@@ -105,8 +104,7 @@ def test_unlock_encrypted_path_bad_key(
 ) -> None:
     p, _ = empty_portfolio_encrypted
     path_password = tmp_path / "password.secret"
-    with path_password.open("w", encoding="utf-8") as file:
-        file.write("not key")
+    path_password.write_text("not key", "utf-8")
 
     with pytest.raises(SystemExit):
         MockCommand(p.path, path_password)

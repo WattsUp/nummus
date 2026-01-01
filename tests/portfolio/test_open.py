@@ -25,8 +25,7 @@ def test_non_existant(tmp_path: Path) -> None:
 
 def test_corrupted(tmp_path: Path) -> None:
     path = tmp_path / "missing.db"
-    with path.open("wb") as file:
-        file.write(b"fake")
+    path.write_bytes(b"fake")
     with pytest.raises(exc.UnlockingError):
         Portfolio(path, None)
 

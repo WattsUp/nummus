@@ -63,8 +63,7 @@ class BaseCommand(ABC):
             sys.exit(1)
         key: str | None = None
         if path_password is not None and path_password.exists():
-            with path_password.open(encoding="utf-8") as file:
-                key = file.read().strip()
+            key = path_password.read_text("utf-8").strip()
 
         try:
             self._p = self._unlock(
