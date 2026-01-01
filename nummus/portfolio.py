@@ -94,8 +94,7 @@ class Portfolio:
         if key is None:
             self._enc = None
         elif self._path_salt.exists():
-            with self._path_salt.open("rb") as file:
-                enc_config = file.read()
+            enc_config = self._path_salt.read_bytes()
             self._enc = encryption.Encryption(key, enc_config)
         else:
             msg = f"Portfolio at {self._path_db} does not have salt file"
@@ -182,8 +181,7 @@ class Portfolio:
         enc_config = None
         if encryption.AVAILABLE and key is not None:
             enc, enc_config = encryption.Encryption.create(key)
-            with path_salt.open("wb") as file:
-                file.write(enc_config)
+            path_salt.write_bytes(enc_config)
             path_salt.chmod(0o600)  # Only owner can read/write
         else:
             # Remove salt if unencrypted
@@ -408,8 +406,7 @@ class Portfolio:
         """
         # Compute hash of file contents to check if already imported
         sha = hashlib.sha256()
-        with path.open("rb") as file:
-            sha.update(file.read())
+        sha.update(path.read_bytes())
         h = sha.hexdigest()
         with self.begin_session() as s:
             if force:

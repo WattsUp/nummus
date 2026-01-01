@@ -3,6 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    import datetime
+
+    from sqlalchemy import orm
+
     from nummus.models import (
         Account,
         Transaction,
@@ -16,7 +20,7 @@ def test_page(
     transactions: list[Transaction],
 ) -> None:
     _ = transactions
-    result, _ = web_client.GET("income.page")
+    result, _ = web_client.GET(("income.page", {"period": "all"}))
     assert "Income" in result
     assert account.name in result
     assert "Other Income" in result
@@ -29,7 +33,7 @@ def test_chart(
     transactions: list[Transaction],
 ) -> None:
     _ = transactions
-    result, _ = web_client.GET("income.chart")
+    result, _ = web_client.GET(("income.chart", {"period": "all"}))
     assert "Income" in result
     assert account.name in result
     assert "Other Income" in result
@@ -37,11 +41,16 @@ def test_chart(
 
 
 def test_dashboard(
+    today: datetime.date,
+    session: orm.Session,
     web_client: WebClient,
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
+    transactions[0].date = today
+    transactions[0].splits[0].parent = transactions[0]
+    session.commit()
+
     result, _ = web_client.GET("income.dashboard")
     assert "Income" in result
     assert account.name in result

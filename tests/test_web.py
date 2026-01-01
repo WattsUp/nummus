@@ -64,8 +64,7 @@ def test_create_app_encrypted_key_file(
 ) -> None:
     p, key = empty_portfolio_encrypted
     path_key = tmp_path / "key"
-    with path_key.open("w", encoding="utf-8") as file:
-        file.write(key)
+    path_key.write_text(key, "utf-8")
     monkeypatch.setenv("NUMMUS_PORTFOLIO", str(p.path))
     monkeypatch.setenv("NUMMUS_KEY_PATH", str(path_key))
 

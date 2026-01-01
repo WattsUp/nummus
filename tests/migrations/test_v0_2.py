@@ -20,8 +20,10 @@ def test_migrate(tmp_path: Path, data_path: Path) -> None:
     m = MigratorV0_2()
     result = m.migrate(p)
     target = [
-        "This transaction had multiple payees, only one allowed: "
-        "1948-03-15 Savings, please validate",
+        (
+            "This transaction had multiple payees, only one allowed: "
+            "1948-03-15 Savings, please validate"
+        ),
     ]
     assert result == target
 

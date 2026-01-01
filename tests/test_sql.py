@@ -34,8 +34,7 @@ def test_get_engine_unencrypted(tmp_path: Path) -> None:
     assert "child" in ORMBase.metadata.tables
     ORMBase.metadata.create_all(s.get_bind())
     s.commit()
-    with path.open("rb") as file:
-        assert b"SQLite" in file.read()
+    assert b"SQLite" in path.read_bytes()
 
 
 @pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
@@ -51,8 +50,7 @@ def test_get_engine_encrypted(tmp_path: Path, rand_str: str) -> None:
     assert "child" in ORMBase.metadata.tables
     ORMBase.metadata.create_all(s.get_bind())
     s.commit()
-    with path.open("rb") as file:
-        assert b"SQLite" not in file.read()
+    assert b"SQLite" not in path.read_bytes()
 
 
 def test_escape_not_reserved() -> None:

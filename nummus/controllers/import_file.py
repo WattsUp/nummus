@@ -34,8 +34,7 @@ def import_file() -> str | flask.Response:
     filename = Path(werkzeug.utils.secure_filename(file.filename or ""))
     path_file_local = Path(tempfile.mkstemp(suffix=filename.suffix)[1])
 
-    with path_file_local.open("wb") as file_local:
-        file_local.write(file.stream.read())
+    path_file_local.write_bytes(file.stream.read())
 
     path_debug = p.path.with_suffix(".importer_debug")
     try:

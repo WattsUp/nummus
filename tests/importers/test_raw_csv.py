@@ -135,8 +135,7 @@ def test_is_importable(
 ) -> None:
     if isinstance(data, str):
         path = data_path / data
-        with path.open("rb") as file:
-            buf = file.read()
+        buf = path.read_bytes()
     else:
         buf = data
 
@@ -151,8 +150,7 @@ def test_run_none() -> None:
 
 def test_run_lacking(data_path: Path) -> None:
     path = data_path / "transactions_lacking.csv"
-    with path.open("rb") as file:
-        buf = file.read()
+    buf = path.read_bytes()
     i = CSVTransactionImporter(buf=buf)
     with pytest.raises(KeyError):
         i.run()
@@ -174,8 +172,7 @@ def test_run_bad_value() -> None:
 )
 def test_run(data_path: Path, name: str, target: TxnDicts) -> None:
     path = data_path / name
-    with path.open("rb") as file:
-        buf = file.read()
+    buf = path.read_bytes()
     result = CSVTransactionImporter(buf=buf).run()
     assert len(result) == len(target)
     for r, t in zip(result, target, strict=True):

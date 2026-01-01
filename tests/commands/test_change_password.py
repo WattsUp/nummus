@@ -31,9 +31,7 @@ def test_no_change_unencrypted(
     tmp_path: Path,
 ) -> None:
     path_password_new = tmp_path / "password.secret"
-    with path_password_new.open("w", encoding="utf-8") as file:
-        file.write("db:\n")
-        file.write("web:\n")
+    path_password_new.write_text("db:\nweb:\n", "utf-8")
 
     c = ChangePassword(empty_portfolio.path, None, path_password_new)
     assert c.run() != 0
@@ -60,9 +58,7 @@ def test_change(
     target: str,
 ) -> None:
     path_password_new = tmp_path / "password.secret"
-    with path_password_new.open("w", encoding="utf-8") as file:
-        file.write(f"db:{new_db_key}\n")
-        file.write(f"web:{new_web_key}\n")
+    path_password_new.write_text(f"db:{new_db_key}\nweb:{new_web_key}\n", "utf-8")
     monkeypatch.setattr("nummus.portfolio.Portfolio", MockPortfolio)
 
     c = ChangePassword(empty_portfolio.path, None, path_password_new)
@@ -117,9 +113,7 @@ def test_get_keys_file(
     tmp_path: Path,
 ) -> None:
     path_password_new = tmp_path / "password.secret"
-    with path_password_new.open("w", encoding="utf-8") as file:
-        file.write("db:12345678\n")
-        file.write("web:01010101\n")
+    path_password_new.write_text("db:12345678\nweb:01010101\n", "utf-8")
 
     c = ChangePassword(empty_portfolio.path, None, path_password_new)
     new_db_key, new_web_key = c._get_keys()

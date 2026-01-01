@@ -38,7 +38,7 @@ def test_page(month: datetime.date, web_client: WebClient) -> None:
 @pytest.mark.parametrize(
     ("prop", "value"),
     [
-        ("date", "2100-01-01"),
+        ("due", "2100-01-01"),
         ("amount", "1"),
         ("repeat", "1"),
     ],

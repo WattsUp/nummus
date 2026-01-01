@@ -529,8 +529,7 @@ def test_tranaction_category_groups(
     ids=conftest.id_func,
 )
 def test_template(valid_html: HTMLValidator, path: Path) -> None:
-    with path.open("r", encoding="utf-8") as file:
-        buf = file.read()
+    buf = path.read_text("utf-8")
 
     re_jinja_template = re.compile(r'"\{\{ (.+?) \}\}"')
     for endpoint in re_jinja_template.findall(buf):

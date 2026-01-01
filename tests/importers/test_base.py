@@ -39,16 +39,14 @@ def test_init_without_buf() -> None:
 
 def test_init_with_raw_buf(data_path: Path) -> None:
     path = data_path / "transactions_required.csv"
-    with path.open("rb") as file:
-        buf = file.read()
+    buf = path.read_bytes()
     i = Derived(buf=buf)
     assert i._buf == buf
 
 
 def test_init_with_pdf_buf(data_path: Path) -> None:
     path = data_path / "transactions_required.csv"
-    with path.open("rb") as file:
-        buf_pdf = file.read().decode().splitlines()
+    buf_pdf = path.read_text().splitlines()
     i = Derived(buf_pdf=buf_pdf)
     assert i._buf_pdf == buf_pdf
 

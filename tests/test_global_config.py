@@ -25,8 +25,7 @@ def test_get_non_existant(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> No
 def test_get_empty(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     path = tmp_path / "config.ini"
     monkeypatch.setattr(global_config, "_PATH", path)
-    with path.open("w", encoding="utf-8") as file:
-        file.write("[nummus]\n")
+    path.write_text("[nummus]\n", "utf-8")
 
     # Empty section should still be defaults
     config = global_config.get()
@@ -43,8 +42,7 @@ def test_get_populated(
 ) -> None:
     path = tmp_path / "config.ini"
     monkeypatch.setattr(global_config, "_PATH", path)
-    with path.open("w", encoding="utf-8") as file:
-        file.write(f"[nummus]\nsecure-icon = {rand_str}\n")
+    path.write_text(f"[nummus]\nsecure-icon = {rand_str}\n", "utf-8")
 
     assert global_config.get(global_config.ConfigKey.SECURE_ICON) == rand_str
     assert global_config.get("secure-icon") == rand_str

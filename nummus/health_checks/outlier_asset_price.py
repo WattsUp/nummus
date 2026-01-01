@@ -94,8 +94,10 @@ class OutlierAssetPrice(Base):
                     (
                         uri,
                         f"{datetime.date.fromordinal(date_ord)}: {assets[a_id]}",
-                        f"was traded at {utils.format_financial(t_price)} which is "
-                        f"below valuation of {utils.format_financial(v_price)}",
+                        (
+                            f"was traded at {utils.format_financial(t_price)} which is "
+                            f"below valuation of {utils.format_financial(v_price)}"
+                        ),
                     ),
                 )
             elif t_price > v_price_high:
@@ -103,8 +105,10 @@ class OutlierAssetPrice(Base):
                     (
                         uri,
                         f"{datetime.date.fromordinal(date_ord)}: {assets[a_id]}",
-                        f"was traded at {utils.format_financial(t_price)} which is "
-                        f"above valuation of {utils.format_financial(v_price)}",
+                        (
+                            f"was traded at {utils.format_financial(t_price)} which is "
+                            f"above valuation of {utils.format_financial(v_price)}"
+                        ),
                     ),
                 )
         source_len = max(len(item[1]) for item in issues) if issues else 0

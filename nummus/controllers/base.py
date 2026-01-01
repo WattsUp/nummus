@@ -249,8 +249,7 @@ def ctx_base(
         if mtime_ns == last_modified_ns:
             icons.update(path_icons)
             continue
-        with path.open("r", encoding="utf-8") as file:
-            buf = file.read()
+        buf = path.read_text("utf-8")
         # Look for icon = "" in jinja
         path_icons_new = set(RE_ICON_VAR.findall(buf))
 

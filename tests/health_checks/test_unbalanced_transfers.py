@@ -83,10 +83,14 @@ def test_wrong_amount(
 
     lines = (
         f"{today}: Sum of transfers on this day are non-zero",
-        f"  {account.name}: {utils.format_financial(Decimal(-200), plus=True):>14} "
-        "Transfers",
-        f"  {account.name}: {utils.format_financial(Decimal(100), plus=True):>14} "
-        "Transfers",
+        (
+            f"  {account.name}: {utils.format_financial(Decimal(-200), plus=True):>14} "
+            "Transfers"
+        ),
+        (
+            f"  {account.name}: {utils.format_financial(Decimal(100), plus=True):>14} "
+            "Transfers"
+        ),
     )
     assert c.issues == {uri: "\n".join(lines)}
 
@@ -117,8 +121,10 @@ def test_one_pair(
 
     lines = (
         f"{today}: Sum of transfers on this day are non-zero",
-        f"  {account.name}: {utils.format_financial(Decimal(-100), plus=True):>14} "
-        "Transfers",
+        (
+            f"  {account.name}: {utils.format_financial(Decimal(-100), plus=True):>14} "
+            "Transfers"
+        ),
     )
     assert c.issues == {uri: "\n".join(lines)}
 
@@ -160,8 +166,10 @@ def test_wrong_date(
     assert i.check == c.name()
     lines = (
         f"{today}: Sum of transfers on this day are non-zero",
-        f"  {account.name}: {utils.format_financial(Decimal(100), plus=True):>14} "
-        "Transfers",
+        (
+            f"  {account.name}: {utils.format_financial(Decimal(100), plus=True):>14} "
+            "Transfers"
+        ),
     )
     assert i.msg == "\n".join(lines)
 
@@ -174,7 +182,9 @@ def test_wrong_date(
     assert i.value == tomorrow.isoformat()
     lines = (
         f"{tomorrow}: Sum of transfers on this day are non-zero",
-        f"  {account.name}: {utils.format_financial(Decimal(-100), plus=True):>14} "
-        "Transfers",
+        (
+            f"  {account.name}: {utils.format_financial(Decimal(-100), plus=True):>14} "
+            "Transfers"
+        ),
     )
     assert i.msg == "\n".join(lines)
