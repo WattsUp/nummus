@@ -1,4 +1,8 @@
-<div>
+<div
+  hx-get="{{ url_for('common.page_dashboard') }}"
+  hx-trigger="account from:body, asset from:body"
+  hx-target="#main"
+>
   <h1>Dashboard</h1>
 </div>
 <div class="dashboard">
