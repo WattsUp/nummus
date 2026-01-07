@@ -28,7 +28,6 @@
       <option value="{{ item | e }}">{{ item }}</option>
     {% endfor %}
   </datalist>
-  {# TODO (WattsUp): #363 Add a manual clear button with confirmation #}
   {% if txn.cleared %}
     <div class="{{ parent_class }} flex items-center gap-1">
       <icon>account_balance</icon>Account: {{ txn.account }}
@@ -326,6 +325,15 @@
     {% endif %}
   {% endif %}
   {% if txn.uri and not txn.cleared %}
+    <button
+      class="btn-text"
+      hx-patch="{{ url_for('transactions.transaction', uri=txn.uri) }}"
+      hx-trigger="clear"
+      hx-disabled-elt="this"
+      onclick="txn.confirmClear(event)"
+    >
+      Manually clear
+    </button>
     <button
       class="btn-text-error"
       hx-delete="{{ url_for('transactions.transaction', uri=txn.uri) }}"

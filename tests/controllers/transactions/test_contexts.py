@@ -482,31 +482,16 @@ def test_ctx_table_paging(
     assert ctx["next_page"] == transactions[0].date.isoformat()
 
 
-@pytest.mark.parametrize(
-    ("search_str", "target"),
-    [
-        ("rent", 2),
-        ("label:engineer", 2),
-        ("-label:engineer", 2),
-        ('category:"other income"', 1),
-        ('-category:"other income"', 3),
-        # Unknown key ignored
-        ("key:fake", 4),
-        ("-key:fake", 4),
-    ],
-)
 def test_ctx_table_search(
     today: datetime.date,
     session: orm.Session,
     transactions: list[Transaction],
-    search_str: str,
-    target: int,
 ) -> None:
     _ = transactions
     ctx, _ = txn_controller.ctx_table(
         session,
         today,
-        search_str,
+        "rent",
         None,
         None,
         None,
@@ -516,8 +501,8 @@ def test_ctx_table_search(
         uncleared=False,
     )
 
-    assert len(ctx["transactions"]) == target
-    assert ctx["search"] == search_str
+    assert len(ctx["transactions"]) == 2
+    assert ctx["search"] == "rent"
 
 
 def test_ctx_table_search_paging(

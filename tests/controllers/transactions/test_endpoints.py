@@ -75,6 +75,7 @@ def test_new_get(
     assert today.isoformat() in result
     assert result.count('name="memo"') == 1
     assert "Delete" not in result
+    assert "Manually clear" not in result
 
 
 def test_new_put(
@@ -356,6 +357,7 @@ def test_transaction_get_uncleared(
     assert txn.date.isoformat() in result
     assert result.count('name="memo"') == 1
     assert "Delete" in result
+    assert "Manually clear" in result
 
 
 def test_transaction_get(
@@ -368,6 +370,32 @@ def test_transaction_get(
     assert txn.date.isoformat() in result
     assert result.count('name="memo"') == 1
     assert "Delete" not in result
+    assert "Manually clear" not in result
+
+
+def test_transaction_clear(
+    session: orm.Session,
+    web_client: WebClient,
+    transactions: list[Transaction],
+) -> None:
+    txn = transactions[0]
+    txn.cleared = False
+    session.commit()
+
+    result, headers = web_client.PATCH(("transactions.transaction", {"uri": txn.uri}))
+    assert "snackbar.show" in result
+    assert f"Transaction on {txn.date} cleared" in result
+    assert "transaction" in headers["HX-Trigger"]
+
+    session.refresh(txn)
+    assert txn.cleared
+
+    t = (
+        session.query(TransactionSplit)
+        .where(TransactionSplit.parent_id == txn.id_)
+        .one()
+    )
+    assert t.cleared
 
 
 def test_transaction_delete_uncleared(

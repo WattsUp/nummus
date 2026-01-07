@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class UnclearedTransactions(Base):
-    """Checks for unlinked transactions."""
+    """Checks for uncleared transactions."""
 
     _DESC = textwrap.dedent(
         """\

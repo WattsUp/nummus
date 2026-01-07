@@ -467,6 +467,28 @@ class WebClient:
         """
         return self.open_("GET", endpoint, rc=rc, content_type=content_type, **kwargs)
 
+    def PATCH(
+        self,
+        endpoint: str | tuple[str, Queries],
+        *,
+        rc: int = HTTP_CODE_OK,
+        content_type: str = "text/html; charset=utf-8",
+        **kwargs: object,
+    ) -> tuple[str, werkzeug.datastructures.Headers]:
+        """PATCH an HTTP response.
+
+        Args:
+            endpoint: Route endpoint to test or (endpoint, url_for kwargs)
+            rc: Expected HTTP return code
+            content_type: Content type to check for
+            kwargs: Passed to client.get
+
+        Returns:
+            (response.text, headers)
+
+        """
+        return self.open_("PATCH", endpoint, rc=rc, content_type=content_type, **kwargs)
+
     def PUT(
         self,
         endpoint: str | tuple[str, Queries],
