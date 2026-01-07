@@ -11,6 +11,21 @@ const txn = {
     });
   },
   /**
+   * On click of clear transaction, confirm action
+   *
+   * @param {Event} evt Triggering event
+   */
+  confirmClear: function (evt) {
+    dialog.confirm(
+      "Clear transaction",
+      "Clear",
+      () => {
+        htmx.trigger(evt.target, "clear");
+      },
+      "Transaction will be marked as cleared. Only use on manually updated accounts. Cannot undo.",
+    );
+  },
+  /**
    * On click of delete transaction, confirm action
    *
    * @param {Event} evt Triggering event
@@ -22,7 +37,7 @@ const txn = {
       () => {
         htmx.trigger(evt.target, "delete");
       },
-      "Unlinked transaction will be deleted.",
+      "Uncleared transaction will be deleted.",
     );
   },
 };

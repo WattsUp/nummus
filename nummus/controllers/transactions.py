@@ -420,7 +420,7 @@ def new() -> str | flask.Response:
 
 
 def transaction(uri: str) -> str | flask.Response:
-    """GET, PUT, & DELETE /h/transactions/t/<uri>.
+    """GET, PUT, PATCH, & DELETE /h/transactions/t/<uri>.
 
     Args:
         uri: URI of Transaction
@@ -438,6 +438,15 @@ def transaction(uri: str) -> str | flask.Response:
             return flask.render_template(
                 "transactions/edit.jinja",
                 txn=ctx_txn(txn, today),
+            )
+        if flask.request.method == "PATCH":
+            txn.cleared = True
+            s.query(TransactionSplit).where(
+                TransactionSplit.parent_id == txn.id_,
+            ).update({"cleared": True})
+            return base.dialog_swap(
+                event="transaction",
+                snackbar=f"Transaction on {txn.date} cleared",
             )
         if flask.request.method == "DELETE":
             if txn.cleared:
@@ -1395,6 +1404,6 @@ ROUTES: base.Routes = {
     "/h/transactions/table-options": (table_options, ["GET"]),
     "/h/transactions/new": (new, ["GET", "PUT", "POST"]),
     "/h/transactions/validation": (validation, ["GET"]),
-    "/h/transactions/t/<path:uri>": (transaction, ["GET", "PUT", "DELETE"]),
+    "/h/transactions/t/<path:uri>": (transaction, ["GET", "PUT", "PATCH", "DELETE"]),
     "/h/transactions/t/<path:uri>/split": (split, ["PUT"]),
 }

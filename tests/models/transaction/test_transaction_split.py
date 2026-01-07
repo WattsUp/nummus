@@ -178,6 +178,13 @@ def test_search_none(session: orm.Session, transactions: list[Transaction]) -> N
         ("rent transfer", [3, 2]),
         ('"rent transfer"', [3]),
         ("+fake", []),
+        ("label:engineer", [1, 0]),
+        ("-label:engineer", [3, 2]),
+        ('category:"other income"', [0]),
+        ('-category:"other income"', [3, 2, 1]),
+        # Unknown key ignored
+        ("key:fake", [3, 2, 1, 0]),
+        ("-key:fake", [3, 2, 1, 0]),
     ],
     ids=conftest.id_func,
 )
