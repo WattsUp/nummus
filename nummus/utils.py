@@ -979,7 +979,7 @@ def tokenize_search_str(search_str: str) -> Tokens:
     """
     # Clean a bit
     for s in string.punctuation:
-        if s not in '"+-':
+        if s not in '"+-:':
             search_str = search_str.replace(s, " ")
 
     # Replace +- not following a space with a space
@@ -1009,6 +1009,10 @@ def tokenize_search_str(search_str: str) -> Tokens:
         elif raw[0] == "-":
             dest = tokens_not
             token = raw[1:]
+        elif ":" in raw:
+            # key value pairs are only must or not
+            dest = tokens_must
+            token = raw
         else:
             dest = tokens_can
             token = raw

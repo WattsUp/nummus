@@ -936,11 +936,11 @@ def test_tokenize_search_str_unbalanced_quote() -> None:
 
 
 def test_tokenize_search_str_everything() -> None:
-    s = '+query "keep together" -ignore "    "'
+    s = '+query "keep together" -ignore "    " key:value -key:"this value"'
     r_must, r_can, r_not = utils.tokenize_search_str(s)
-    assert r_must == {"query"}
+    assert r_must == {"query", "key:value"}
     assert r_can == {"keep together"}
-    assert r_not == {"ignore"}
+    assert r_not == {"ignore", "key:this value"}
 
 
 def test_low_pass_n1() -> None:
