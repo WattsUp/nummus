@@ -424,6 +424,13 @@ def ctx_chart(
 
     final_query = dat_query.final_query
     n_matches = query_count(final_query)
+    if not n_matches:
+        # If no matches, reset period to all
+        selected_period = None
+        dat_query.clauses.pop("start", None)
+        dat_query.clauses.pop("end", None)
+        final_query = dat_query.final_query
+        n_matches = query_count(final_query)
 
     query = final_query.with_entities(
         TransactionSplit.account_id,
