@@ -271,11 +271,17 @@ class TransactionSplit(Base):
         tokens_must, tokens_can, tokens_not = utils.tokenize_search_str(search_str)
 
         category_names = category_names or TransactionCategory.map_name(query.session)
+        category_names_rev = {v: k for k, v in category_names.items()}
         label_names = label_names or Label.map_name(query.session)
-        label_names = {k: v.lower() for k, v in label_names.items()}
+        label_names_rev = {v.lower(): k for k, v in label_names.items()}
 
-        query = cls._search_must(query, tokens_must, category_names, label_names)
-        query = cls._search_not(query, tokens_not, category_names, label_names)
+        query = cls._search_must(
+            query,
+            tokens_must,
+            category_names_rev,
+            label_names_rev,
+        )
+        query = cls._search_not(query, tokens_not, category_names_rev, label_names_rev)
 
         sub_query = query.with_entities(TransactionSplit.id_).scalar_subquery()
         query_modified = (
@@ -334,22 +340,33 @@ class TransactionSplit(Base):
         cls,
         query: orm.Query[TransactionSplit],
         tokens_must: set[str],
-        category_names: dict[int, str],
-        label_names: dict[int, str],
+        category_names: dict[str, int],
+        label_names: dict[str, int],
     ) -> orm.Query[TransactionSplit]:
         # Add tokens_must as an OR for each category and text_fields
         for token in tokens_must:
+            if ":" in token:
+                key, value = token.split(":", maxsplit=1)
+                label_id = label_names.get(value)
+                cat_id = category_names.get(value)
+                if key == "label" and label_id:
+                    query = query.where(LabelLink.label_id == label_id)
+                elif key == "category" and cat_id:
+                    query = query.where(TransactionSplit.category_id == cat_id)
+
+                continue
+
             clauses_or: list[sqlalchemy.ColumnExpressionArgument] = []
             categories = {
                 cat_id
-                for cat_id, cat_name in category_names.items()
+                for cat_name, cat_id in category_names.items()
                 if token in cat_name
             }
             if categories:
                 clauses_or.append(TransactionSplit.category_id.in_(categories))
             labels = {
                 label_id
-                for label_id, label_name in label_names.items()
+                for label_name, label_id in label_names.items()
                 if token in label_name
             }
             if labels:
@@ -363,21 +380,34 @@ class TransactionSplit(Base):
         cls,
         query: orm.Query[TransactionSplit],
         tokens_not: set[str],
-        category_names: dict[int, str],
-        label_names: dict[int, str],
+        category_names: dict[str, int],
+        label_names: dict[str, int],
     ) -> orm.Query[TransactionSplit]:
         # Add tokens_not as an NAND for each category and text_fields
         for token in tokens_not:
+            if ":" in token:
+                key, value = token.split(":", maxsplit=1)
+                label_id = label_names.get(value)
+                cat_id = category_names.get(value)
+                if key == "label" and label_id:
+                    query = query.where(
+                        LabelLink.label_id.is_(None) | (LabelLink.label_id != label_id),
+                    )
+                elif key == "category" and cat_id:
+                    query = query.where(TransactionSplit.category_id != cat_id)
+
+                continue
+
             categories = {
                 cat_id
-                for cat_id, cat_name in category_names.items()
+                for cat_name, cat_id in category_names.items()
                 if token in cat_name
             }
             if categories:
                 query = query.where(TransactionSplit.category_id.not_in(categories))
             labels = {
                 label_id
-                for label_id, label_name in label_names.items()
+                for label_name, label_id in label_names.items()
                 if token in label_name
             }
             if labels:
