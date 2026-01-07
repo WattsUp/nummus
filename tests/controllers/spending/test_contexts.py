@@ -179,12 +179,13 @@ def test_ctx_chart_empty(
     ctx, title = spending.ctx_chart(
         session,
         today,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
+        selected_account=None,
+        selected_category=None,
+        selected_label=None,
+        # No results should force period to "all"
+        selected_period=str(today.year),
+        selected_start=None,
+        selected_end=None,
         is_income=False,
     )
 
