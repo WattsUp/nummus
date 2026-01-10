@@ -49,3 +49,25 @@ def test_empty(session: orm.Session) -> None:
 def test_short() -> None:
     with pytest.raises(exc.InvalidORMValueError):
         Config(key=ConfigKey.WEB_KEY, value="a")
+
+
+def test_set(session: orm.Session, rand_str: str) -> None:
+    Config.set_(session, ConfigKey.WEB_KEY, rand_str)
+    session.commit()
+
+    v = session.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
+    assert v == rand_str
+
+
+def test_fetch(session: orm.Session) -> None:
+    target = session.query(Config.value).where(Config.key == ConfigKey.VERSION).scalar()
+    assert Config.fetch(session, ConfigKey.VERSION) == target
+
+
+def test_fetch_missing(session: orm.Session) -> None:
+    with pytest.raises(exc.ProtectedObjectNotFoundError):
+        Config.fetch(session, ConfigKey.WEB_KEY)
+
+
+def test_fetch_missing_ok(session: orm.Session) -> None:
+    assert Config.fetch(session, ConfigKey.WEB_KEY, no_raise=True) is None

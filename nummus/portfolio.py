@@ -209,35 +209,14 @@ class Portfolio:
                     *[m.min_version() for m in migrations.MIGRATORS],
                 )
 
-                c_version = Config(
-                    key=ConfigKey.VERSION,
-                    value=str(v),
-                )
-                c_enc_test = Config(
-                    key=ConfigKey.ENCRYPTION_TEST,
-                    value=test_value,
-                )
-                c_cipher = Config(
-                    key=ConfigKey.CIPHER,
-                    value=cipher_b64,
-                )
-                c_key = Config(
-                    key=ConfigKey.SECRET_KEY,
-                    value=secrets.token_hex(),
-                )
-                c_currency = Config(
-                    key=ConfigKey.BASE_CURRENCY,
-                    value=str(DEFAULT_CURRENCY.value),
-                )
-
-                s.add_all((c_version, c_enc_test, c_cipher, c_key, c_currency))
+                Config.set_(s, ConfigKey.VERSION, str(v))
+                Config.set_(s, ConfigKey.ENCRYPTION_TEST, test_value)
+                Config.set_(s, ConfigKey.CIPHER, cipher_b64)
+                Config.set_(s, ConfigKey.SECRET_KEY, secrets.token_hex())
+                Config.set_(s, ConfigKey.BASE_CURRENCY, str(DEFAULT_CURRENCY.value))
 
                 if enc is not None and key is not None:
-                    c_web_key = Config(
-                        key=ConfigKey.WEB_KEY,
-                        value=enc.encrypt(key),
-                    )
-                    s.add(c_web_key)
+                    Config.set_(s, ConfigKey.WEB_KEY, enc.encrypt(key))
         path_db.chmod(0o600)  # Only owner can read/write
 
         p = Portfolio(path_db, key)
@@ -353,26 +332,6 @@ class Portfolio:
         """
         return self.decrypt(enc_secret).decode()
 
-    def config(self, key: ConfigKey) -> str:
-        """Grab a configuration value.
-
-        Args:
-            key: ConfigKey to query
-
-        Returns:
-            string value
-
-        Raises:
-            ProtectedObjectNotFoundError: If key is not found
-
-        """
-        with self.begin_session() as s:
-            try:
-                return s.query(Config.value).where(Config.key == key).one()[0]
-            except exc.NoResultFound as e:
-                msg = f"Config.{key} not found"
-                raise exc.ProtectedObjectNotFoundError(msg) from e
-
     @property
     def db_version(self) -> Version:
         """Query the database version.
@@ -381,7 +340,8 @@ class Portfolio:
             Version of database
 
         """
-        return Version(self.config(ConfigKey.VERSION))
+        with self.begin_session() as s:
+            return Version(Config.fetch(s, ConfigKey.VERSION))
 
     @property
     def base_currency(self) -> Currency:
@@ -391,7 +351,8 @@ class Portfolio:
             Base currency all accounts are converted into
 
         """
-        return Currency(int(self.config(ConfigKey.BASE_CURRENCY)))
+        with self.begin_session() as s:
+            return Currency(int(Config.fetch(s, ConfigKey.BASE_CURRENCY)))
 
     def migration_required(self, version_str: str | None) -> Version | None:
         """Check if migration is required.
@@ -1080,9 +1041,7 @@ class Portfolio:
 
         # Use new encryption key
         with self.begin_session() as s:
-            value_encrypted: str | None = (
-                s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
-            )
+            value_encrypted = Config.fetch(s, ConfigKey.WEB_KEY)
             value = key if value_encrypted is None else self.decrypt_s(value_encrypted)
         dst.change_web_key(value)
 
@@ -1114,6 +1073,4 @@ class Portfolio:
 
         key_encrypted = self.encrypt(key)
         with self.begin_session() as s:
-            s.query(Config).where(Config.key == ConfigKey.WEB_KEY).update(
-                {Config.value: key_encrypted},
-            )
+            Config.set_(s, ConfigKey.WEB_KEY, key_encrypted)

@@ -105,9 +105,7 @@ def test_no_encryption_test(
 
 def test_bad_encryption_test(empty_portfolio: Portfolio) -> None:
     with empty_portfolio.begin_session() as s:
-        s.query(Config).where(Config.key == ConfigKey.ENCRYPTION_TEST).update(
-            {"value": "fake"},
-        )
+        Config.set_(s, ConfigKey.ENCRYPTION_TEST, "fake")
 
     with pytest.raises(exc.UnlockingError):
         Portfolio(empty_portfolio.path, None)
@@ -156,9 +154,7 @@ def test_encrypted_bad_enc_test(
 ) -> None:
     p, key = empty_portfolio_encrypted
     with p.begin_session() as s:
-        s.query(Config).where(Config.key == ConfigKey.ENCRYPTION_TEST).update(
-            {"value": "fake"},
-        )
+        Config.set_(s, ConfigKey.ENCRYPTION_TEST, "fake")
 
     with pytest.raises(exc.UnlockingError):
         Portfolio(p.path, key)

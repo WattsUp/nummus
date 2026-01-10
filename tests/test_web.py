@@ -20,9 +20,7 @@ if TYPE_CHECKING:
 
 def test_create_app(empty_portfolio: Portfolio, flask_app: flask.Flask) -> None:
     with empty_portfolio.begin_session() as s:
-        secret_key = (
-            s.query(Config.value).where(Config.key == ConfigKey.SECRET_KEY).one()[0]
-        )
+        secret_key = Config.fetch(s, ConfigKey.SECRET_KEY)
     assert flask_app.secret_key == secret_key
     assert len(flask_app.before_request_funcs[None]) == 1
 

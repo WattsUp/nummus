@@ -106,26 +106,10 @@ def ctx_checks(s: orm.Session, *, run: bool) -> HealthContext:
 
     issues: dict[str, dict[str, str]] = defaultdict(dict)
     if run:
-        c = (
-            s.query(Config)
-            .where(Config.key == ConfigKey.LAST_HEALTH_CHECK_TS)
-            .one_or_none()
-        )
-        if c is None:
-            c = Config(
-                key=ConfigKey.LAST_HEALTH_CHECK_TS,
-                value=utc_now.isoformat(),
-            )
-            s.add(c)
-        else:
-            c.value = utc_now.isoformat()
+        Config.set_(s, ConfigKey.LAST_HEALTH_CHECK_TS, utc_now.isoformat())
         last_update = utc_now
     else:
-        last_update_str = (
-            s.query(Config.value)
-            .where(Config.key == ConfigKey.LAST_HEALTH_CHECK_TS)
-            .scalar()
-        )
+        last_update_str = Config.fetch(s, ConfigKey.LAST_HEALTH_CHECK_TS, no_raise=True)
         last_update = (
             None
             if last_update_str is None

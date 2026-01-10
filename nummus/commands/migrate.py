@@ -82,9 +82,7 @@ class Migrate(BaseCommand):
                     *[m.min_version() for m in MIGRATORS],
                 )
 
-                s.query(Config).where(Config.key == ConfigKey.VERSION).update(
-                    {"value": str(v)},
-                )
+                Config.set_(s, ConfigKey.VERSION, str(v))
         except Exception:  # pragma: no cover
             # No immediate exception thrown, can't easily test
             portfolio.Portfolio.restore(p, tar_ver=tar_ver)
