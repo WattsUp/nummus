@@ -24,6 +24,7 @@ from nummus.models import (
     TransactionSplit,
     YIELD_PER,
 )
+from nummus.models.currency import Currency, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     import datetime
@@ -41,6 +42,8 @@ class AccountContext(TypedDict):
     institution: str
     category: AccountCategory
     category_type: type[AccountCategory]
+    currency: Currency
+    currency_type: type[Currency]
     closed: bool
     budgeted: bool
     updated_days_ago: int | None
@@ -187,6 +190,8 @@ def new() -> str | flask.Response:
             "institution": "",
             "category": AccountCategory.CASH,
             "category_type": AccountCategory,
+            "currency": DEFAULT_CURRENCY,
+            "currency_type": Currency,
             "closed": False,
             "budgeted": False,
             "updated_days_ago": None,
@@ -211,6 +216,7 @@ def new() -> str | flask.Response:
         name = form["name"].strip()
         number = form["number"].strip()
         category = AccountCategory(form["category"])
+        currency = Currency(form["currency"])
         budgeted = "budgeted" in form
 
         try:
@@ -222,6 +228,7 @@ def new() -> str | flask.Response:
                     category=category,
                     closed=False,
                     budgeted=budgeted,
+                    currency=currency,
                 )
                 s.add(acct)
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
@@ -265,6 +272,7 @@ def account(uri: str) -> str | werkzeug.Response:
         name = form["name"].strip()
         number = form["number"].strip()
         category = AccountCategory(form["category"])
+        currency = Currency(form["currency"])
         closed = "closed" in form
         budgeted = "budgeted" in form
 
@@ -278,6 +286,7 @@ def account(uri: str) -> str | werkzeug.Response:
                 acct.name = name
                 acct.number = number
                 acct.category = category
+                acct.currency = currency
                 acct.closed = closed
                 acct.budgeted = budgeted
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
@@ -427,6 +436,8 @@ def ctx_account(
         "institution": acct.institution,
         "category": acct.category,
         "category_type": AccountCategory,
+        "currency": acct.currency,
+        "currency_type": Currency,
         "value": current_value,
         "closed": acct.closed,
         "budgeted": acct.budgeted,

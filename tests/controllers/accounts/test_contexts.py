@@ -11,6 +11,7 @@ from nummus.models import (
     AccountCategory,
     AssetCategory,
 )
+from nummus.models.currency import Currency
 
 if TYPE_CHECKING:
     import datetime
@@ -41,6 +42,8 @@ def test_ctx_account_empty(
         "institution": account.institution,
         "category": account.category,
         "category_type": AccountCategory,
+        "currency": account.currency,
+        "currency_type": Currency,
         "value": Decimal(),
         "closed": account.closed,
         "budgeted": account.budgeted,
@@ -70,6 +73,8 @@ def test_ctx_account(
         "institution": account.institution,
         "category": account.category,
         "category_type": AccountCategory,
+        "currency": account.currency,
+        "currency_type": Currency,
         "value": sum(txn.amount for txn in transactions[:2]) or Decimal(),
         "closed": account.closed,
         "budgeted": account.budgeted,

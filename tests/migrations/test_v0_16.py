@@ -22,7 +22,7 @@ def test_migrate(tmp_path: Path, data_path: Path) -> None:
     m = MigratorV0_16()
     result = m.migrate(p)
     target = [
-        "Portfolio currency set to USD, use web to edit",
+        "Portfolio currency set to USD (US Dollar), use web to edit",
     ]
     assert result == target
 

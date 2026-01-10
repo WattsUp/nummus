@@ -24,14 +24,20 @@ class Currency(BaseEnum):
     @property
     @override
     def pretty(self) -> str:
-        # All are upper case
-        return self.name
+        return {
+            Currency.CAD: "CAD (Canadian Dollar)",
+            Currency.CHF: "CHF (Swiss Franc)",
+            Currency.DKK: "DKK (Danish Krone)",
+            Currency.EUR: "EUR (Euro)",
+            Currency.GBP: "GBP (British Pound)",
+            Currency.USD: "USD (US Dollar)",
+            Currency.YEN: "YEN (Japanese Yen)",
+        }[self]
 
 
 class Format(NamedTuple):
     """Currency format."""
 
-    name: str
     symbol: str
     sep_1k: str = ","
     sep_dec: str = "."
@@ -79,17 +85,11 @@ class Format(NamedTuple):
 DEFAULT_CURRENCY = Currency.USD
 
 FORMATS: dict[Currency, Format] = {
-    Currency.CAD: Format("Canadian Dollar", "C$"),
-    Currency.CHF: Format("Swiss Franc", "CHF ", sep_1k="'"),
-    Currency.DKK: Format(
-        "Danish Krone",
-        " kr",
-        sep_1k=".",
-        sep_dec=",",
-        is_suffix=True,
-    ),
-    Currency.EUR: Format("Euro", "€", sep_1k=".", sep_dec=","),
-    Currency.GBP: Format("British Pound", "£"),
-    Currency.USD: Format("US Dollar", "$"),
-    Currency.YEN: Format("Japanese Yen", "¥", precision=0),
+    Currency.CAD: Format("C$"),
+    Currency.CHF: Format("CHF ", sep_1k="'"),
+    Currency.DKK: Format(" kr", sep_1k=".", sep_dec=",", is_suffix=True),
+    Currency.EUR: Format("€", sep_1k=".", sep_dec=","),
+    Currency.GBP: Format("£"),
+    Currency.USD: Format("$"),
+    Currency.YEN: Format("¥", precision=0),
 }

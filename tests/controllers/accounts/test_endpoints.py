@@ -6,6 +6,7 @@ import pytest
 
 from nummus.controllers import base
 from nummus.models import Account, AccountCategory
+from nummus.models.currency import Currency
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -112,7 +113,6 @@ def test_new_get(web_client: WebClient) -> None:
     assert "Delete" not in result
 
 
-@pytest.mark.xfail
 def test_new(
     web_client: WebClient,
     session: orm.Session,
@@ -122,6 +122,7 @@ def test_new(
         data={
             "name": "New name",
             "category": "INVESTMENT",
+            "currency": "USD",
             "institution": "Nothing to see",
             "number": "1234",
             "closed": "on",
@@ -134,6 +135,7 @@ def test_new(
     account = session.query(Account).one()
     assert account.name == "New name"
     assert account.category == AccountCategory.INVESTMENT
+    assert account.currency == Currency.USD
     assert account.institution == "Nothing to see"
     assert account.number == "1234"
     assert not account.closed
@@ -145,6 +147,7 @@ def test_new_error(web_client: WebClient) -> None:
         data={
             "name": "a",
             "category": "INVESTMENT",
+            "currency": "USD",
             "institution": "Nothing to see",
             "number": "1234",
             "closed": "on",
@@ -190,6 +193,7 @@ def test_account_edit(
         data={
             "name": "New name",
             "category": "INVESTMENT",
+            "currency": "EUR",
             "institution": "Nothing to see",
             "number": "1234",
             "closed": "on",
@@ -202,6 +206,7 @@ def test_account_edit(
     session.refresh(account)
     assert account.name == "New name"
     assert account.category == AccountCategory.INVESTMENT
+    assert account.currency == Currency.EUR
     assert account.institution == "Nothing to see"
     assert account.number == "1234"
 
@@ -225,6 +230,7 @@ def test_account_edit_error(
     form = {
         "name": name,
         "category": "INVESTMENT",
+        "currency": "USD",
         "institution": "Nothing to see",
         "number": "1234",
     }

@@ -10,7 +10,11 @@ from nummus.models.currency import Currency
 
 @pytest.mark.parametrize("c", [*Currency])
 def test_pretty(c: Currency) -> None:
-    assert c.pretty == c.name.upper()
+    assert c.pretty
+
+
+def test_order() -> None:
+    assert [*Currency] == sorted(Currency, key=lambda x: x.name)
 
 
 @pytest.mark.parametrize("c", [*Currency])
