@@ -8,6 +8,7 @@ from nummus.migrations.v0_10 import MigratorV0_10
 from nummus.migrations.v0_11 import MigratorV0_11
 from nummus.migrations.v0_13 import MigratorV0_13
 from nummus.migrations.v0_15 import MigratorV0_15
+from nummus.migrations.v0_16 import MigratorV0_16
 
 __all__ = [
     "MIGRATORS",
@@ -21,4 +22,5 @@ MIGRATORS: list[type[Migrator]] = [
     MigratorV0_11,
     MigratorV0_13,
     MigratorV0_15,
+    MigratorV0_16,
 ]

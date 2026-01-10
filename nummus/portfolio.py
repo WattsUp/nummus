@@ -36,6 +36,7 @@ from nummus.models import (
     TransactionSplit,
     YIELD_PER,
 )
+from nummus.models.currency import Currency, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     import contextlib
@@ -224,8 +225,12 @@ class Portfolio:
                     key=ConfigKey.SECRET_KEY,
                     value=secrets.token_hex(),
                 )
+                c_currency = Config(
+                    key=ConfigKey.BASE_CURRENCY,
+                    value=str(DEFAULT_CURRENCY.value),
+                )
 
-                s.add_all((c_version, c_enc_test, c_cipher, c_key))
+                s.add_all((c_version, c_enc_test, c_cipher, c_key, c_currency))
 
                 if enc is not None and key is not None:
                     c_web_key = Config(
@@ -348,29 +353,45 @@ class Portfolio:
         """
         return self.decrypt(enc_secret).decode()
 
-    @property
-    def db_version(self) -> Version:
-        """Check the version of portfolio is current and does not need migration.
+    def config(self, key: ConfigKey) -> str:
+        """Grab a configuration value.
+
+        Args:
+            key: ConfigKey to query
 
         Returns:
-            Version of database
+            string value
 
         Raises:
-            ProtectedObjectNotFoundError: If VERSION is not found
+            ProtectedObjectNotFoundError: If key is not found
 
         """
         with self.begin_session() as s:
             try:
-                v = (
-                    s.query(Config.value)
-                    .where(Config.key == ConfigKey.VERSION)
-                    .one()[0]
-                )
+                return s.query(Config.value).where(Config.key == key).one()[0]
             except exc.NoResultFound as e:
-                msg = "Config.VERSION not found"
+                msg = f"Config.{key} not found"
                 raise exc.ProtectedObjectNotFoundError(msg) from e
 
-            return Version(v)
+    @property
+    def db_version(self) -> Version:
+        """Query the database version.
+
+        Returns:
+            Version of database
+
+        """
+        return Version(self.config(ConfigKey.VERSION))
+
+    @property
+    def base_currency(self) -> Currency:
+        """Query the basse currency.
+
+        Returns:
+            Base currency all accounts are converted into
+
+        """
+        return Currency(int(self.config(ConfigKey.BASE_CURRENCY)))
 
     def migration_required(self, version_str: str | None) -> Version | None:
         """Check if migration is required.

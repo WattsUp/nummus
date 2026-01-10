@@ -16,6 +16,7 @@ class ConfigKey(BaseEnum):
     SECRET_KEY = 4
     WEB_KEY = 5
     LAST_HEALTH_CHECK_TS = 6
+    BASE_CURRENCY = 7
 
 
 class Config(Base):

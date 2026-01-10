@@ -20,6 +20,7 @@ from nummus.models.base import (
     string_column_args,
     YIELD_PER,
 )
+from nummus.models.currency import Currency
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
 from nummus.models.utils import obj_session
@@ -81,6 +82,7 @@ class Account(Base):
     category: orm.Mapped[AccountCategory] = orm.mapped_column(SQLEnum(AccountCategory))
     closed: ORMBool
     budgeted: ORMBool
+    currency: orm.Mapped[Currency] = orm.mapped_column(SQLEnum(Currency))
 
     __table_args__ = (
         UniqueConstraint("number", "institution"),

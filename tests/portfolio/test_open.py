@@ -7,7 +7,14 @@ import pytest
 
 from nummus import encryption
 from nummus import exceptions as exc
-from nummus.models import Asset, Config, ConfigKey, query_count, TransactionCategory
+from nummus.models import (
+    Asset,
+    Config,
+    ConfigKey,
+    query_count,
+    TransactionCategory,
+)
+from nummus.models.currency import DEFAULT_CURRENCY
 from nummus.portfolio import Portfolio
 
 if TYPE_CHECKING:
@@ -54,7 +61,7 @@ def test_unencrypted(tmp_path: Path) -> None:
     assert not Portfolio.is_encrypted_path(path)
 
     with p.begin_session() as s:
-        assert query_count(s.query(Config)) == 4
+        assert query_count(s.query(Config)) == 5
         assert query_count(s.query(TransactionCategory)) > 0
         assert query_count(s.query(Asset)) > 0
 
@@ -124,7 +131,7 @@ def test_encrypted(tmp_path: Path, rand_str: str) -> None:
     assert Portfolio.is_encrypted_path(path)
 
     with p.begin_session() as s:
-        assert query_count(s.query(Config)) == 5
+        assert query_count(s.query(Config)) == 6
         assert query_count(s.query(TransactionCategory)) > 0
         assert query_count(s.query(Asset)) > 0
 
@@ -165,3 +172,7 @@ def test_encrypt(
 ) -> None:
     p, _ = empty_portfolio_encrypted
     assert p.decrypt_s(p.encrypt(rand_str)) == rand_str
+
+
+def test_base_currency(empty_portfolio: Portfolio) -> None:
+    assert empty_portfolio.base_currency == DEFAULT_CURRENCY
