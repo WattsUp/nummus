@@ -26,6 +26,8 @@ from nummus.models import (
     TransactionCategoryGroup,
     YIELD_PER,
 )
+from nummus.models.config import Config
+from nummus.models.currency import CURRENCY_FORMATS
 
 if TYPE_CHECKING:
     import werkzeug.datastructures
@@ -34,6 +36,7 @@ if TYPE_CHECKING:
     from nummus.models import (
         BudgetAvailableCategory,
     )
+    from nummus.models.currency import CurrencyFormat
 
 
 PERIOD_OPTIONS = {
@@ -110,6 +113,7 @@ class BudgetContext(TypedDict):
     assignable: Decimal
     groups: list[GroupContext]
     n_overspent: int
+    currency_format: CurrencyFormat
 
 
 class SidebarContext(TypedDict):
@@ -325,6 +329,7 @@ def move(uri: str) -> str | flask.Response:
     month_ord = month.toordinal()
 
     with p.begin_session() as s:
+        cf = CURRENCY_FORMATS[Config.base_currency(s)]
         data = BudgetAssignment.get_monthly_available(s, month)
         if uri == "income":
             src_cat = None
@@ -357,7 +362,7 @@ def move(uri: str) -> str | flask.Response:
 
             return base.dialog_swap(
                 event="budget",
-                snackbar=f"{utils.format_financial(abs(to_move))} reallocated",
+                snackbar=f"{cf(abs(to_move))} reallocated",
             )
 
         options: dict[TransactionCategoryGroup, list[MoveOption]] = defaultdict(list)
@@ -399,6 +404,7 @@ def move(uri: str) -> str | flask.Response:
             "month": month_str,
             "options": options,
             "destination": destination,
+            "currency_format": cf,
         }
     return flask.render_template(
         "budgeting/edit-move.jinja",
@@ -542,6 +548,7 @@ def new_group() -> str:
     p = web.portfolio
     name = "New group"
     with p.begin_session() as s:
+        cf = CURRENCY_FORMATS[Config.base_currency(s)]
         # Ensure the name isn't a duplicate
         i = 1
         n = query_count(s.query(BudgetGroup).where(BudgetGroup.name == name))
@@ -582,6 +589,7 @@ def new_group() -> str:
             {% include "budgeting/group.jinja" %}
         </div>
         """,
+        ctx={"currency_format": cf},
         group=ctx,
     )
 
@@ -671,6 +679,7 @@ def target(uri: str) -> str | flask.Response:
             "from_amount": (
                 flask.request.headers.get("HX-Trigger") == "budgeting-amount"
             ),
+            "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
         }
         # Don't make the changes
         s.rollback()
@@ -781,7 +790,10 @@ def sidebar() -> flask.Response:
         )
         html = flask.render_template(
             "budgeting/sidebar.jinja",
-            ctx={"month": month_str},
+            ctx={
+                "month": month_str,
+                "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
+            },
             budget_sidebar=sidebar,
         )
     response = flask.make_response(html)
@@ -1197,6 +1209,7 @@ def ctx_budget(
             "assignable": assignable,
             "groups": groups_list,
             "n_overspent": n_overspent,
+            "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
         },
         title,
     )

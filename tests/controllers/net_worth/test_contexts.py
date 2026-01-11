@@ -9,6 +9,7 @@ from nummus.models import (
     Transaction,
     TransactionSplit,
 )
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -48,6 +49,7 @@ def test_ctx_chart_empty(
         "liabilities": Decimal(),
         "assets_w": Decimal(),
         "liabilities_w": Decimal(),
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
     assert ctx == target
 
@@ -156,5 +158,6 @@ def test_ctx_chart(
         "liabilities": Decimal(-100),
         "assets_w": Decimal(60),
         "liabilities_w": Decimal(40),
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
     assert ctx == target

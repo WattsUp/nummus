@@ -7,16 +7,17 @@
   hx-swap="innerHTML show:window:top"
   hx-push-url="true"
 >
+  {% set cf = asset.currency_format %}
   <div class="flex justify-between gap-2">
     <b class="truncate">{{ asset.name }}</b>
-    <span>{{ asset.value | money }}</span>
+    <span>{{ cf(asset.value) }}</span>
   </div>
   <div class="text-on-surface-variant flex justify-between gap-2 text-sm">
     <span>
       {% if asset.ticker %}@{{ asset.ticker }},{% endif %}
       {% if include_weight %}{{ asset.weight | percent }} of asset{% endif %}
     </span>
-    <span>{{ asset.qty | qty }} @ {{ asset.price | money }}</span>
+    <span>{{ asset.qty | qty }} @ {{ cf(asset.price) }}</span>
   </div>
   <icon class="absolute right-0 top-1/2 -translate-y-1/2">chevron_forward</icon>
 </a>

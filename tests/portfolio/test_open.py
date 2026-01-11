@@ -14,7 +14,6 @@ from nummus.models import (
     query_count,
     TransactionCategory,
 )
-from nummus.models.currency import DEFAULT_CURRENCY
 from nummus.portfolio import Portfolio
 
 if TYPE_CHECKING:
@@ -168,7 +167,3 @@ def test_encrypt(
 ) -> None:
     p, _ = empty_portfolio_encrypted
     assert p.decrypt_s(p.encrypt(rand_str)) == rand_str
-
-
-def test_base_currency(empty_portfolio: Portfolio) -> None:
-    assert empty_portfolio.base_currency == DEFAULT_CURRENCY

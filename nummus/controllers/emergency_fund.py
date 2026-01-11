@@ -10,11 +10,15 @@ import flask
 from nummus import utils, web
 from nummus.controllers import base
 from nummus.models.budget import BudgetAssignment
+from nummus.models.config import Config
+from nummus.models.currency import CURRENCY_FORMATS
 
 if TYPE_CHECKING:
     from decimal import Decimal
 
     from sqlalchemy import orm
+
+    from nummus.models.currency import CurrencyFormat
 
 
 class ChartContext(TypedDict):
@@ -46,6 +50,7 @@ class EFundContext(TypedDict):
     delta_lower: Decimal
     delta_upper: Decimal
     categories: list[CategoryInfo]
+    currency_format: CurrencyFormat
 
 
 def page() -> flask.Response:
@@ -153,6 +158,7 @@ def ctx_page(s: orm.Session, today: datetime.date) -> EFundContext:
         "delta_lower": delta_lower,
         "delta_upper": delta_upper,
         "categories": category_infos,
+        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
     }
 
 

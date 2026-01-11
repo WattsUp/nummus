@@ -15,9 +15,13 @@ from nummus import utils, web
 from nummus.controllers import base
 from nummus.models import Account, AccountCategory, Asset, TransactionSplit
 from nummus.models.asset import AssetCategory
+from nummus.models.config import Config
+from nummus.models.currency import CURRENCY_FORMATS
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
+
+    from nummus.models.currency import CurrencyFormat
 
 _DEFAULT_INDEX = "S&P 500"
 
@@ -32,6 +36,7 @@ class AccountContext(TypedDict):
     pnl: Decimal
     cash_flow: Decimal
     mwrr: Decimal | None
+    currency_format: CurrencyFormat
 
 
 class AccountsContext(TypedDict):
@@ -44,6 +49,7 @@ class AccountsContext(TypedDict):
     mwrr: Decimal | None
     accounts: list[AccountContext]
     options: list[base.NamePairState]
+    currency_format: CurrencyFormat
 
 
 class ChartData(base.ChartData):
@@ -178,6 +184,7 @@ def dashboard() -> str:
             "pnl": total_profit[-1],
             "twrr": twrr[-1],
             "indices": indices,
+            "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
         }
     return flask.render_template(
         "performance/dashboard.jinja",
@@ -233,6 +240,7 @@ def ctx_chart(
 
     query = s.query(Account).where(Account.id_.in_(acct_ids))
     mapping: dict[int, str] = {}
+    currency_formats: dict[int, CurrencyFormat] = {}
     acct_ids.clear()
     account_options: list[base.NamePairState] = []
     for acct in query.all():
@@ -243,6 +251,7 @@ def ctx_chart(
             )
             if not excluded:
                 mapping[acct.id_] = acct.name
+                currency_formats[acct.id_] = CURRENCY_FORMATS[acct.currency]
                 acct_ids.add(acct.id_)
 
     acct_values, acct_profits, _ = Account.get_value_all(
@@ -281,6 +290,7 @@ def ctx_chart(
                 "pnl": profit,
                 "cash_flow": cash_flow,
                 "mwrr": utils.mwrr(values, profits),
+                "currency_format": currency_formats[acct_id],
             },
         )
         sum_cash_flow += cash_flow
@@ -314,6 +324,7 @@ def ctx_chart(
         "mwrr": mwrr,
         "accounts": ctx_accounts,
         "options": sorted(account_options, key=operator.itemgetter(0)),
+        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
     }
 
     return {

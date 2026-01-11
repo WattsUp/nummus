@@ -11,7 +11,7 @@ from nummus.models import (
     AccountCategory,
     AssetCategory,
 )
-from nummus.models.currency import Currency
+from nummus.models.currency import Currency, CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     import datetime
@@ -54,6 +54,7 @@ def test_ctx_account_empty(
         "n_future": 0,
         "performance": None,
         "assets": [],
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
     assert ctx == target
 
@@ -85,6 +86,7 @@ def test_ctx_account(
         "n_future": 2,
         "performance": None,
         "assets": [],
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
     assert ctx == target
 
@@ -215,6 +217,7 @@ def test_ctx_accounts_empty(today: datetime.date, session: orm.Session) -> None:
         "categories": {},
         "include_closed": False,
         "n_closed": 0,
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
     assert ctx == target
 
@@ -252,5 +255,6 @@ def test_ctx_accounts(
         },
         "include_closed": True,
         "n_closed": 1,
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
     assert ctx == target

@@ -18,19 +18,26 @@ from nummus.models import (
     AccountCategory,
     Asset,
     AssetCategory,
+    Config,
     query_to_dict,
     Transaction,
     TransactionCategory,
     TransactionSplit,
     YIELD_PER,
 )
-from nummus.models.currency import Currency
+from nummus.models.currency import (
+    Currency,
+    CURRENCY_FORMATS,
+    DEFAULT_CURRENCY,
+)
 
 if TYPE_CHECKING:
     import datetime
 
     import werkzeug
     from sqlalchemy import orm
+
+    from nummus.models.currency import CurrencyFormat
 
 
 class AccountContext(TypedDict):
@@ -44,6 +51,7 @@ class AccountContext(TypedDict):
     category_type: type[AccountCategory]
     currency: Currency
     currency_type: type[Currency]
+    currency_format: CurrencyFormat
     closed: bool
     budgeted: bool
     updated_days_ago: int | None
@@ -104,6 +112,7 @@ class AllAccountsContext(TypedDict):
     assets_w: Decimal
     liabilities_w: Decimal
     categories: dict[AccountCategory, tuple[Decimal, list[AccountContext]]]
+    currency_format: CurrencyFormat
     include_closed: bool
     n_closed: int
 
@@ -183,33 +192,34 @@ def new() -> str | flask.Response:
 
     """
     p = web.portfolio
-    if flask.request.method == "GET":
-        ctx: AccountContext = {
-            "uri": None,
-            "name": "",
-            "number": None,
-            "institution": "",
-            "category": AccountCategory.CASH,
-            "category_type": AccountCategory,
-            "currency": p.base_currency,
-            "currency_type": Currency,
-            "closed": False,
-            "budgeted": False,
-            "updated_days_ago": None,
-            "n_today": 0,
-            "n_future": 0,
-            "change_today": Decimal(),
-            "change_future": Decimal(),
-            "value": Decimal(),
-            "performance": None,
-            "assets": None,
-        }
-        return flask.render_template(
-            "accounts/edit.jinja",
-            acct=ctx,
-        )
-
     with p.begin_session() as s:
+        if flask.request.method == "GET":
+            ctx: AccountContext = {
+                "uri": None,
+                "name": "",
+                "number": None,
+                "institution": "",
+                "category": AccountCategory.CASH,
+                "category_type": AccountCategory,
+                "currency": Config.base_currency(s),
+                "currency_type": Currency,
+                "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
+                "closed": False,
+                "budgeted": False,
+                "updated_days_ago": None,
+                "n_today": 0,
+                "n_future": 0,
+                "change_today": Decimal(),
+                "change_future": Decimal(),
+                "value": Decimal(),
+                "performance": None,
+                "assets": None,
+            }
+            return flask.render_template(
+                "accounts/edit.jinja",
+                acct=ctx,
+            )
+
         form = flask.request.form
         institution = form["institution"].strip()
         name = form["name"].strip()
@@ -315,6 +325,7 @@ def performance(uri: str) -> flask.Response:
                     base.today_client(),
                     args.get("chart-period"),
                 ),
+                "currency_format": CURRENCY_FORMATS[acct.currency],
             },
         )
     response = flask.make_response(html)
@@ -437,6 +448,7 @@ def ctx_account(
         "category_type": AccountCategory,
         "currency": acct.currency,
         "currency_type": Currency,
+        "currency_format": CURRENCY_FORMATS[acct.currency],
         "value": current_value,
         "closed": acct.closed,
         "budgeted": acct.budgeted,
@@ -776,6 +788,7 @@ def ctx_accounts(
         },
         "include_closed": include_closed,
         "n_closed": n_closed,
+        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
     }
 
 

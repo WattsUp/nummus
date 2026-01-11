@@ -5,18 +5,21 @@
 >
   <h1>Net worth</h1>
 </div>
+{% set cf = ctx.currency_format %}
 <div
   class="mb-2 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-x-2 text-center font-bold"
 >
   <div class="col-span-2">
     <h2 class="text-xl">Net worth</h2>
     <h1 class="text-tertiary font-serif text-6xl">
-      {{ ctx.net_worth | money0 }}
+      {{ cf(ctx.net_worth, coarse=True) }}
     </h1>
   </div>
   <div class="max-lg:col-start-1">
     <h2 class="text-xl">Assets</h2>
-    <h1 class="text-tertiary font-serif text-4xl">{{ ctx.assets | money0 }}</h1>
+    <h1 class="text-tertiary font-serif text-4xl">
+      {{ cf(ctx.assets, coarse=True) }}
+    </h1>
     <div class="border-primary h-2 w-full rounded-xl border">
       <div
         class="bg-primary h-full rounded-xl"
@@ -27,7 +30,7 @@
   <div>
     <h2 class="text-xl">Liabilities</h2>
     <h1 class="text-tertiary font-serif text-4xl">
-      {{ ctx.liabilities | money0 }}
+      {{ cf(ctx.liabilities, coarse=True) }}
     </h1>
     <div class="border-primary h-2 w-full rounded-xl border">
       <div

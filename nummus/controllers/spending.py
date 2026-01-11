@@ -21,12 +21,16 @@ from nummus.models import (
     TransactionSplit,
     YIELD_PER,
 )
+from nummus.models.config import Config
+from nummus.models.currency import CURRENCY_FORMATS
 
 if TYPE_CHECKING:
     from decimal import Decimal
 
     import sqlalchemy
     from sqlalchemy import orm
+
+    from nummus.models.currency import CurrencyFormat
 
 
 class OptionsContext(TypedDict):
@@ -52,6 +56,7 @@ class Context(OptionsContext):
     by_payee: list[tuple[str, Decimal]]
     by_category: list[tuple[str, Decimal]]
     by_label: list[tuple[str | None, Decimal]]
+    currency_format: CurrencyFormat
 
 
 class DataQuery(NamedTuple):
@@ -502,6 +507,7 @@ def ctx_chart(
             for label, amount, is_selected in by_label
             if not is_selected or len(by_label) == 1
         ],
+        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
     }, ("Income" if is_income else "Spending")
 
 

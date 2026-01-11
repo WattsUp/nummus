@@ -15,6 +15,8 @@ from nummus.models import (
     AssetSector,
     YIELD_PER,
 )
+from nummus.models.config import Config
+from nummus.models.currency import CURRENCY_FORMATS
 
 if TYPE_CHECKING:
     import datetime
@@ -26,6 +28,7 @@ if TYPE_CHECKING:
         AssetCategory,
         USSector,
     )
+    from nummus.models.currency import CurrencyFormat
 
 
 class ChartAssetContext(TypedDict):
@@ -43,6 +46,7 @@ class AssetContext(ChartAssetContext):
     uri: str
     qty: Decimal
     price: Decimal
+    currency_format: CurrencyFormat
 
 
 class GroupContext(TypedDict):
@@ -66,6 +70,7 @@ class AllocationContext(TypedDict):
     categories: list[GroupContext]
     sectors: list[GroupContext]
     chart: ChartContext
+    currency_format: CurrencyFormat
 
 
 def page() -> flask.Response:
@@ -122,33 +127,24 @@ def ctx_allocation(s: orm.Session, today: datetime.date) -> AllocationContext:
 
     assets_by_category: dict[AssetCategory, list[AssetContext]] = defaultdict(list)
     assets_by_sector: dict[USSector, list[AssetContext]] = defaultdict(list)
-    query = (
-        s.query(Asset)
-        .with_entities(Asset.id_, Asset.name, Asset.category, Asset.ticker)
-        .where(Asset.id_.in_(asset_qtys))
-        .order_by(Asset.name)
-    )
-    for a_id, name, category, ticker in query.yield_per(YIELD_PER):
-        a_id: int
-        name: str
-        category: AssetCategory
-        ticker: str | None
-        qty = asset_qtys[a_id]
-        value = asset_values[a_id]
-        a_uri = Asset.id_to_uri(a_id)
+    query = s.query(Asset).where(Asset.id_.in_(asset_qtys)).order_by(Asset.name)
+    for asset in query.yield_per(YIELD_PER):
+        qty = asset_qtys[asset.id_]
+        value = asset_values[asset.id_]
 
         asset_ctx: AssetContext = {
-            "uri": a_uri,
-            "name": name,
-            "ticker": ticker,
+            "uri": asset.uri,
+            "name": asset.name,
+            "ticker": asset.ticker,
             "qty": qty,
-            "price": asset_prices[a_id],
+            "price": asset_prices[asset.id_],
             "value": value,
             "weight": Decimal(1),
+            "currency_format": CURRENCY_FORMATS[asset.currency],
         }
-        assets_by_category[category].append(asset_ctx)
+        assets_by_category[asset.category].append(asset_ctx)
 
-        for sector, weight in asset_sectors[a_id].items():
+        for sector, weight in asset_sectors[asset.id_].items():
             asset_sector_ctx = asset_ctx.copy()
             asset_sector_ctx["weight"] = weight
             asset_sector_ctx["qty"] = qty * weight
@@ -192,6 +188,7 @@ def ctx_allocation(s: orm.Session, today: datetime.date) -> AllocationContext:
             },
             "sectors": {item["name"]: chart_assets(item["assets"]) for item in sectors},
         },
+        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
     }
 
 

@@ -7,6 +7,7 @@ from nummus.migrations.v0_16 import MigratorV0_16
 from nummus.models import dump_table_configs
 from nummus.models.account import Account
 from nummus.models.asset import Asset
+from nummus.models.config import Config
 from nummus.models.currency import Currency
 from nummus.portfolio import Portfolio
 
@@ -34,4 +35,4 @@ def test_migrate(tmp_path: Path, data_path: Path) -> None:
         result = "\n".join(dump_table_configs(s, Asset))
         assert "currency" in result
 
-    assert p.base_currency == Currency.USD
+        assert Config.base_currency(s) == Currency.USD

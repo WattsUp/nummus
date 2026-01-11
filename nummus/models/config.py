@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from typing import Literal, overload
 
+from packaging.version import Version
 from sqlalchemy import orm
 
 from nummus import exceptions as exc
 from nummus.models.base import Base, BaseEnum, ORMStr, SQLEnum, string_column_args
+from nummus.models.currency import Currency
 
 
 class ConfigKey(BaseEnum):
@@ -116,3 +118,29 @@ class Config(Base):
                 return None
             msg = f"Config.{key} not found"
             raise exc.ProtectedObjectNotFoundError(msg) from e
+
+    @classmethod
+    def db_version(cls, s: orm.Session) -> Version:
+        """Query the database version.
+
+        Args:
+            s: SQL session to use
+
+        Returns:
+            Version of database
+
+        """
+        return Version(Config.fetch(s, ConfigKey.VERSION))
+
+    @classmethod
+    def base_currency(cls, s: orm.Session) -> Currency:
+        """Query the basse currency.
+
+        Args:
+            s: SQL session to use
+
+        Returns:
+            Base currency all accounts are converted into
+
+        """
+        return Currency(int(Config.fetch(s, ConfigKey.BASE_CURRENCY)))

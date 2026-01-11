@@ -1,25 +1,26 @@
+{% set cf = ctx.currency_format %}
 <div class="budget-sidebar-summary">
   <div class="font-bold">
     <h1>Available balance</h1>
-    <div>{{ budget_sidebar.available | money }}</div>
+    <div>{{ cf(budget_sidebar.available) }}</div>
   </div>
   <div>
     <div>Cash leftover</div>
-    <div>{{ budget_sidebar.leftover | money }}</div>
+    <div>{{ cf(budget_sidebar.leftover) }}</div>
   </div>
   <div>
     <div>Assigned this month</div>
-    <div>{{ budget_sidebar.assigned | money }}</div>
+    <div>{{ cf(budget_sidebar.assigned) }}</div>
   </div>
   {% if budget_sidebar.future_assigned is not none %}
     <div>
       <div>Assigned in future</div>
-      <div>{{ budget_sidebar.future_assigned | money }}</div>
+      <div>{{ cf(budget_sidebar.future_assigned) }}</div>
     </div>
   {% endif %}
   <div>
     <div>Activity this month</div>
-    <div>{{ budget_sidebar.activity | money }}</div>
+    <div>{{ cf(budget_sidebar.activity) }}</div>
   </div>
   <input
     id="budget-sidebar-uri"
@@ -38,7 +39,7 @@
     <h1 class="font-bold">Targets</h1>
     <div>
       <h2>Total to go</h2>
-      <div>{{ budget_sidebar.to_go | money }}</div>
+      <div>{{ cf(budget_sidebar.to_go) }}</div>
     </div>
     <label class="input-outlined">
       <select class="w-full" autocomplete="off">
@@ -83,7 +84,7 @@
         {% set money_prefix = "Assign" %}
       {% endif %}
       <h2 class="font-bold">
-        {{ money_prefix }} {{ target.target | money }}{{ money_suffix }}
+        {{ money_prefix }} {{ cf(target.target) }}{{ money_suffix }}
       </h2>
       <div>By {{ target.next_due_date }}</div>
       <hr />
@@ -101,7 +102,7 @@
       {% else %}
         <div class="status-tertiary w-full">
           <span class="grow text-center">
-            Assign {{ target.to_go | money }} more to meet target
+            Assign {{ cf(target.to_go) }} more to meet target
           </span>
         </div>
       {% endif %}
@@ -114,16 +115,16 @@
       {% endif %}
       <div>
         <div>{{ label_target }}</div>
-        <div>{{ target.total_target | money }}</div>
+        <div>{{ cf(target.total_target) }}</div>
       </div>
       <div>
         <div>{{ label_assigned }}</div>
-        <div>{{ target.total_assigned | money }}</div>
+        <div>{{ cf(target.total_assigned) }}</div>
       </div>
       <hr />
       <div>
         <div>To go</div>
-        <div>{{ target.total_to_go | money }}</div>
+        <div>{{ cf(target.total_to_go) }}</div>
       </div>
       <button
         class="btn-tonal mx-auto"

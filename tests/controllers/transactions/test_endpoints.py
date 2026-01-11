@@ -618,6 +618,7 @@ def test_validation(
 def test_validation_amounts(
     flask_app: flask.Flask,
     web_client: WebClient,
+    transactions: list[Transaction],
     split_amount: list[str],
     split: bool,
     target: str,
@@ -625,7 +626,12 @@ def test_validation_amounts(
     result, _ = web_client.GET(
         (
             "transactions.validation",
-            {"amount": "10", "split-amount": split_amount, "split": split},
+            {
+                "amount": "10",
+                "split-amount": split_amount,
+                "uri": transactions[0].uri,
+                "split": split,
+            },
         ),
     )
 

@@ -13,6 +13,7 @@ from nummus.models import (
     TransactionCategory,
     TransactionSplit,
 )
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -45,6 +46,7 @@ def test_empty(today: datetime.date, session: orm.Session) -> None:
         "delta_lower": Decimal(),
         "delta_upper": Decimal(),
         "categories": [],
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
     assert ctx == target
 

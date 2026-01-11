@@ -11,6 +11,7 @@ from nummus.models import (
     AssetCategory,
     YIELD_PER,
 )
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
 
@@ -52,6 +53,7 @@ def test_ctx_chart_empty(
         "mwrr": Decimal(),
         "accounts": [],
         "options": [],
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
 
     query = session.query(Asset.name).order_by(Asset.name)
@@ -141,11 +143,13 @@ def test_ctx_chart(
                 "pnl": Decimal(50),
                 "cash_flow": Decimal(),
                 "mwrr": None,
+                "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
             },
         ],
         "options": [
             base.NamePairState(account.uri, account.name, state=False),
         ],
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
 
     query = (
@@ -210,6 +214,7 @@ def test_ctx_chart_exclude(
         "options": [
             base.NamePairState(account.uri, account.name, state=True),
         ],
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
 
     query = (

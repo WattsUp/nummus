@@ -1,4 +1,5 @@
 <div>
+  {% set cf=ctx.currency_format %}
   <a
     href="{{ url_for('emergency_fund.page') }}"
     hx-get="{{ url_for('emergency_fund.page') }}"
@@ -7,7 +8,7 @@
     hx-push-url="true"
   >
     <h1>Emergency fund</h1>
-    <h2>{{ ctx.current | money0 }}</h2>
+    <h2>{{ cf(ctx.current, coarse=True) }}</h2>
     <icon>chevron_forward</icon>
   </a>
   <div class="grow">
@@ -26,12 +27,13 @@
       No spending found to estimate emergency budget.
     {% elif ctx.delta_lower > 0 %}
       <p>
-        Try to increase your fund to at least {{ ctx.target_lower | money0 }}.
+        Try to increase your fund to at least
+        {{ cf(ctx.target_lower, coarse=True) }}.
       </p>
     {% elif ctx.delta_upper > 0 %}
       <p>
-        {{ ctx.delta_upper | money0 }} could be invested for potential greater
-        returns.
+        {{ cf(ctx.delta_upper, coarse=True) }} could be invested for potential
+        greater returns.
       </p>
     {% else %}
       <p>You should be able to cover {{ ctx.days | days }} of expenses.</p>

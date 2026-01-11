@@ -36,7 +36,7 @@ from nummus.models import (
     TransactionSplit,
     YIELD_PER,
 )
-from nummus.models.currency import Currency, DEFAULT_CURRENCY
+from nummus.models.currency import DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     import contextlib
@@ -332,28 +332,6 @@ class Portfolio:
         """
         return self.decrypt(enc_secret).decode()
 
-    @property
-    def db_version(self) -> Version:
-        """Query the database version.
-
-        Returns:
-            Version of database
-
-        """
-        with self.begin_session() as s:
-            return Version(Config.fetch(s, ConfigKey.VERSION))
-
-    @property
-    def base_currency(self) -> Currency:
-        """Query the basse currency.
-
-        Returns:
-            Base currency all accounts are converted into
-
-        """
-        with self.begin_session() as s:
-            return Currency(int(Config.fetch(s, ConfigKey.BASE_CURRENCY)))
-
     def migration_required(self, version_str: str | None) -> Version | None:
         """Check if migration is required.
 
@@ -364,7 +342,11 @@ class Portfolio:
             Version to migrate to or None if migration not required
 
         """
-        v_db = self.db_version if version_str is None else Version(version_str)
+        if version_str is None:
+            with self.begin_session() as s:
+                v_db = Config.db_version(s)
+        else:
+            v_db = Version(version_str)
         for m in migrations.MIGRATORS[::-1]:
             v_m = m.min_version()
             if v_db < v_m:

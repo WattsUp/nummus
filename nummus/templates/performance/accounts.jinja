@@ -17,6 +17,7 @@
     <div>MWRR p.a.</div>
   </div>
   {% for account in accounts.accounts %}
+    {% set cf = account.currency_format %}
     <a
       class="hover:bg-surface-container-high odd:bg-surface-container col-span-full grid grid-cols-subgrid rounded py-1 pl-1"
       href="{{ url_for('accounts.page', uri=account.uri) }}"
@@ -24,13 +25,11 @@
       hx-disabled-elt="this"
     >
       <div>{{ account.name }}</div>
-      <div class="text-right max-md:hidden">{{ account.initial | money }}</div>
-      <div class="text-right max-md:hidden">
-        {{ account.cash_flow | money }}
-      </div>
-      <div class="text-right max-md:hidden">{{ account.end | money }}</div>
+      <div class="text-right max-md:hidden">{{ cf(account.initial) }}</div>
+      <div class="text-right max-md:hidden">{{ cf(account.cash_flow) }}</div>
+      <div class="text-right max-md:hidden">{{ cf(account.end) }}</div>
       <div class="{{ account.pnl | pnl_color }} flex items-center justify-end">
-        {{ account.pnl | abs | money }}
+        {{ cf(account.pnl | abs) }}
         <icon class="sm">{{ account.pnl | pnl_arrow }}</icon>
       </div>
       <div class="text-right">{{ account.mwrr | percent }}</div>
@@ -40,12 +39,13 @@
   <div
     class="border-outline col-span-full grid grid-cols-subgrid border-t py-1 pl-1 font-bold"
   >
+    {% set cf = accounts.currency_format %}
     <div>Total</div>
-    <div class="text-right max-md:hidden">{{ accounts.initial | money }}</div>
-    <div class="text-right max-md:hidden">{{ accounts.cash_flow | money }}</div>
-    <div class="text-right max-md:hidden">{{ accounts.end | money }}</div>
+    <div class="text-right max-md:hidden">{{ cf(accounts.initial) }}</div>
+    <div class="text-right max-md:hidden">{{ cf(accounts.cash_flow) }}</div>
+    <div class="text-right max-md:hidden">{{ cf(accounts.end) }}</div>
     <div class="{{ accounts.pnl | pnl_color }} flex items-center justify-end">
-      {{ accounts.pnl | money }}
+      {{ cf(accounts.pnl | abs) }}
       <icon class="sm">{{ accounts.pnl | pnl_arrow }}</icon>
     </div>
     <div class="text-right">{{ accounts.mwrr | percent }}</div>

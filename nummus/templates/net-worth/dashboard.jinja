@@ -7,7 +7,7 @@
     hx-push-url="true"
   >
     <h1>Net worth</h1>
-    <h2>{{ ctx.net_worth | money0 }}</h2>
+    <h2>{{ ctx.currency_format(ctx.net_worth, coarse=True) }}</h2>
     <icon>chevron_forward</icon>
   </a>
   <div class="grow">

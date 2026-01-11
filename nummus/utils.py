@@ -280,26 +280,6 @@ def parse_real(s: str | None, precision: int = 2) -> Decimal | None:
     return round(value, precision)
 
 
-# TODO (Bradley): #443 move all calls to currency format
-def format_financial(x: Decimal, precision: int = 2, *, plus: bool = False) -> str:
-    """Format a number to financial notation.
-
-    Args:
-        x: Number to format
-        precision: Number of decimals
-        plus: True will print a + for positive amounts
-
-    Returns:
-        x formatted similar to $1,000.00 or -$1,000.00
-
-    """
-    if x < 0:
-        return f"-${-x:,.{precision}f}"
-    if plus:
-        return f"+${x:,.{precision}f}"
-    return f"${x:,.{precision}f}"
-
-
 def parse_bool(s: str | None) -> bool | None:
     """Parse a string into a bool.
 

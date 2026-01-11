@@ -5,6 +5,7 @@
 >
   <h1>Asset allocation</h1>
 </div>
+{% set cf = allocation.currency_format %}
 <h2>By category</h2>
 <div class="relative mb-2 h-60 w-full md:h-96">
   <canvas id="category-chart-canvas" hx-preserve></canvas>
@@ -16,7 +17,7 @@
         class="bg-secondary-container text-on-secondary-container flex items-center gap-2 rounded-md p-2"
       >
         <span>{{ category.name }}</span>
-        <span class="ml-auto">{{ category.value | money }}</span>
+        <span class="ml-auto">{{ cf(category.value) }}</span>
         <icon class="details-icon-open">keyboard_arrow_up</icon>
         <icon class="details-icon-closed">keyboard_arrow_down</icon>
       </summary>
@@ -59,7 +60,7 @@
         class="bg-secondary-container text-on-secondary-container flex items-center gap-2 rounded-md p-2"
       >
         <span>{{ sector.name }}</span>
-        <span class="ml-auto">{{ sector.value | money }}</span>
+        <span class="ml-auto">{{ cf(sector.value) }}</span>
         <icon class="details-icon-open">keyboard_arrow_up</icon>
         <icon class="details-icon-closed">keyboard_arrow_down</icon>
       </summary>

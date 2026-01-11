@@ -9,7 +9,7 @@
 >
   <div class="flex justify-between">
     <b>{{ acct.name }}</b>
-    <span>{{ acct.value | money }}</span>
+    <span>{{ acct.currency_format(acct.value) }}</span>
   </div>
   <div class="text-on-surface-variant flex justify-between text-sm">
     {% if acct.closed %}
@@ -23,12 +23,12 @@
         {{ acct.n_future }} future transaction{{ 's' if acct.n_future != 1 }}
         pending
       </span>
-      <span>{{ acct.change_future | money }}</span>
+      <span>{{ acct.currency_format(acct.change_future) }}</span>
     {% elif acct.updated_days_ago == 0 %}
       <span>
         {{ acct.n_today }} transaction{{ 's' if acct.n_today != 1 }} today
       </span>
-      <span>{{ acct.change_today | money }}</span>
+      <span>{{ acct.currency_format(acct.change_today) }}</span>
     {% else %}
       Updated {{ acct.updated_days_ago | days }} ago
     {% endif %}

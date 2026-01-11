@@ -7,6 +7,7 @@ import pytest
 
 from nummus import utils
 from nummus.controllers import assets, base
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     import datetime
@@ -196,6 +197,7 @@ def test_ctx_rows_unheld(
                 "qty": Decimal(),
                 "price": Decimal(),
                 "value": Decimal(),
+                "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
             },
         ],
     }
@@ -220,6 +222,7 @@ def test_ctx_rows(
                 "qty": Decimal(10),
                 "price": asset_valuation.value,
                 "value": Decimal(10) * asset_valuation.value,
+                "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
             },
         ],
     }

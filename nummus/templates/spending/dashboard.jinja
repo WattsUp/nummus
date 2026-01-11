@@ -5,6 +5,7 @@
   hx-push-url="true"
 >
   {% set n_display = 8 %}
+  {% set cf = ctx.currency_format %}
   {% set name = "income-by" if is_income else "spending-by" %}
   <a
     href="{{ url_for(controller + '.page') }}"
@@ -30,7 +31,7 @@
         class="even:bg-surface-container-highest flex justify-between gap-2 rounded-md px-2 py-1"
       >
         <div class="truncate">{{ label }}</div>
-        <div class="shrink-0">{{ amount | money }}</div>
+        <div class="shrink-0">{{ cf(amount) }}</div>
       </div>
     {% endfor %}
   </details>
@@ -48,7 +49,7 @@
         class="even:bg-surface-container-highest flex justify-between gap-2 rounded-md px-2 py-1"
       >
         <div class="truncate">{{ label }}</div>
-        <div class="shrink-0">{{ amount | money }}</div>
+        <div class="shrink-0">{{ cf(amount) }}</div>
       </div>
     {% endfor %}
   </details>
@@ -66,7 +67,7 @@
         class="even:bg-surface-container-highest flex justify-between gap-2 rounded-md px-2 py-1"
       >
         <div class="truncate">{{ label }}</div>
-        <div class="shrink-0">{{ amount | money }}</div>
+        <div class="shrink-0">{{ cf(amount) }}</div>
       </div>
     {% endfor %}
   </details>
@@ -84,7 +85,7 @@
         class="even:bg-surface-container-highest flex justify-between gap-2 rounded-md px-2 py-1"
       >
         <div class="truncate">{{ label or "[none]" }}</div>
-        <div class="shrink-0">{{ amount | money }}</div>
+        <div class="shrink-0">{{ cf(amount) }}</div>
       </div>
     {% endfor %}
   </details>

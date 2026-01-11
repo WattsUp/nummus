@@ -101,9 +101,6 @@ class FlaskExtension:
 
     @classmethod
     def _init_jinja_env(cls, env: jinja2.Environment) -> None:
-        env.filters["money"] = utils.format_financial
-        env.filters["money0"] = lambda x: utils.format_financial(x, 0)
-        env.filters["money6"] = lambda x: utils.format_financial(x, 6)
         env.filters["seconds"] = utils.format_seconds
         env.filters["days"] = utils.format_days
         env.filters["days_abv"] = lambda x: utils.format_days(

@@ -74,12 +74,6 @@
   </label>
   <label class="input-outlined input-bg-surface-container-high col-span-2">
     <select name="currency" required autocomplete="off">
-      <option
-        value=""
-        {% if not acct.currency %}selected{% endif %}
-        disabled
-        hidden
-      ></option>
       {% for currency in acct.currency_type %}
         <option
           value="{{ currency.name }}"

@@ -3,9 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version
 
+from nummus import __version__
 from nummus import exceptions as exc
+from nummus import migrations
 from nummus.models.config import Config, ConfigKey
+from nummus.models.currency import DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -71,3 +75,15 @@ def test_fetch_missing(session: orm.Session) -> None:
 
 def test_fetch_missing_ok(session: orm.Session) -> None:
     assert Config.fetch(session, ConfigKey.WEB_KEY, no_raise=True) is None
+
+
+def test_db_version(session: orm.Session) -> None:
+    target = max(
+        Version(__version__),
+        *[m.min_version() for m in migrations.MIGRATORS],
+    )
+    assert Config.db_version(session) == target
+
+
+def test_base_currency(session: orm.Session) -> None:
+    assert Config.base_currency(session) == DEFAULT_CURRENCY

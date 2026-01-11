@@ -115,10 +115,6 @@ def test_flask_context(flask_app: flask.Flask) -> None:
 @pytest.mark.parametrize(
     ("value", "filt", "target"),
     [
-        (Decimal("1000.100000"), "money", "$1,000.10"),
-        (Decimal("-1000.100000"), "money", "-$1,000.10"),
-        (Decimal("1000.100000"), "money0", "$1,000"),
-        (Decimal("1000.100000"), "money6", "$1,000.100000"),
         (Decimal("1000.100000"), "comma", "1,000.10"),
         (Decimal("1000.100000"), "qty", "1,000.100000"),
         (Decimal("1000.100000"), "input_value", "1000.1"),

@@ -72,6 +72,26 @@
     </div>
   </label>
   <label class="input-outlined input-bg-surface-container-high col-span-full">
+    <select
+      name="currency"
+      required
+      autocomplete="off"
+      {% if asset.ticker %}disabled{% endif %}
+    >
+      {% for currency in asset.currency_type %}
+        <option
+          value="{{ currency.name }}"
+          {% if currency == asset.currency %}selected{% endif %}
+        >
+          {{ currency.pretty }}
+        </option>
+      {% endfor %}
+    </select>
+    <div>
+      <div>Currency</div>
+    </div>
+  </label>
+  <label class="input-outlined input-bg-surface-container-high col-span-full">
     <textarea
       name="description"
       placeholder=""

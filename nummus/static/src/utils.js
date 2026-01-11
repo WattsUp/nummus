@@ -68,6 +68,8 @@ function downsampleMonths(dates, values) {
 }
 
 /**
+ * TODO (WattsUp): #443 format with appropriate currency
+ *
  * USD formatter with zero fractional digits
  */
 const formatterF0 = new Intl.NumberFormat("en-US", {

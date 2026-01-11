@@ -5,6 +5,7 @@
   hx-swap="innerHTML show:#dialog:top"
   hx-push-url="#dialog"
 >
+  {% set cf = txn.currency_format %}
   <label class="checkbox">
     {# TODO (WattsUp): #365 Add bulk editor #}
     <input type="checkbox" autocomplete="off" disabled />
@@ -34,7 +35,7 @@
         {% endif %}
       </div>
       {% set class_amount = "text-primary" if txn.amount > 0 %}
-      <div class="{{ class_amount }}">{{ txn.amount | money }}</div>
+      <div class="{{ class_amount }}">{{ cf(txn.amount) }}</div>
       {% set class_cleared = "text-primary filled" if txn.cleared > 0 %}
       <icon class="{{ class_cleared }}">check_circle</icon>
     </div>
@@ -42,7 +43,7 @@
       <div>
         {% if txn.asset_quantity %}
           {{ txn.asset_quantity | abs | qty }}
-          shares @ {{ txn.asset_price | money }}
+          shares @ {{ cf(txn.asset_price) }}
         {% else %}
           {{ txn.category }}
         {% endif %}

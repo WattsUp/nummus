@@ -67,7 +67,7 @@ def ctx_settings(s: orm.Session) -> SettingsContext:
 
     """
     return {
-        "currency": Currency(int(Config.fetch(s, ConfigKey.BASE_CURRENCY))),
+        "currency": Config.base_currency(s),
         "currency_type": Currency,
     }
 

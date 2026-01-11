@@ -13,13 +13,16 @@ from nummus import web
 from nummus.controllers import base
 from nummus.models import (
     Account,
+    Config,
     TransactionSplit,
 )
+from nummus.models.currency import CURRENCY_FORMATS
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
     from nummus.controllers.base import Routes
+    from nummus.models.currency import CurrencyFormat
 
 
 class AccountContext(TypedDict):
@@ -46,6 +49,7 @@ class Context(TypedDict):
     liabilities: Decimal
     assets_w: Decimal
     liabilities_w: Decimal
+    currency_format: CurrencyFormat
 
 
 def page() -> flask.Response:
@@ -204,6 +208,7 @@ def ctx_chart(
         "liabilities": liabilities,
         "assets_w": asset_width,
         "liabilities_w": liabilities_width,
+        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
     }
 
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from nummus.models.config import Config, ConfigKey
+from nummus.models.config import Config
 from nummus.models.currency import Currency
 
 if TYPE_CHECKING:
@@ -22,4 +22,4 @@ def test_edit_currency(web_client: WebClient, session: orm.Session) -> None:
     assert "All changes saved" in result
     assert "config" in headers["HX-Trigger"]
 
-    assert Config.fetch(session, ConfigKey.BASE_CURRENCY) == str(Currency.CHF.value)
+    assert Config.base_currency(session) == Currency.CHF

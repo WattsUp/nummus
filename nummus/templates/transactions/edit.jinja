@@ -17,6 +17,7 @@
   {% set parent_class = "" %}
   {% set split_class = "md:col-span-2" %}
 {% endif %}
+{% set cf=txn.currency_format %}
 <form class="{{ form_class }} grid gap-x-2 gap-y-1" onsubmit="return false">
   <datalist id="payees">
     {% for item in txn.payees %}
@@ -33,7 +34,7 @@
       <icon>account_balance</icon>Account: {{ txn.account }}
     </div>
     <div class="{{ parent_class }} flex items-center gap-1">
-      <icon>attach_money</icon>Amount: {{ txn.amount | money }}
+      <icon>attach_money</icon>Amount: {{ cf(txn.amount) }}
     </div>
     <input name="account" type="hidden" value="{{ txn.account_uri }}" />
     <input name="amount" type="hidden" value="{{ txn.amount }}" />
@@ -74,7 +75,7 @@
         autocomplete="off"
         enterkeyhint="next"
         inputmode="tel"
-        hx-get="{{ url_for('transactions.validation') }}"
+        hx-get="{{ url_for('transactions.validation', uri=txn.uri) }}"
         hx-trigger="input delay:200ms"
         hx-target="next error"
         hx-include="this{{ ', #dialog [name=split-amount]' if is_split }}"
@@ -168,7 +169,7 @@
         {% if split.asset_quantity %}
           <icon>money_bag</icon>
           {{ split.asset_quantity | abs | qty }} shares @
-          {{ split.asset_price | money }}
+          {{ cf(split.asset_price) }}
         {% endif %}
       </div>
       <div
@@ -264,7 +265,7 @@
           autocomplete="off"
           enterkeyhint="next"
           inputmode="tel"
-          hx-get="{{ url_for('transactions.validation',  split=True) }}"
+          hx-get="{{ url_for('transactions.validation', uri=txn.uri,  split=True) }}"
           hx-trigger="input delay:200ms"
           hx-target="next error"
           hx-include="this, #dialog [name=split-amount], #dialog [name=amount]"

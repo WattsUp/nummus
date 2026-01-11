@@ -15,6 +15,7 @@
     <icon>edit</icon>Edit
   </button>
 </div>
+{% set cf = asset.currency_format %}
 <div class="text-on-surface-variant flex flex-wrap items-center gap-2 text-sm">
   <span>
     {{ asset.category.pretty }}
@@ -22,7 +23,7 @@
   </span>
   <span class="ml-auto">
     {% if asset.value_date %}
-      {{ asset.value | money }}
+      {{ cf(asset.value) }}
       as of {{ asset.value_date }}
     {% else %}
       <span class="text-error">Asset has no valuations</span>
@@ -62,7 +63,7 @@
     >
       <div>{{ account.name }}</div>
       <div class="text-right">{{ account.qty | qty }}</div>
-      <div class="text-right">{{ account.value | money }}</div>
+      <div class="text-right">{{ cf(account.value) }}</div>
       <icon>chevron_right</icon>
     </a>
   {% endfor %}
