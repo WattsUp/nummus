@@ -42,9 +42,8 @@ if TYPE_CHECKING:
     import contextlib
 
     from nummus.importers.base import TxnDict
-    from nummus.models import (
-        Base,
-    )
+    from nummus.models import Base
+    from nummus.models.currency import Currency
 
 
 class AssetUpdate(NamedTuple):
@@ -922,6 +921,11 @@ class Portfolio:
         updated: list[AssetUpdate] = []
 
         with self.begin_session() as s:
+            # Get FOREXes, add if need be
+            currencies: set[Currency] = {r[0] for r in s.query(Account.currency).all()}
+            base_currency = Config.base_currency(s)
+            Asset.create_forex(s, base_currency, currencies)
+
             assets = s.query(Asset).where(Asset.ticker.isnot(None)).all()
             ids = [asset.id_ for asset in assets]
 

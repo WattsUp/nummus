@@ -7,9 +7,10 @@
   hx-swap="innerHTML show:window:top"
   hx-push-url="true"
 >
+  {% set cf = acct.currency_format %}
   <div class="flex justify-between">
     <b>{{ acct.name }}</b>
-    <span>{{ acct.currency_format(acct.value) }}</span>
+    <span>{{ cf(acct.value) }}</span>
   </div>
   <div class="text-on-surface-variant flex justify-between text-sm">
     {% if acct.closed %}
@@ -23,14 +24,18 @@
         {{ acct.n_future }} future transaction{{ 's' if acct.n_future != 1 }}
         pending
       </span>
-      <span>{{ acct.currency_format(acct.change_future) }}</span>
+      <span>{{ cf(acct.change_future) }}</span>
     {% elif acct.updated_days_ago == 0 %}
       <span>
         {{ acct.n_today }} transaction{{ 's' if acct.n_today != 1 }} today
       </span>
-      <span>{{ acct.currency_format(acct.change_today) }}</span>
+      <span>{{ cf(acct.change_today) }}</span>
     {% else %}
       Updated {{ acct.updated_days_ago | days }} ago
+      {% if acct.value_base is not none %}
+        {# Use base currency_format #}
+        <span>≈ {{ ctx.currency_format(acct.value_base) }}</span>
+      {% endif %}
     {% endif %}
   </div>
   <icon class="absolute right-0 top-1/2 -translate-y-1/2">chevron_forward</icon>

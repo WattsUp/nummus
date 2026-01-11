@@ -53,7 +53,8 @@ class Migrate(BaseCommand):
         # Back up Portfolio
         _, tar_ver = p.backup()
 
-        v_db = p.db_version
+        with p.begin_session() as s:
+            v_db = Config.db_version(s)
 
         any_migrated = False
         try:

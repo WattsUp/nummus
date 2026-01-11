@@ -60,6 +60,7 @@ class AccountContext(TypedDict):
     change_today: Decimal
     change_future: Decimal
     value: Decimal
+    value_base: Decimal | None
 
     performance: PerformanceContext | None
     assets: list[AssetContext] | None
@@ -212,6 +213,7 @@ def new() -> str | flask.Response:
                 "change_today": Decimal(),
                 "change_future": Decimal(),
                 "value": Decimal(),
+                "value_base": None,
                 "performance": None,
                 "assets": None,
             }
@@ -450,6 +452,7 @@ def ctx_account(
         "currency_type": Currency,
         "currency_format": CURRENCY_FORMATS[acct.currency],
         "value": current_value,
+        "value_base": None,
         "closed": acct.closed,
         "budgeted": acct.budgeted,
         "updated_days_ago": updated_days_ago,
@@ -686,11 +689,13 @@ def ctx_accounts(
     n_closed = 0
     # Get basic info
     accounts: dict[int, AccountContext] = {}
+    currencies: dict[int, Currency] = {}
     query = s.query(Account).order_by(Account.category)
     if not include_closed:
         query = query.where(Account.closed.is_(False))
     for acct in query.all():
         accounts[acct.id_] = ctx_account(s, acct, today, skip_today=True)
+        currencies[acct.id_] = acct.currency
         if acct.closed:
             n_closed += 1
 
@@ -747,15 +752,29 @@ def ctx_accounts(
         accounts[acct_id]["n_future"] = n_future
         accounts[acct_id]["change_future"] = change_future
 
+    base_currency = Config.base_currency(s)
+    forex = Asset.get_forex(
+        s,
+        base_currency,
+        set(currencies.values()),
+        today_ord,
+        today_ord,
+    )
+
     # Get all Account values
     acct_values, _, _ = Account.get_value_all(s, today_ord, today_ord, ids=accounts)
     for acct_id, ctx in accounts.items():
         v = acct_values[acct_id][0]
+        ctx["value"] = v
+
+        currency = currencies[acct_id]
+        v *= forex[currency][0]
+        ctx["value_base"] = None if currency == base_currency else v
+
         if v > 0:
             assets += v
         else:
             liabilities += v
-        ctx["value"] = v
         category = ctx["category"]
 
         categories_total[category] += v

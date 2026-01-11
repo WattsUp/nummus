@@ -1026,3 +1026,17 @@ def low_pass(data: list[Decimal], rc: int) -> list[Decimal]:
         data[i] = current
 
     return data
+
+
+def element_multiply(a: list[Decimal], b: list[Decimal]) -> list[Decimal]:
+    """Multiply two lists element-wise.
+
+    Args:
+        a: First list
+        b: Second list
+
+    Returns:
+        [a[0] * b[0], ..., a[n] * b[n]]
+
+    """
+    return [aa * bb for aa, bb in zip(a, b, strict=True)]
