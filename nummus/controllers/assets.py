@@ -209,6 +209,7 @@ def new() -> str | flask.Response:
                     description=description,
                     category=category,
                     ticker=ticker,
+                    currency=p.base_currency,
                 )
                 s.add(a)
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:

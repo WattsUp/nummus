@@ -67,7 +67,8 @@ class Account(Base):
         institution: Account holding institution
         category: Type of Account
         closed: True if Account is closed, will hide from view and not update
-        emergency: True if Account is included in emergency fund
+        budgeted: True if Account is included in budgeting
+        currency: Currency this asset is valued in
         opened_on: Date of first Transaction
         updated_on: Date of latest Transaction
 

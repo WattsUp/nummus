@@ -28,6 +28,7 @@ from nummus.models.base import (
     string_column_args,
     YIELD_PER,
 )
+from nummus.models.currency import Currency, DEFAULT_CURRENCY
 from nummus.models.transaction import TransactionSplit
 from nummus.models.utils import obj_session, query_count, update_rows
 
@@ -207,6 +208,7 @@ class Asset(Base):
             sparsely (monthly) valued assets
         ticker: Name of exchange ticker to fetch prices for. If no ticker then
             valuations must be manually entered
+        currency: Currency this asset is valued in
 
     """
 
@@ -218,6 +220,8 @@ class Asset(Base):
     category: orm.Mapped[AssetCategory] = orm.mapped_column(SQLEnum(AssetCategory))
     interpolate: ORMBool = orm.mapped_column(default=False)
     ticker: ORMStrOpt = orm.mapped_column(unique=True)
+    # TODO (WattsUp): #443 set currency based on web fetch
+    currency: orm.Mapped[Currency] = orm.mapped_column(SQLEnum(Currency))
 
     __table_args__ = (
         *string_column_args("name"),
@@ -765,6 +769,7 @@ class Asset(Base):
                 category=AssetCategory.INDEX,
                 interpolate=False,
                 ticker=ticker,
+                currency=DEFAULT_CURRENCY,
             )
             s.add(a)
 

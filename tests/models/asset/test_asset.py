@@ -18,6 +18,7 @@ from nummus.models import (
     update_rows,
     USSector,
 )
+from nummus.models.currency import DEFAULT_CURRENCY
 from tests import conftest
 
 if TYPE_CHECKING:
@@ -80,6 +81,7 @@ def test_init_properties(
         "description": rand_str_generator(),
         "category": AssetCategory.STOCKS,
         "ticker": "A",
+        "currency": DEFAULT_CURRENCY,
     }
 
     a = Asset(**d)

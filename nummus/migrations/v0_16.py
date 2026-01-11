@@ -6,6 +6,7 @@ from typing import override, TYPE_CHECKING
 
 from nummus.migrations.base import Migrator
 from nummus.models.account import Account
+from nummus.models.asset import Asset
 from nummus.models.config import Config, ConfigKey
 from nummus.models.currency import DEFAULT_CURRENCY
 
@@ -32,5 +33,6 @@ class MigratorV0_16(Migrator):
             )
 
             self.add_column(s, Account, Account.currency, DEFAULT_CURRENCY)
+            self.add_column(s, Asset, Asset.currency, DEFAULT_CURRENCY)
 
         return comments

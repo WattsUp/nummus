@@ -24,7 +24,7 @@ from nummus.models import (
     TransactionSplit,
     YIELD_PER,
 )
-from nummus.models.currency import Currency, DEFAULT_CURRENCY
+from nummus.models.currency import Currency
 
 if TYPE_CHECKING:
     import datetime
@@ -182,6 +182,7 @@ def new() -> str | flask.Response:
         HTML response
 
     """
+    p = web.portfolio
     if flask.request.method == "GET":
         ctx: AccountContext = {
             "uri": None,
@@ -190,7 +191,7 @@ def new() -> str | flask.Response:
             "institution": "",
             "category": AccountCategory.CASH,
             "category_type": AccountCategory,
-            "currency": DEFAULT_CURRENCY,
+            "currency": p.base_currency,
             "currency_type": Currency,
             "closed": False,
             "budgeted": False,
@@ -207,8 +208,6 @@ def new() -> str | flask.Response:
             "accounts/edit.jinja",
             acct=ctx,
         )
-
-    p = web.portfolio
 
     with p.begin_session() as s:
         form = flask.request.form

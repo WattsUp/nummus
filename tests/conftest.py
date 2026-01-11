@@ -406,6 +406,7 @@ def asset(session: orm.Session) -> Asset:
         category=AssetCategory.STOCKS,
         ticker="BANANA",
         description="Banana Incorporated makes bananas",
+        currency=DEFAULT_CURRENCY,
     )
     session.add(asset)
     session.commit()
@@ -425,6 +426,7 @@ def asset_etf(session: orm.Session) -> Asset:
         category=AssetCategory.STOCKS,
         ticker="BANANA_ETF",
         description="Banana ETF",
+        currency=DEFAULT_CURRENCY,
     )
     session.add(asset)
     session.commit()
