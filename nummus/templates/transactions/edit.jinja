@@ -75,10 +75,10 @@
         autocomplete="off"
         enterkeyhint="next"
         inputmode="tel"
-        hx-get="{{ url_for('transactions.validation', uri=txn.uri) }}"
+        hx-get="{{ url_for('transactions.validation') }}"
         hx-trigger="input delay:200ms"
         hx-target="next error"
-        hx-include="this{{ ', #dialog [name=split-amount]' if is_split }}"
+        hx-include="this{{ ', #dialog [name=split-amount], #dialog [name=account]' if is_split }}"
       />
       <icon>attach_money</icon>
       <div>
@@ -265,10 +265,10 @@
           autocomplete="off"
           enterkeyhint="next"
           inputmode="tel"
-          hx-get="{{ url_for('transactions.validation', uri=txn.uri,  split=True) }}"
+          hx-get="{{ url_for('transactions.validation',  split=True) }}"
           hx-trigger="input delay:200ms"
           hx-target="next error"
-          hx-include="this, #dialog [name=split-amount], #dialog [name=amount]"
+          hx-include="this, #dialog [name=split-amount], #dialog [name=amount], #dialog [name=account]"
         />
         <icon>attach_money</icon>
         <div>

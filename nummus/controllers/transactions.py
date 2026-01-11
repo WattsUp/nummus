@@ -778,14 +778,15 @@ def _validate_splits() -> str:
         if remaining == 0:
             msg = ""
         else:
-            uri = args["uri"]
+            uri = args.get("account")
             p = web.portfolio
             with p.begin_session() as s:
                 currency = (
                     s.query(Account.currency)
-                    .join(Transaction)
-                    .where(Transaction.id_ == Transaction.uri_to_id(uri))
+                    .where(Account.id_ == Account.uri_to_id(uri))
                     .one()[0]
+                    if uri
+                    else Config.base_currency(s)
                 )
             cf = CURRENCY_FORMATS[currency]
             msg = (
