@@ -16,6 +16,7 @@ class Currency(BaseEnum):
     DKK = 208
     EUR = 978
     GBP = 826
+    HKD = 344
     JPY = 392
     USD = 840
 
@@ -28,6 +29,7 @@ class Currency(BaseEnum):
             Currency.DKK: "DKK (Danish Krone)",
             Currency.EUR: "EUR (Euro)",
             Currency.GBP: "GBP (British Pound)",
+            Currency.HKD: "HKD (Hong Kong Dollar)",
             Currency.JPY: "JPY (Japanese Yen)",
             Currency.USD: "USD (US Dollar)",
         }[self]
@@ -98,6 +100,7 @@ CURRENCY_FORMATS: dict[Currency, CurrencyFormat] = {
     Currency.DKK: CurrencyFormat(" kr", sep_1k=".", sep_dec=",", symbol_is_suffix=True),
     Currency.EUR: CurrencyFormat("€", sep_1k=".", sep_dec=","),
     Currency.GBP: CurrencyFormat("£"),
+    Currency.HKD: CurrencyFormat("HK$"),
     Currency.JPY: CurrencyFormat("¥", precision=0, precision_coarse=-3),
     Currency.USD: CurrencyFormat("$"),
 }

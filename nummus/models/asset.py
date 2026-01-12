@@ -221,7 +221,6 @@ class Asset(Base):
     category: orm.Mapped[AssetCategory] = orm.mapped_column(SQLEnum(AssetCategory))
     interpolate: ORMBool = orm.mapped_column(default=False)
     ticker: ORMStrOpt = orm.mapped_column(unique=True)
-    # TODO (WattsUp): #443 set currency based on web fetch if ticker
     currency: orm.Mapped[Currency] = orm.mapped_column(SQLEnum(Currency))
 
     __table_args__ = (
@@ -597,6 +596,7 @@ class Asset(Base):
                 actions=True,
                 raise_errors=True,
             )
+            self.currency = Currency(yf_ticker.get_info()["currency"])
         except Exception as e:
             # yfinance raises Exception if no data found
             raise exc.AssetWebError(e) from e
