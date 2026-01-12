@@ -143,7 +143,6 @@ def test_ctx_chart(
                 "pnl": Decimal(50),
                 "cash_flow": Decimal(),
                 "mwrr": None,
-                "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
             },
         ],
         "options": [

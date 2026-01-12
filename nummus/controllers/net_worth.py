@@ -9,20 +9,21 @@ from typing import TYPE_CHECKING, TypedDict
 import flask
 from sqlalchemy import func
 
-from nummus import web
+from nummus import utils, web
 from nummus.controllers import base
 from nummus.models import (
     Account,
     Config,
     TransactionSplit,
 )
+from nummus.models.asset import Asset
 from nummus.models.currency import CURRENCY_FORMATS
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
     from nummus.controllers.base import Routes
-    from nummus.models.currency import CurrencyFormat
+    from nummus.models.currency import Currency, CurrencyFormat
 
 
 class AccountContext(TypedDict):
@@ -151,14 +152,29 @@ def ctx_chart(
     end_ord = end.toordinal()
 
     query = s.query(Account)
-    acct_ids = [acct.id_ for acct in query.all() if acct.do_include(start_ord)]
+    account_currencies: dict[int, Currency] = {
+        acct.id_: acct.currency for acct in query.all() if acct.do_include(start_ord)
+    }
+
+    base_currency = Config.base_currency(s)
+    forex = Asset.get_forex(
+        s,
+        start_ord,
+        end_ord,
+        base_currency,
+        set(account_currencies.values()),
+    )
 
     acct_values, _, _ = Account.get_value_all(
         s,
         start_ord,
         end_ord,
-        ids=acct_ids,
+        ids=account_currencies.keys(),
     )
+    acct_values = {
+        acct_id: utils.element_multiply(values, forex[account_currencies[acct_id]])
+        for acct_id, values in acct_values.items()
+    }
 
     total: list[Decimal] = [
         Decimal(sum(item)) for item in zip(*acct_values.values(), strict=True)
@@ -208,7 +224,7 @@ def ctx_chart(
         "liabilities": liabilities,
         "assets_w": asset_width,
         "liabilities_w": liabilities_width,
-        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
+        "currency_format": CURRENCY_FORMATS[base_currency],
     }
 
 

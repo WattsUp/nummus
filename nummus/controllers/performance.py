@@ -21,7 +21,7 @@ from nummus.models.currency import CURRENCY_FORMATS
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus.models.currency import CurrencyFormat
+    from nummus.models.currency import Currency, CurrencyFormat
 
 _DEFAULT_INDEX = "S&P 500"
 
@@ -36,7 +36,6 @@ class AccountContext(TypedDict):
     pnl: Decimal
     cash_flow: Decimal
     mwrr: Decimal | None
-    currency_format: CurrencyFormat
 
 
 class AccountsContext(TypedDict):
@@ -240,7 +239,7 @@ def ctx_chart(
 
     query = s.query(Account).where(Account.id_.in_(acct_ids))
     mapping: dict[int, str] = {}
-    currency_formats: dict[int, CurrencyFormat] = {}
+    currencies: dict[int, Currency] = {}
     acct_ids.clear()
     account_options: list[base.NamePairState] = []
     for acct in query.all():
@@ -251,14 +250,24 @@ def ctx_chart(
             )
             if not excluded:
                 mapping[acct.id_] = acct.name
-                currency_formats[acct.id_] = CURRENCY_FORMATS[acct.currency]
+                currencies[acct.id_] = acct.currency
                 acct_ids.add(acct.id_)
+
+    base_currency = Config.base_currency(s)
+    forex = Asset.get_forex(
+        s,
+        start_ord,
+        end_ord,
+        base_currency,
+        set(currencies.values()),
+    )
 
     acct_values, acct_profits, _ = Account.get_value_all(
         s,
         start_ord,
         end_ord,
         ids=acct_ids,
+        forex=forex,
     )
 
     total: list[Decimal] = [
@@ -290,7 +299,6 @@ def ctx_chart(
                 "pnl": profit,
                 "cash_flow": cash_flow,
                 "mwrr": utils.mwrr(values, profits),
-                "currency_format": currency_formats[acct_id],
             },
         )
         sum_cash_flow += cash_flow
@@ -324,7 +332,7 @@ def ctx_chart(
         "mwrr": mwrr,
         "accounts": ctx_accounts,
         "options": sorted(account_options, key=operator.itemgetter(0)),
-        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
+        "currency_format": CURRENCY_FORMATS[base_currency],
     }
 
     return {

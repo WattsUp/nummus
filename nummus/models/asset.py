@@ -834,25 +834,32 @@ class Asset(Base):
             existing.discard(ticker)
 
         # existing has unused FOREX assets
-        s.query(Asset).where(Asset.ticker.in_(existing)).delete()
+        # TODO (WattsUp): #463 Handle when accounts hold FOREX
+        to_delete = {
+            r[0] for r in s.query(Asset.id_).where(Asset.ticker.in_(existing)).all()
+        }
+        s.query(AssetValuation).where(AssetValuation.asset_id.in_(to_delete)).delete()
+        s.query(AssetSplit).where(AssetSplit.asset_id.in_(to_delete)).delete()
+        s.query(AssetSector).where(AssetSector.asset_id.in_(to_delete)).delete()
+        s.query(Asset).where(Asset.id_.in_(to_delete)).delete()
 
     @classmethod
     def get_forex(
         cls,
         s: orm.Session,
-        base: Currency,
-        others: set[Currency],
         start_ord: int,
         end_ord: int,
+        base: Currency,
+        currencies: Iterable[Currency] | None = None,
     ) -> dict[Currency, list[Decimal]]:
         """Get foreign exchange rate over time.
 
         Args:
             s: SQL session to use
-            base: Base currency to get FOREX referenced to
-            others: Other currencys to get
             start_ord: First date ordinal to evaluate
             end_ord: Last date ordinal to evaluate (inclusive)
+            base: Base currency to exchange to
+            currencies: Filter which currencies to get
 
         Returns:
             dict{
@@ -863,26 +870,27 @@ class Asset(Base):
             see utils.element_multiply
 
         """
-        if base in others:
-            others.discard(base)
-        tickers = {f"{other.name}{base.name}=X": other for other in others}
+        currencies = currencies or [*Currency]
+        currencies_by_ticker: dict[str | None, Currency] = {
+            f"{other.name}{base.name}=X": other for other in currencies
+        }
         # null ticker filtered out by query
-        query: orm.query.RowReturningQuery[tuple[int, str]] = s.query(  # type: ignore[attr-defined]
-            Asset.id_,
-            Asset.ticker,
-        ).where(
-            Asset.ticker.in_(tickers),
+        query = s.query(Asset.id_, Asset.ticker).where(
+            Asset.category == AssetCategory.FOREX,
+            Asset.currency == base,
         )
+        query = query.where(Asset.ticker.in_(currencies_by_ticker))
         assets = query_to_dict(query)
 
         values = cls.get_value_all(s, start_ord, end_ord, assets.keys())
 
-        forex: dict[Currency, list[Decimal]] = {
-            base: [Decimal(1)] * (end_ord - start_ord + 1),
-        }
+        forex: dict[Currency, list[Decimal]] = defaultdict(
+            lambda: [Decimal(1)] * (end_ord - start_ord + 1),
+        )
 
         for a_id, exchange in values.items():
             ticker = assets[a_id]
-            forex[tickers[ticker]] = exchange
+            currency = currencies_by_ticker[ticker]
+            forex[currency] = exchange
 
         return forex

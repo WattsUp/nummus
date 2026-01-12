@@ -194,6 +194,7 @@ def new() -> str | flask.Response:
     """
     p = web.portfolio
     with p.begin_session() as s:
+        base_currency = Config.base_currency(s)
         if flask.request.method == "GET":
             ctx: AccountContext = {
                 "uri": None,
@@ -202,7 +203,7 @@ def new() -> str | flask.Response:
                 "institution": "",
                 "category": AccountCategory.CASH,
                 "category_type": AccountCategory,
-                "currency": Config.base_currency(s),
+                "currency": base_currency,
                 "currency_type": Currency,
                 "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
                 "closed": False,
@@ -229,6 +230,9 @@ def new() -> str | flask.Response:
         category = AccountCategory(form["category"])
         currency = Currency(form["currency"])
         budgeted = "budgeted" in form
+
+        if budgeted and currency != base_currency:
+            return base.error("Budgeted account must be in base currency")
 
         try:
             with s.begin_nested():
@@ -263,6 +267,8 @@ def account(uri: str) -> str | werkzeug.Response:
     today_ord = today.toordinal()
 
     with p.begin_session() as s:
+        base_currency = Config.base_currency(s)
+
         acct = base.find(s, Account, uri)
 
         if flask.request.method == "GET":
@@ -286,6 +292,11 @@ def account(uri: str) -> str | werkzeug.Response:
         currency = Currency(form["currency"])
         closed = "closed" in form
         budgeted = "budgeted" in form
+
+        if budgeted and currency != base_currency:
+            return base.error(
+                f"Budgeted account must be in {base_currency.name}",
+            )
 
         if closed and v != 0:
             msg = "Cannot close Account with non-zero balance"
@@ -755,10 +766,10 @@ def ctx_accounts(
     base_currency = Config.base_currency(s)
     forex = Asset.get_forex(
         s,
+        today_ord,
+        today_ord,
         base_currency,
         set(currencies.values()),
-        today_ord,
-        today_ord,
     )
 
     # Get all Account values

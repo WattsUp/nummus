@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     import sqlalchemy
     from sqlalchemy import orm
 
-    from nummus.models.currency import CurrencyFormat
+    from nummus.models.currency import Currency, CurrencyFormat
 
 
 class OptionsContext(TypedDict):
@@ -176,6 +176,7 @@ def dashboard() -> str:
 
 def data_query(
     s: orm.Session,
+    selected_currency: Currency,
     selected_account: str | None = None,
     selected_period: str | None = None,
     selected_start: str | None = None,
@@ -189,6 +190,7 @@ def data_query(
 
     Args:
         s: SQL session to use
+        selected_currency: Currency to filter by
         selected_account: URI of account from args
         selected_period: Name of period from args
         selected_start: ISO date string of start from args
@@ -215,8 +217,11 @@ def data_query(
         | TransactionCategory.group.in_(skip_groups),
     )
     skip_ids = {r[0] for r in query.yield_per(YIELD_PER)}
+    query = s.query(Account.id_).where(Account.currency != selected_currency)
+    skip_acct_ids = {r[0] for r in query.yield_per(YIELD_PER)}
     query = s.query(TransactionSplit).where(
         TransactionSplit.category_id.not_in(skip_ids),
+        TransactionSplit.account_id.not_in(skip_acct_ids),
     )
     clauses: dict[str, sqlalchemy.ColumnElement] = {}
 
@@ -403,11 +408,13 @@ def ctx_chart(
 
     """
     accounts = Account.map_name(s)
+    base_currency = Config.base_currency(s)
     categories_emoji = TransactionCategory.map_name_emoji(s)
     labels = Label.map_name(s)
 
     dat_query = data_query(
         s,
+        base_currency,
         selected_account,
         selected_period,
         selected_start,
@@ -507,7 +514,7 @@ def ctx_chart(
             for label, amount, is_selected in by_label
             if not is_selected or len(by_label) == 1
         ],
-        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
+        "currency_format": CURRENCY_FORMATS[base_currency],
     }, ("Income" if is_income else "Spending")
 
 

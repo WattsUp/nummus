@@ -334,6 +334,7 @@ def table(uri: str) -> str | flask.Response:
     args = flask.request.args
     with p.begin_session() as s:
         a = base.find(s, Asset, uri)
+        cf = CURRENCY_FORMATS[a.currency]
         val_table = ctx_table(
             s,
             a,
@@ -348,6 +349,7 @@ def table(uri: str) -> str | flask.Response:
     html = flask.render_template(
         "assets/table-rows.jinja",
         ctx=val_table,
+        cf=cf,
         include_oob=first_page,
     )
     if not first_page:
