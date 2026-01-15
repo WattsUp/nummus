@@ -33,6 +33,7 @@ def test_ctx_performance_empty(
         "min": None,
         "period": "1yr",
         "period_options": base.PERIOD_OPTIONS,
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
     }
     assert ctx == target
 
@@ -53,6 +54,7 @@ def test_ctx_performance(
         "min": None,
         "period": "max",
         "period_options": base.PERIOD_OPTIONS,
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
     }
     assert ctx == target
 

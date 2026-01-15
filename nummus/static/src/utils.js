@@ -68,36 +68,58 @@ function downsampleMonths(dates, values) {
 }
 
 /**
- * TODO (WattsUp): #443 format with appropriate currency
+ * Create currency formatter from spec
  *
- * USD formatter with zero fractional digits
+ * @param {Object} spec See Python side: Currency
+ * @returns function(x: Number, coarse: Boolean = false): String
  */
-const formatterF0 = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
+function newCurrencyFormat(spec) {
+  const formatter = new Intl.NumberFormat("nu", {
+    useGrouping: "always",
+    minimumFractionDigits: Math.max(0, spec.precision),
+    maximumFractionDigits: Math.max(0, spec.precision),
+  });
+  const formatterCoarse = new Intl.NumberFormat("nu", {
+    useGrouping: "always",
+    minimumFractionDigits: Math.max(0, spec.precision_coarse),
+    maximumFractionDigits: Math.max(0, spec.precision_coarse),
+  });
+  function format(x, coarse, formattedNumber) {
+    coarse = coarse ?? false;
 
-/**
- * USD formatter with one fractional digit
- */
-const formatterF1 = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 1,
-});
+    let s = "";
+    if (!spec.plus_is_prefix && !spec.symbol_is_suffix) s += spec.symbol;
 
-/**
- * USD formatter with two fractional digits
- */
-const formatterF2 = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+    if (x < 0) {
+      s += "-";
+      x = -x;
+    } else if (spec.plus) {
+      s += "+";
+    }
+
+    if (spec.plus_is_prefix && !spec.symbol_is_suffix) s += spec.symbol;
+
+    if (!formattedNumber) {
+      let p = coarse ? spec.precision_coarse : spec.precision;
+      let exp = Math.pow(10, p);
+
+      x = Math.round(x * exp) / exp;
+
+      formattedNumber = coarse
+        ? formatterCoarse.format(x)
+        : formatter.format(x);
+    }
+    s += formattedNumber.replaceAll(/[.,]/g, (g) => {
+      return g == "." ? spec.sep_dec : spec.sep_1k;
+    });
+
+    if (spec.symbol_is_suffix) s += spec.symbol;
+
+    return s;
+  }
+
+  return format;
+}
 
 /**
  * Format ticks as money
@@ -109,16 +131,32 @@ const formatterF2 = new Intl.NumberFormat("en-US", {
  */
 function formatMoneyTicks(value, index, ticks) {
   if (index == 0) {
+    const formatter0 = new Intl.NumberFormat("nu", {
+      useGrouping: "always",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+    const formatter1 = new Intl.NumberFormat("nu", {
+      useGrouping: "always",
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    });
+
+    const cf = this.chart.config.options.currencyFormat;
     const step = Math.abs(ticks[0].value - ticks[1].value);
     const smallest = Math.min(...ticks.map((t) => Math.abs(t.value)));
     ticks.forEach((t) => {
-      if (step >= 1000) {
-        t.label = formatterF0.format(t.value / 1000) + "k";
-      } else if (step >= 100 && smallest >= 1000) {
-        t.label = formatterF1.format(t.value / 1000) + "k";
-      } else {
-        t.label = formatterF0.format(t.value);
+      let v = null;
+      if (step >= 1_000_000) {
+        v = formatter0.format(Math.abs(t.value / 1_000_000)) + "M";
+      } else if (step >= 100_000 && smallest >= 1_000_000) {
+        v = formatter1.format(Math.abs(t.value / 1_000_000)) + "M";
+      } else if (step >= 1_000) {
+        v = formatter0.format(Math.abs(t.value / 1_000)) + "k";
+      } else if (step >= 100 && smallest >= 1_000) {
+        v = formatter1.format(Math.abs(t.value / 1_000)) + "k";
       }
+      t.label = cf(t.value, false, v);
     });
   }
   return ticks[index].label;

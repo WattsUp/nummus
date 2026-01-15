@@ -82,7 +82,11 @@ const pluginTreeLabel = {
       (context.raw.h * zoom - padding * 2) / font.lineHeight,
     );
 
-    let lines = [obj.ticker, obj.name, formatterF2.format(obj.value)];
+    let lines = [
+      obj.ticker,
+      obj.name,
+      context.chart.config.options.currencyFormat(obj.value),
+    ];
     return word_wrap(lines, maxWidth, maxLines, ctx);
   },
 };

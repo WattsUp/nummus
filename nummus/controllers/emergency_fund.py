@@ -29,6 +29,7 @@ class ChartContext(TypedDict):
     balances: list[Decimal]
     spending_lower: list[Decimal]
     spending_upper: list[Decimal]
+    currency_format: dict[str, object]
 
 
 class CategoryInfo(TypedDict):
@@ -143,6 +144,7 @@ def ctx_page(s: orm.Session, today: datetime.date) -> EFundContext:
         key=lambda item: (-round(item["monthly"], 2), item["name"]),
     )
 
+    cf = CURRENCY_FORMATS[Config.base_currency(s)]
     return {
         "chart": {
             "labels": [d.isoformat() for d in dates],
@@ -150,6 +152,7 @@ def ctx_page(s: orm.Session, today: datetime.date) -> EFundContext:
             "balances": balances,
             "spending_lower": t_lowers,
             "spending_upper": t_uppers,
+            "currency_format": cf._asdict(),
         },
         "current": current,
         "target_lower": target_lower,
@@ -158,7 +161,7 @@ def ctx_page(s: orm.Session, today: datetime.date) -> EFundContext:
         "delta_lower": delta_lower,
         "delta_upper": delta_upper,
         "categories": category_infos,
-        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
+        "currency_format": cf,
     }
 
 

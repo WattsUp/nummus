@@ -59,6 +59,7 @@ class ChartData(base.ChartData):
     index_min: list[Decimal] | None
     index_max: list[Decimal] | None
     mwrr: list[Decimal] | None
+    currency_format: dict[str, object]
 
 
 class Context(TypedDict):
@@ -315,6 +316,7 @@ def ctx_chart(
         (twrr, index_twrr, mwrr_interpolation),
     )
 
+    cf = CURRENCY_FORMATS[base_currency]
     chart: ChartData = {
         **data_twrr,
         "index": data_index["avg"],
@@ -322,6 +324,7 @@ def ctx_chart(
         "index_min": data_index["min"],
         "index_max": data_index["max"],
         "mwrr": None if mwrr is None else data_mwrr["avg"],
+        "currency_format": cf._asdict(),
     }
 
     accounts: AccountsContext = {
@@ -332,7 +335,7 @@ def ctx_chart(
         "mwrr": mwrr,
         "accounts": ctx_accounts,
         "options": sorted(account_options, key=operator.itemgetter(0)),
-        "currency_format": CURRENCY_FORMATS[base_currency],
+        "currency_format": cf,
     }
 
     return {

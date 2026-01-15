@@ -104,6 +104,8 @@ class PerformanceContext(base.ChartData):
     period: str
     period_options: dict[str, str]
 
+    currency_format: dict[str, object]
+
 
 class RowContext(TypedDict):
     """Context for asset row."""
@@ -777,6 +779,7 @@ def ctx_performance(
         **base.chart_data(start_ord, end_ord, values),
         "period": period,
         "period_options": base.PERIOD_OPTIONS,
+        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)]._asdict(),
     }
 
 

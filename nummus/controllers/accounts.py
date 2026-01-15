@@ -89,6 +89,8 @@ class PerformanceContext(TypedDict):
     period: str
     period_options: dict[str, str]
 
+    currency_format: dict[str, object]
+
 
 class AssetContext(TypedDict):
     """Context for assets held."""
@@ -173,6 +175,7 @@ def page(uri: str) -> flask.Response:
                 acct,
                 today,
                 args.get("chart-period"),
+                CURRENCY_FORMATS[acct.currency],
             )
         ctx["assets"] = ctx_assets(s, acct, today)
         return base.page(
@@ -337,6 +340,7 @@ def performance(uri: str) -> flask.Response:
                     acct,
                     base.today_client(),
                     args.get("chart-period"),
+                    CURRENCY_FORMATS[acct.currency],
                 ),
                 "currency_format": CURRENCY_FORMATS[acct.currency],
             },
@@ -481,6 +485,7 @@ def ctx_performance(
     acct: Account,
     today: datetime.date,
     period: str | None,
+    currency_format: CurrencyFormat,
 ) -> PerformanceContext:
     """Get the context to build the account performance details.
 
@@ -489,6 +494,7 @@ def ctx_performance(
         acct: Account to generate context for
         today: Today's date
         period: Period string to get data for
+        currency_format: CurrencyFormat of account
 
     Returns:
         Dictionary HTML context
@@ -558,6 +564,7 @@ def ctx_performance(
         "cost_basis": chart_cost_basis["avg"],
         "period": period,
         "period_options": base.PERIOD_OPTIONS,
+        "currency_format": currency_format._asdict(),
     }
 
 

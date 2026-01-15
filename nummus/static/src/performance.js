@@ -7,6 +7,7 @@ const performance = {
    * @param {Object} raw Raw data from performance controller
    */
   update: function (raw) {
+    const cf = newCurrencyFormat(raw.currency_format);
     const labels = raw.labels;
     const dateMode = raw.mode;
     const avg = raw.avg.map((v) => Number(v) * 100);
@@ -151,10 +152,11 @@ const performance = {
       };
 
       if (this.chart && ctx == this.chart.ctx) {
-        nummusChart.update(this.chart, labels, dateMode, datasets);
+        nummusChart.update(this.chart, cf, labels, dateMode, datasets);
       } else {
         this.chart = nummusChart.create(
           ctx,
+          cf,
           labels,
           dateMode,
           datasets,

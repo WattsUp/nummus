@@ -8,6 +8,7 @@ const nummusChart = {
    * Create a new chart
    *
    * @param {Object} ctx Canvas context to use
+   * @param {function} currencyFormat Function to format number, see newCurrencyFormat
    * @param {Array} labels Array of labels
    * @param {String} dateMode Mode of date tick formatter
    * @param {Array} datasets Array of datasets
@@ -15,7 +16,15 @@ const nummusChart = {
    * @param {Object} options override
    * @return {Object} Chart object
    */
-  create: function (ctx, labels, dateMode, datasets, plugins, options) {
+  create: function (
+    ctx,
+    currencyFormat,
+    labels,
+    dateMode,
+    datasets,
+    plugins,
+    options,
+  ) {
     setChartDefaults();
 
     // If only single day data, duplicate for prettier charts
@@ -43,7 +52,9 @@ const nummusChart = {
             let label = context.dataset.label || "";
             if (label) label += ": ";
             if (context.parsed.y != null)
-              label += formatterF2.format(context.parsed.y);
+              label += context.chart.config.options.currencyFormat(
+                context.parsed.y,
+              );
             return label;
           },
           labelColor: function (context) {
@@ -96,6 +107,7 @@ const nummusChart = {
           },
         },
         plugins: pluginOptions,
+        currencyFormat: currencyFormat,
       },
       options ?? {},
     );
@@ -110,11 +122,12 @@ const nummusChart = {
    * Update existing chart
    *
    * @param {Object} chart Chart object
+   * @param {function} currencyFormat Function to format number, see newCurrencyFormat
    * @param {Array} labels Array of labels
    * @param {String} dateMode Mode of date tick formatter
    * @param {Array} values Array of values
    */
-  update: function (chart, labels, dateMode, datasets) {
+  update: function (chart, currencyFormat, labels, dateMode, datasets) {
     chart.data.labels = labels;
     if (chart.data.datasets.length == datasets.length) {
       for (let i = 0; i < datasets.length; ++i) {
@@ -123,6 +136,7 @@ const nummusChart = {
     } else {
       chart.data.datasets = datasets;
     }
+    chart.config.options.currencyFormat = currencyFormat;
     chart.config.options.scales.x.ticks.dateMode = dateMode;
     pluginColor.updateChartColor(chart);
     chart.update();
@@ -219,12 +233,13 @@ const nummusChart = {
    * Create a new pie chart
    *
    * @param {Object} ctx Canvas context to use
+   * @param {function} currencyFormat Function to format number, see newCurrencyFormat
    * @param {Array} sources Array of sources [values0, values1, ...]
    * @param {Array} plugins Array of plugins
    * @param {Object} options override
    * @return {Object} Chart object
    */
-  createPie: function (ctx, sources, plugins, options) {
+  createPie: function (ctx, currencyFormat, sources, plugins, options) {
     setChartDefaults();
 
     const { labels, datasets, total } = this.datasetsPie(sources);
@@ -241,7 +256,9 @@ const nummusChart = {
             let label = context.dataset.label || "";
             if (label) label += ": ";
             if (context.parsed != null) {
-              label += formatterF2.format(context.parsed);
+              label += context.chart.config.options.currencyFormat(
+                context.parsed,
+              );
               const percent = (context.parsed / context.dataset.total) * 100;
               label += ` (${percent.toFixed(1)}%)`;
             }
@@ -250,7 +267,7 @@ const nummusChart = {
         },
       },
       doughnutText: {
-        text: formatterF0.format(total),
+        text: currencyFormat(total, true),
         font: "'liberation-sans', 'sans-serif'",
       },
     };
@@ -265,6 +282,7 @@ const nummusChart = {
         responsive: true,
         maintainAspectRatio: true,
         plugins: pluginOptions,
+        currencyFormat: currencyFormat,
       },
       options ?? {},
     );
@@ -280,10 +298,11 @@ const nummusChart = {
    * Update existing pie chart with a single data source
    *
    * @param {Object} chart Chart object
+   * @param {function} currencyFormat Function to format number, see newCurrencyFormat
    * @param {Array} sources Array of sources [values0, values1, ...]
    * @param {String} doughnutText Text to update doughnutText
    */
-  updatePie: function (chart, sources, doughnutText) {
+  updatePie: function (chart, currencyFormat, sources, doughnutText) {
     const { labels, datasets, total } = this.datasetsPie(sources);
 
     if (chart.data.datasets.length == datasets.length) {
@@ -299,8 +318,9 @@ const nummusChart = {
       chart.data.datasets = datasets;
     }
     chart.data.labels = labels;
+    chart.config.options.currencyFormat = currencyFormat;
     chart.config.options.plugins.doughnutText.text =
-      doughnutText ?? formatterF0.format(total);
+      doughnutText ?? currencyFormat(total, true);
     pluginColor.updateChartColor(chart);
     pluginHoverHighlight.addListeners(chart);
     chart.update();
@@ -309,12 +329,13 @@ const nummusChart = {
    * Create a new tree chart
    *
    * @param {Object} ctx Canvas context to use
+   * @param {function} currencyFormat Function to format number, see newCurrencyFormat
    * @param {Array} datasets Array of datasets
    * @param {Array} plugins Array of plugins
    * @param {Object} options override
    * @return {Object} Chart object
    */
-  createTree: function (ctx, datasets, plugins, options) {
+  createTree: function (ctx, currencyFormat, datasets, plugins, options) {
     setChartDefaults();
 
     const pluginObjects = [pluginColor, pluginTreeColor, pluginTreeLabel];
@@ -330,7 +351,11 @@ const nummusChart = {
           label: function (context) {
             const obj = context.raw._data;
             let label = obj.name || obj[0];
-            return label + ": " + formatterF2.format(obj.value);
+            return (
+              label +
+              ": " +
+              context.chart.config.options.currencyFormat(obj.value)
+            );
           },
         },
       },
@@ -364,6 +389,7 @@ const nummusChart = {
         maintainAspectRatio: false,
         animations: false,
         plugins: pluginOptions,
+        currencyFormat: currencyFormat,
       },
       options ?? {},
     );

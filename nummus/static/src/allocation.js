@@ -8,6 +8,7 @@ const allocation = {
    * @param {Object} raw Raw data from allocation controller
    */
   update: function (raw) {
+    const cf = newCurrencyFormat(raw.currency_format);
     const categories = raw.categories;
     const sectors = raw.sectors;
 
@@ -64,7 +65,7 @@ const allocation = {
       if (this.chartCategory) {
         this.chartCategory.destroy();
       }
-      this.chartCategory = nummusChart.createTree(ctx, datasets);
+      this.chartCategory = nummusChart.createTree(ctx, cf, datasets);
     }
 
     {
@@ -96,7 +97,7 @@ const allocation = {
           const obj = context.raw._data;
           const sector = obj[0];
           const label = obj.name || sector;
-          const value = formatterF2.format(obj.value);
+          const value = cf(obj.value);
           if (obj.name) {
             const weight = sectorTree[sector][obj.name].weight;
             return `${label} (${weight.toFixed(2)}%): ${value}`;
@@ -104,7 +105,7 @@ const allocation = {
           return `${label}: ${value}`;
         },
       };
-      this.chartSector = nummusChart.createTree(ctx, datasets, null, {
+      this.chartSector = nummusChart.createTree(ctx, cf, datasets, null, {
         plugins: { tooltip: { callbacks: callbacks } },
       });
     }

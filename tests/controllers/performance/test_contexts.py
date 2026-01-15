@@ -43,6 +43,7 @@ def test_ctx_chart_empty(
         "index_min": None,
         "index_max": None,
         "mwrr": [Decimal()],
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
     }
 
     accounts: performance.AccountsContext = {
@@ -126,6 +127,7 @@ def test_ctx_chart(
         "index_min": None,
         "index_max": None,
         "mwrr": None,
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
     }
 
     accounts: performance.AccountsContext = {
@@ -201,6 +203,7 @@ def test_ctx_chart_exclude(
         "index_min": None,
         "index_max": None,
         "mwrr": [Decimal()] * 7,
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
     }
 
     accounts: performance.AccountsContext = {

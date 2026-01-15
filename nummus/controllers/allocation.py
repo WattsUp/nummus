@@ -62,6 +62,7 @@ class ChartContext(TypedDict):
 
     categories: dict[str, list[ChartAssetContext]]
     sectors: dict[str, list[ChartAssetContext]]
+    currency_format: dict[str, object]
 
 
 class AllocationContext(TypedDict):
@@ -179,6 +180,8 @@ def ctx_allocation(s: orm.Session, today: datetime.date) -> AllocationContext:
             for a in assets
         ]
 
+    cf = CURRENCY_FORMATS[Config.base_currency(s)]
+
     return {
         "categories": sorted(categories, key=operator.itemgetter("name")),
         "sectors": sorted(sectors, key=operator.itemgetter("name")),
@@ -187,8 +190,9 @@ def ctx_allocation(s: orm.Session, today: datetime.date) -> AllocationContext:
                 item["name"]: chart_assets(item["assets"]) for item in categories
             },
             "sectors": {item["name"]: chart_assets(item["assets"]) for item in sectors},
+            "currency_format": cf._asdict(),
         },
-        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
+        "currency_format": cf,
     }
 
 

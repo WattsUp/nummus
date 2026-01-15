@@ -18,7 +18,11 @@ def test_ctx_empty(today: datetime.date, session: orm.Session) -> None:
     ctx = allocation.ctx_allocation(session, today)
 
     target: allocation.AllocationContext = {
-        "chart": {"categories": {}, "sectors": {}},
+        "chart": {
+            "categories": {},
+            "sectors": {},
+            "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
+        },
         "categories": [],
         "sectors": [],
         "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
@@ -70,6 +74,7 @@ def test_ctx(
                     },
                 ],
             },
+            "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
         },
         "categories": [
             {

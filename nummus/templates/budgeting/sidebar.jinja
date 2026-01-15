@@ -136,10 +136,12 @@
       </button>
       <script>
         onLoad(() => {
+          // prettier-ignore
           budgeting.update(
             Number("{{ target.total_assigned }}"),
             Number("{{ target.total_target }}"),
             Number("{{ target.on_track | lower }}"),
+            JSON.parse('{{ ctx.currency_format._asdict() | tojson(precision=4) }}'),
           );
         });
       </script>

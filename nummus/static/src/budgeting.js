@@ -373,8 +373,10 @@ const budgeting = {
    * @param {Number} assigned Amount of money assigned to target
    * @param {Number} targetAmount Full target amount
    * @param {Boolean} onTrack True if target is on track
+   * @param {Object} currencyFormat See Python side: Currency
    */
-  update(assigned, targetAmount, onTrack) {
+  update(assigned, targetAmount, onTrack, currencyFormat) {
+    const cf = newCurrencyFormat(currencyFormat);
     const remaining = targetAmount - assigned;
     const percent = Math.min(100, (assigned / targetAmount) * 100);
 
@@ -399,11 +401,12 @@ const budgeting = {
     if (this.sidebarChart && ctx == this.sidebarChart.ctx) {
       nummusChart.updatePie(
         this.sidebarChart,
+        cf,
         datasets,
         `${percent.toFixed(0)}%`,
       );
     } else {
-      this.sidebarChart = nummusChart.createPie(ctx, datasets, null, {
+      this.sidebarChart = nummusChart.createPie(ctx, cf, datasets, null, {
         plugins: { doughnutText: { text: `${percent.toFixed(0)}%` } },
         animations: false,
       });

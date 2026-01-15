@@ -596,7 +596,7 @@ class Asset(Base):
                 actions=True,
                 raise_errors=True,
             )
-            self.currency = Currency(yf_ticker.get_info()["currency"])
+            self.currency = Currency(yf_ticker.info["currency"])
         except Exception as e:
             # yfinance raises Exception if no data found
             raise exc.AssetWebError(e) from e

@@ -101,7 +101,13 @@ def test_ctx_performance_empty(
     start = utils.date_add_months(today, -12)
     labels, mode = base.date_labels(start.toordinal(), today.toordinal())
 
-    ctx = accounts.ctx_performance(session, account, today, "1yr")
+    ctx = accounts.ctx_performance(
+        session,
+        account,
+        today,
+        "1yr",
+        CURRENCY_FORMATS[DEFAULT_CURRENCY],
+    )
 
     target: accounts.PerformanceContext = {
         "pnl_past_year": Decimal(),
@@ -118,6 +124,7 @@ def test_ctx_performance_empty(
         "cost_basis": [Decimal()] * len(labels),
         "period": "1yr",
         "period_options": base.PERIOD_OPTIONS,
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
     }
     assert ctx == target
 
@@ -133,7 +140,13 @@ def test_ctx_performance(
     session.commit()
     labels, mode = base.date_labels(transactions[0].date_ord, today.toordinal())
 
-    ctx = accounts.ctx_performance(session, account, today, "max")
+    ctx = accounts.ctx_performance(
+        session,
+        account,
+        today,
+        "max",
+        CURRENCY_FORMATS[DEFAULT_CURRENCY],
+    )
 
     twrr = Decimal(8) / Decimal(100)
     twrr_per_annum = (1 + twrr) ** (utils.DAYS_IN_YEAR / len(labels)) - 1
@@ -154,6 +167,7 @@ def test_ctx_performance(
         "cost_basis": [Decimal(100)] * len(labels),
         "period": "max",
         "period_options": base.PERIOD_OPTIONS,
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
     }
     assert ctx == target
 

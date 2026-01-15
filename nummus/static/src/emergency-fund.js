@@ -7,6 +7,7 @@ const emergencyFund = {
    * @param {Object} raw Raw data from emergency fund controller
    */
   update: function (raw) {
+    const cf = newCurrencyFormat(raw.currency_format);
     const labels = raw.labels;
     const dateMode = raw.date_mode;
     const values = raw.balances;
@@ -56,10 +57,10 @@ const emergencyFund = {
       },
     ];
     if (this.chart && ctx == this.chart.ctx) {
-      nummusChart.update(this.chart, labels, dateMode, datasets);
+      nummusChart.update(this.chart, cf, labels, dateMode, datasets);
     } else {
       this.ctx = ctx;
-      this.chart = nummusChart.create(ctx, labels, dateMode, datasets);
+      this.chart = nummusChart.create(ctx, cf, labels, dateMode, datasets);
     }
   },
   /**
@@ -68,6 +69,7 @@ const emergencyFund = {
    * @param {Object} raw Raw data from emergency fund controller
    */
   updateDashboard: function (raw) {
+    const cf = newCurrencyFormat(raw.currency_format);
     const labels = raw.labels;
     const dateMode = raw.date_mode;
     const values = raw.balances;
@@ -117,14 +119,22 @@ const emergencyFund = {
       },
     ];
     if (this.chart && ctx == this.chart.ctx) {
-      nummusChart.update(this.chart, labels, dateMode, datasets);
+      nummusChart.update(this.chart, cf, labels, dateMode, datasets);
     } else {
       this.ctx = ctx;
-      this.chart = nummusChart.create(ctx, labels, dateMode, datasets, null, {
-        scales: {
-          y: { ticks: { display: false }, grid: { drawTicks: false } },
+      this.chart = nummusChart.create(
+        ctx,
+        cf,
+        labels,
+        dateMode,
+        datasets,
+        null,
+        {
+          scales: {
+            y: { ticks: { display: false }, grid: { drawTicks: false } },
+          },
         },
-      });
+      );
     }
   },
 };
