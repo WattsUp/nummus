@@ -141,19 +141,7 @@ class Health(BaseCommand):
         # Update LAST_HEALTH_CHECK_TS
         utc_now = datetime.datetime.now(datetime.UTC)
         with p.begin_session() as s:
-            c = (
-                s.query(Config)
-                .where(Config.key == ConfigKey.LAST_HEALTH_CHECK_TS)
-                .one_or_none()
-            )
-            if c is None:
-                c = Config(
-                    key=ConfigKey.LAST_HEALTH_CHECK_TS,
-                    value=utc_now.isoformat(),
-                )
-                s.add(c)
-            else:
-                c.value = utc_now.isoformat()
+            Config.set_(s, ConfigKey.LAST_HEALTH_CHECK_TS, utc_now.isoformat())
         if any_severe_issues:
             return -2
         if any_issues:

@@ -220,6 +220,7 @@ def ctx_base(
                     "Style test": (
                         Page("style", "common.page_style_test") if debug else None
                     ),
+                    "Settings": Page("settings", "settings.page"),
                 },
             ),
         ]

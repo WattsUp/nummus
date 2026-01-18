@@ -37,6 +37,7 @@ from nummus.models import (
     TransactionSplit,
     USSector,
 )
+from nummus.models.currency import DEFAULT_CURRENCY
 from nummus.portfolio import Portfolio
 from tests.mock_yfinance import MockTicker
 
@@ -314,6 +315,7 @@ def account(session: orm.Session, rand_str_generator: RandomStringGenerator) -> 
         category=AccountCategory.CASH,
         closed=False,
         budgeted=True,
+        currency=DEFAULT_CURRENCY,
         number=rand_str_generator(),
     )
     session.add(acct)
@@ -336,6 +338,7 @@ def account_savings(session: orm.Session) -> Account:
         category=AccountCategory.CASH,
         closed=False,
         budgeted=False,
+        currency=DEFAULT_CURRENCY,
         number="1234",
     )
     session.add(acct)
@@ -357,6 +360,7 @@ def account_investments(session: orm.Session) -> Account:
         category=AccountCategory.INVESTMENT,
         closed=False,
         budgeted=False,
+        currency=DEFAULT_CURRENCY,
         number="1235",
     )
     session.add(acct)
@@ -402,6 +406,7 @@ def asset(session: orm.Session) -> Asset:
         category=AssetCategory.STOCKS,
         ticker="BANANA",
         description="Banana Incorporated makes bananas",
+        currency=DEFAULT_CURRENCY,
     )
     session.add(asset)
     session.commit()
@@ -421,6 +426,7 @@ def asset_etf(session: orm.Session) -> Asset:
         category=AssetCategory.STOCKS,
         ticker="BANANA_ETF",
         description="Banana ETF",
+        currency=DEFAULT_CURRENCY,
     )
     session.add(asset)
     session.commit()

@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING
 
 from colorama import Fore
 
-from nummus import utils
 from nummus.commands.export import Export
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -63,12 +63,13 @@ def test_export(
     assert captured.out == target
     assert not captured.err
 
+    cf = CURRENCY_FORMATS[DEFAULT_CURRENCY]
     buf = path_csv.read_text("utf-8").splitlines()
     target = [
         "Date,Account,Payee,Memo,Category,Amount",
         (
             f"{txn.date},{account.name},{txn.payee or ''},{t_split.memo or ''},"
-            f"Other Income,{utils.format_financial(txn.amount)}"
+            f"Other Income,{cf(txn.amount)}"
         ),
     ]
     assert buf == target

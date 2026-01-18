@@ -6,6 +6,7 @@
     {% include "budgeting/sidebar.jinja" %}
   </div>
 {% endif %}
+{% set cf = ctx.currency_format %}
 <label class="{{ 'error' if group.has_error }}">
   <input
     name="open"
@@ -44,15 +45,15 @@
   </div>
   <div class="edit:hidden max-md:open:hidden">
     <div class="not-error:text-on-surface-variant text-sm">Assigned</div>
-    <div>{{ group.assigned | money }}</div>
+    <div>{{ cf(group.assigned) }}</div>
   </div>
   <div class="edit:hidden max-md:hidden">
     <div class="not-error:text-on-surface-variant text-sm">Activity</div>
-    <div>{{ group.activity | money }}</div>
+    <div>{{ cf(group.activity) }}</div>
   </div>
   <div class="edit:hidden max-md:open:hidden md:pr-2">
     <div class="not-error:text-on-surface-variant text-sm">Available</div>
-    <div>{{ group.available | money }}</div>
+    <div>{{ cf(group.available) }}</div>
   </div>
   <div
     class="edit:hidden not-open:hidden not-error:text-on-surface-variant text-sm md:hidden"

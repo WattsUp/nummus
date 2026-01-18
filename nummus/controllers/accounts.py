@@ -18,11 +18,17 @@ from nummus.models import (
     AccountCategory,
     Asset,
     AssetCategory,
+    Config,
     query_to_dict,
     Transaction,
     TransactionCategory,
     TransactionSplit,
     YIELD_PER,
+)
+from nummus.models.currency import (
+    Currency,
+    CURRENCY_FORMATS,
+    DEFAULT_CURRENCY,
 )
 
 if TYPE_CHECKING:
@@ -30,6 +36,8 @@ if TYPE_CHECKING:
 
     import werkzeug
     from sqlalchemy import orm
+
+    from nummus.models.currency import CurrencyFormat
 
 
 class AccountContext(TypedDict):
@@ -41,6 +49,9 @@ class AccountContext(TypedDict):
     institution: str
     category: AccountCategory
     category_type: type[AccountCategory]
+    currency: Currency
+    currency_type: type[Currency]
+    currency_format: CurrencyFormat
     closed: bool
     budgeted: bool
     updated_days_ago: int | None
@@ -49,6 +60,7 @@ class AccountContext(TypedDict):
     change_today: Decimal
     change_future: Decimal
     value: Decimal
+    value_base: Decimal | None
 
     performance: PerformanceContext | None
     assets: list[AssetContext] | None
@@ -77,6 +89,8 @@ class PerformanceContext(TypedDict):
     period: str
     period_options: dict[str, str]
 
+    currency_format: dict[str, object]
+
 
 class AssetContext(TypedDict):
     """Context for assets held."""
@@ -101,6 +115,7 @@ class AllAccountsContext(TypedDict):
     assets_w: Decimal
     liabilities_w: Decimal
     categories: dict[AccountCategory, tuple[Decimal, list[AccountContext]]]
+    currency_format: CurrencyFormat
     include_closed: bool
     n_closed: int
 
@@ -160,6 +175,7 @@ def page(uri: str) -> flask.Response:
                 acct,
                 today,
                 args.get("chart-period"),
+                CURRENCY_FORMATS[acct.currency],
             )
         ctx["assets"] = ctx_assets(s, acct, today)
         return base.page(
@@ -179,39 +195,49 @@ def new() -> str | flask.Response:
         HTML response
 
     """
-    if flask.request.method == "GET":
-        ctx: AccountContext = {
-            "uri": None,
-            "name": "",
-            "number": None,
-            "institution": "",
-            "category": AccountCategory.CASH,
-            "category_type": AccountCategory,
-            "closed": False,
-            "budgeted": False,
-            "updated_days_ago": None,
-            "n_today": 0,
-            "n_future": 0,
-            "change_today": Decimal(),
-            "change_future": Decimal(),
-            "value": Decimal(),
-            "performance": None,
-            "assets": None,
-        }
-        return flask.render_template(
-            "accounts/edit.jinja",
-            acct=ctx,
-        )
-
     p = web.portfolio
-
     with p.begin_session() as s:
+        base_currency = Config.base_currency(s)
+        if flask.request.method == "GET":
+            ctx: AccountContext = {
+                "uri": None,
+                "name": "",
+                "number": None,
+                "institution": "",
+                "category": AccountCategory.CASH,
+                "category_type": AccountCategory,
+                "currency": base_currency,
+                "currency_type": Currency,
+                "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
+                "closed": False,
+                "budgeted": False,
+                "updated_days_ago": None,
+                "n_today": 0,
+                "n_future": 0,
+                "change_today": Decimal(),
+                "change_future": Decimal(),
+                "value": Decimal(),
+                "value_base": None,
+                "performance": None,
+                "assets": None,
+            }
+            return flask.render_template(
+                "accounts/edit.jinja",
+                acct=ctx,
+            )
+
         form = flask.request.form
         institution = form["institution"].strip()
         name = form["name"].strip()
         number = form["number"].strip()
         category = AccountCategory(form["category"])
+        currency = Currency(form["currency"])
         budgeted = "budgeted" in form
+
+        if budgeted and currency != base_currency:
+            return base.error(
+                f"Budgeted account must be in {base_currency.name}",
+            )
 
         try:
             with s.begin_nested():
@@ -222,6 +248,7 @@ def new() -> str | flask.Response:
                     category=category,
                     closed=False,
                     budgeted=budgeted,
+                    currency=currency,
                 )
                 s.add(acct)
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
@@ -245,6 +272,8 @@ def account(uri: str) -> str | werkzeug.Response:
     today_ord = today.toordinal()
 
     with p.begin_session() as s:
+        base_currency = Config.base_currency(s)
+
         acct = base.find(s, Account, uri)
 
         if flask.request.method == "GET":
@@ -265,8 +294,14 @@ def account(uri: str) -> str | werkzeug.Response:
         name = form["name"].strip()
         number = form["number"].strip()
         category = AccountCategory(form["category"])
+        currency = Currency(form["currency"])
         closed = "closed" in form
         budgeted = "budgeted" in form
+
+        if budgeted and currency != base_currency:
+            return base.error(
+                f"Budgeted account must be in {base_currency.name}",
+            )
 
         if closed and v != 0:
             msg = "Cannot close Account with non-zero balance"
@@ -278,6 +313,7 @@ def account(uri: str) -> str | werkzeug.Response:
                 acct.name = name
                 acct.number = number
                 acct.category = category
+                acct.currency = currency
                 acct.closed = closed
                 acct.budgeted = budgeted
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
@@ -306,7 +342,9 @@ def performance(uri: str) -> flask.Response:
                     acct,
                     base.today_client(),
                     args.get("chart-period"),
+                    CURRENCY_FORMATS[acct.currency],
                 ),
+                "currency_format": CURRENCY_FORMATS[acct.currency],
             },
         )
     response = flask.make_response(html)
@@ -427,7 +465,11 @@ def ctx_account(
         "institution": acct.institution,
         "category": acct.category,
         "category_type": AccountCategory,
+        "currency": acct.currency,
+        "currency_type": Currency,
+        "currency_format": CURRENCY_FORMATS[acct.currency],
         "value": current_value,
+        "value_base": None,
         "closed": acct.closed,
         "budgeted": acct.budgeted,
         "updated_days_ago": updated_days_ago,
@@ -445,6 +487,7 @@ def ctx_performance(
     acct: Account,
     today: datetime.date,
     period: str | None,
+    currency_format: CurrencyFormat,
 ) -> PerformanceContext:
     """Get the context to build the account performance details.
 
@@ -453,6 +496,7 @@ def ctx_performance(
         acct: Account to generate context for
         today: Today's date
         period: Period string to get data for
+        currency_format: CurrencyFormat of account
 
     Returns:
         Dictionary HTML context
@@ -522,6 +566,7 @@ def ctx_performance(
         "cost_basis": chart_cost_basis["avg"],
         "period": period,
         "period_options": base.PERIOD_OPTIONS,
+        "currency_format": currency_format._asdict(),
     }
 
 
@@ -664,11 +709,13 @@ def ctx_accounts(
     n_closed = 0
     # Get basic info
     accounts: dict[int, AccountContext] = {}
+    currencies: dict[int, Currency] = {}
     query = s.query(Account).order_by(Account.category)
     if not include_closed:
         query = query.where(Account.closed.is_(False))
     for acct in query.all():
         accounts[acct.id_] = ctx_account(s, acct, today, skip_today=True)
+        currencies[acct.id_] = acct.currency
         if acct.closed:
             n_closed += 1
 
@@ -725,15 +772,29 @@ def ctx_accounts(
         accounts[acct_id]["n_future"] = n_future
         accounts[acct_id]["change_future"] = change_future
 
+    base_currency = Config.base_currency(s)
+    forex = Asset.get_forex(
+        s,
+        today_ord,
+        today_ord,
+        base_currency,
+        set(currencies.values()),
+    )
+
     # Get all Account values
     acct_values, _, _ = Account.get_value_all(s, today_ord, today_ord, ids=accounts)
     for acct_id, ctx in accounts.items():
         v = acct_values[acct_id][0]
+        ctx["value"] = v
+
+        currency = currencies[acct_id]
+        v *= forex[currency][0]
+        ctx["value_base"] = None if currency == base_currency else v
+
         if v > 0:
             assets += v
         else:
             liabilities += v
-        ctx["value"] = v
         category = ctx["category"]
 
         categories_total[category] += v
@@ -766,6 +827,7 @@ def ctx_accounts(
         },
         "include_closed": include_closed,
         "n_closed": n_closed,
+        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
     }
 
 

@@ -20,9 +20,7 @@ if TYPE_CHECKING:
 
 def test_create_app(empty_portfolio: Portfolio, flask_app: flask.Flask) -> None:
     with empty_portfolio.begin_session() as s:
-        secret_key = (
-            s.query(Config.value).where(Config.key == ConfigKey.SECRET_KEY).one()[0]
-        )
+        secret_key = Config.fetch(s, ConfigKey.SECRET_KEY)
     assert flask_app.secret_key == secret_key
     assert len(flask_app.before_request_funcs[None]) == 1
 
@@ -117,10 +115,6 @@ def test_flask_context(flask_app: flask.Flask) -> None:
 @pytest.mark.parametrize(
     ("value", "filt", "target"),
     [
-        (Decimal("1000.100000"), "money", "$1,000.10"),
-        (Decimal("-1000.100000"), "money", "-$1,000.10"),
-        (Decimal("1000.100000"), "money0", "$1,000"),
-        (Decimal("1000.100000"), "money6", "$1,000.100000"),
         (Decimal("1000.100000"), "comma", "1,000.10"),
         (Decimal("1000.100000"), "qty", "1,000.100000"),
         (Decimal("1000.100000"), "input_value", "1000.1"),

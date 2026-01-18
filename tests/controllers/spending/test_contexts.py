@@ -13,6 +13,7 @@ from nummus.models import (
     TransactionCategoryGroup,
     TransactionSplit,
 )
+from nummus.models.currency import DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     import datetime
@@ -66,6 +67,7 @@ def test_data_query(
     _ = transactions_spending
     dat_query = spending.data_query(
         session,
+        DEFAULT_CURRENCY,
         account.uri if include_account else None,
         period,
         start,

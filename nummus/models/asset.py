@@ -28,8 +28,9 @@ from nummus.models.base import (
     string_column_args,
     YIELD_PER,
 )
+from nummus.models.currency import Currency, DEFAULT_CURRENCY
 from nummus.models.transaction import TransactionSplit
-from nummus.models.utils import obj_session, query_count, update_rows
+from nummus.models.utils import obj_session, query_count, query_to_dict, update_rows
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -189,6 +190,7 @@ class AssetCategory(BaseEnum):
     FUTURES = 5
     CRYPTOCURRENCY = 6
     INDEX = 7
+    FOREX = 11
 
     REAL_ESTATE = 8
     VEHICLE = 9
@@ -207,6 +209,7 @@ class Asset(Base):
             sparsely (monthly) valued assets
         ticker: Name of exchange ticker to fetch prices for. If no ticker then
             valuations must be manually entered
+        currency: Currency this asset is valued in
 
     """
 
@@ -218,6 +221,7 @@ class Asset(Base):
     category: orm.Mapped[AssetCategory] = orm.mapped_column(SQLEnum(AssetCategory))
     interpolate: ORMBool = orm.mapped_column(default=False)
     ticker: ORMStrOpt = orm.mapped_column(unique=True)
+    currency: orm.Mapped[Currency] = orm.mapped_column(SQLEnum(Currency))
 
     __table_args__ = (
         *string_column_args("name"),
@@ -567,6 +571,8 @@ class Asset(Base):
         if self.category == AssetCategory.INDEX:
             query = query.where(TransactionSplit.asset_id.isnot(None))
             through_today = True
+        elif self.category == AssetCategory.FOREX:
+            through_today = True
         else:
             query = query.where(TransactionSplit.asset_id == self.id_)
         start_ord, end_ord = query.one()
@@ -590,6 +596,7 @@ class Asset(Base):
                 actions=True,
                 raise_errors=True,
             )
+            self.currency = Currency(yf_ticker.info["currency"])
         except Exception as e:
             # yfinance raises Exception if no data found
             raise exc.AssetWebError(e) from e
@@ -765,6 +772,7 @@ class Asset(Base):
                 category=AssetCategory.INDEX,
                 interpolate=False,
                 ticker=ticker,
+                currency=DEFAULT_CURRENCY,
             )
             s.add(a)
 
@@ -786,3 +794,103 @@ class Asset(Base):
         )
         # Don't interpolate if there are dailys or if there is only one AssetValuation
         self.interpolate = not has_dailys and len(date_ords) > 1
+
+    @classmethod
+    def create_forex(
+        cls,
+        s: orm.Session,
+        base: Currency,
+        others: set[Currency],
+    ) -> None:
+        """Create foreign exchange rate assets.
+
+        Args:
+            s: SQL session to use
+            base: Base currency to get FOREX referenced to
+            others: Other currencys to get
+
+        """
+        if base in others:
+            others.discard(base)
+
+        query = s.query(Asset.ticker).where(Asset.category == AssetCategory.FOREX)
+        existing: set[str] = {r[0] for r in query.all()}
+
+        for other in others:
+            ticker = f"{other.name}{base.name}=X"
+            if ticker in existing:
+                existing.discard(ticker)
+                continue
+
+            asset = Asset(
+                name=f"{other.name} to {base.name}",
+                description=f"Exchange rate from {other.pretty} to {base.pretty}",
+                category=AssetCategory.FOREX,
+                ticker=ticker,
+                currency=base,
+            )
+            s.add(asset)
+
+            existing.discard(ticker)
+
+        # existing has unused FOREX assets
+        # TODO (WattsUp): #463 Handle when accounts hold FOREX
+        to_delete = {
+            r[0] for r in s.query(Asset.id_).where(Asset.ticker.in_(existing)).all()
+        }
+        s.query(AssetValuation).where(AssetValuation.asset_id.in_(to_delete)).delete()
+        s.query(AssetSplit).where(AssetSplit.asset_id.in_(to_delete)).delete()
+        s.query(AssetSector).where(AssetSector.asset_id.in_(to_delete)).delete()
+        s.query(Asset).where(Asset.id_.in_(to_delete)).delete()
+
+    @classmethod
+    def get_forex(
+        cls,
+        s: orm.Session,
+        start_ord: int,
+        end_ord: int,
+        base: Currency,
+        currencies: Iterable[Currency] | None = None,
+    ) -> dict[Currency, list[Decimal]]:
+        """Get foreign exchange rate over time.
+
+        Args:
+            s: SQL session to use
+            start_ord: First date ordinal to evaluate
+            end_ord: Last date ordinal to evaluate (inclusive)
+            base: Base currency to exchange to
+            currencies: Filter which currencies to get
+
+        Returns:
+            dict{
+                currency: [exchange rates]
+            }
+
+            Multiply value in other by exchange rate to get base value
+            see utils.element_multiply
+
+        """
+        currencies = currencies or [*Currency]
+        currencies_by_ticker: dict[str | None, Currency] = {
+            f"{other.name}{base.name}=X": other for other in currencies
+        }
+        # null ticker filtered out by query
+        query = s.query(Asset.id_, Asset.ticker).where(
+            Asset.category == AssetCategory.FOREX,
+            Asset.currency == base,
+        )
+        query = query.where(Asset.ticker.in_(currencies_by_ticker))
+        assets = query_to_dict(query)
+
+        values = cls.get_value_all(s, start_ord, end_ord, assets.keys())
+
+        forex: dict[Currency, list[Decimal]] = defaultdict(
+            lambda: [Decimal(1)] * (end_ord - start_ord + 1),
+        )
+
+        for a_id, exchange in values.items():
+            ticker = assets[a_id]
+            currency = currencies_by_ticker[ticker]
+            forex[currency] = exchange
+
+        return forex

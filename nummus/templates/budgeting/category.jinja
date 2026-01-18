@@ -25,12 +25,12 @@
         hx-disabled-elt="this"
         hx-target="#group-{{ group.uri or "ungrouped" }}"
       />
-      <span>{{ category.assigned | money }}</span>
+      <span>{{ cf(category.assigned) }}</span>
     </div>
     <div
       class="{{ "text-on-surface-variant" if category.activity == 0 }} max-md:hidden"
     >
-      {{ category.activity | money }}
+      {{ cf(category.activity) }}
     </div>
     <div
       hx-target="#dialog"
@@ -43,7 +43,7 @@
           hx-get="{{ url_for('budgeting.move', uri=category.uri, month=ctx.month) }}"
           hx-disabled-elt="this"
         >
-          {{ category.available | money }}
+          {{ cf(category.available) }}
         </button>
       {% else %}
         {% set btn_class = ("btn-tonal-tertiary" if target and target.to_go > 0 else "btn-tonal") %}
@@ -53,7 +53,7 @@
           hx-get="{{ url_for('budgeting.move', uri=category.uri, month=ctx.month) }}"
           hx-disabled-elt="this"
         >
-          {{ category.available | money }}
+          {{ cf(category.available) }}
         </button>
       {% endif %}
     </div>
@@ -86,10 +86,10 @@
     {% if category.available < 0 %}<b>Overspent</b>{% endif %}
     {% if target and target.total_to_go != 0 %}
       {% if not target.on_track %}
-        {{ target.to_go | money }}
+        {{ cf(target.to_go) }}
         more needed
       {% elif target.period == "WEEK" %}
-        On track, {{ target.to_go | money }} more needed
+        On track, {{ cf(target.to_go) }} more needed
       {% else %}
         On track
       {% endif %}

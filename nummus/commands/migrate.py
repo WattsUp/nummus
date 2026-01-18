@@ -53,7 +53,8 @@ class Migrate(BaseCommand):
         # Back up Portfolio
         _, tar_ver = p.backup()
 
-        v_db = p.db_version
+        with p.begin_session() as s:
+            v_db = Config.db_version(s)
 
         any_migrated = False
         try:
@@ -82,9 +83,7 @@ class Migrate(BaseCommand):
                     *[m.min_version() for m in MIGRATORS],
                 )
 
-                s.query(Config).where(Config.key == ConfigKey.VERSION).update(
-                    {"value": str(v)},
-                )
+                Config.set_(s, ConfigKey.VERSION, str(v))
         except Exception:  # pragma: no cover
             # No immediate exception thrown, can't easily test
             portfolio.Portfolio.restore(p, tar_ver=tar_ver)

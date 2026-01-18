@@ -54,7 +54,7 @@
     <select name="category" required autocomplete="off">
       <option
         value=""
-        {% if not acct.group %}selected{% endif %}
+        {% if not acct.category %}selected{% endif %}
         disabled
         hidden
       ></option>
@@ -70,6 +70,21 @@
     </select>
     <div>
       <div>Category</div>
+    </div>
+  </label>
+  <label class="input-outlined input-bg-surface-container-high col-span-2">
+    <select name="currency" required autocomplete="off">
+      {% for currency in acct.currency_type %}
+        <option
+          value="{{ currency.name }}"
+          {% if currency == acct.currency %}selected{% endif %}
+        >
+          {{ currency.pretty }}
+        </option>
+      {% endfor %}
+    </select>
+    <div>
+      <div>Currency</div>
     </div>
   </label>
   <label class="input-outlined input-bg-surface-container-high col-span-2">

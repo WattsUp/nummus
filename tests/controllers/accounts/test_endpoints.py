@@ -6,6 +6,7 @@ import pytest
 
 from nummus.controllers import base
 from nummus.models import Account, AccountCategory
+from nummus.models.currency import Currency, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -121,6 +122,7 @@ def test_new(
         data={
             "name": "New name",
             "category": "INVESTMENT",
+            "currency": "USD",
             "institution": "Nothing to see",
             "number": "1234",
             "closed": "on",
@@ -133,23 +135,38 @@ def test_new(
     account = session.query(Account).one()
     assert account.name == "New name"
     assert account.category == AccountCategory.INVESTMENT
+    assert account.currency == Currency.USD
     assert account.institution == "Nothing to see"
     assert account.number == "1234"
     assert not account.closed
 
 
-def test_new_error(web_client: WebClient) -> None:
+@pytest.mark.parametrize(
+    ("name", "currency", "target"),
+    [
+        ("a", "USD", "Account name must be at least 2 characters long"),
+        ("Name", "EUR", f"Budgeted account must be in {DEFAULT_CURRENCY.name}"),
+    ],
+)
+def test_new_error(
+    web_client: WebClient,
+    name: str,
+    currency: str,
+    target: str,
+) -> None:
     result, _ = web_client.POST(
         "accounts.new",
         data={
-            "name": "a",
+            "name": name,
             "category": "INVESTMENT",
+            "currency": currency,
             "institution": "Nothing to see",
             "number": "1234",
             "closed": "on",
+            "budgeted": "on",
         },
     )
-    assert result == base.error("Account name must be at least 2 characters long")
+    assert result == base.error(target)
 
 
 def test_account_get_empty(web_client: WebClient, account: Account) -> None:
@@ -189,6 +206,7 @@ def test_account_edit(
         data={
             "name": "New name",
             "category": "INVESTMENT",
+            "currency": "EUR",
             "institution": "Nothing to see",
             "number": "1234",
             "closed": "on",
@@ -201,15 +219,17 @@ def test_account_edit(
     session.refresh(account)
     assert account.name == "New name"
     assert account.category == AccountCategory.INVESTMENT
+    assert account.currency == Currency.EUR
     assert account.institution == "Nothing to see"
     assert account.number == "1234"
 
 
 @pytest.mark.parametrize(
-    ("name", "closed", "target"),
+    ("name", "closed", "currency", "target"),
     [
-        ("a", False, "Account name must be at least 2 characters long"),
-        ("New name", True, "Cannot close Account with non-zero balance"),
+        ("a", False, "USD", "Account name must be at least 2 characters long"),
+        ("New name", True, "USD", "Cannot close Account with non-zero balance"),
+        ("Name", False, "EUR", f"Budgeted account must be in {DEFAULT_CURRENCY.name}"),
     ],
 )
 def test_account_edit_error(
@@ -217,6 +237,7 @@ def test_account_edit_error(
     account: Account,
     name: str,
     closed: bool,
+    currency: str,
     target: str,
     transactions: list[Transaction],
 ) -> None:
@@ -224,8 +245,10 @@ def test_account_edit_error(
     form = {
         "name": name,
         "category": "INVESTMENT",
+        "currency": currency,
         "institution": "Nothing to see",
         "number": "1234",
+        "budgeted": "on",
     }
     if closed:
         form["closed"] = "on"

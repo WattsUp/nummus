@@ -1,0 +1,35 @@
+<div
+  hx-get="{{ url_for('settings.page') }}"
+  hx-trigger="config from:body, asset from:body"
+  hx-target="#main"
+>
+  <h1>Settings</h1>
+</div>
+<div class="prose mx-auto px-2">
+  <p>Unless indicated, changes take effect immediately.</p>
+</div>
+<label class="input-outlined max-w-md">
+  <select
+    name="currency"
+    required
+    autocomplete="off"
+    hx-patch="{{ url_for('settings.edit') }}"
+    hx-target="#no-target"
+    hx-include="this"
+  >
+    {% for currency in ctx.currency_type %}
+      <option
+        value="{{ currency.name }}"
+        {% if currency == ctx.currency %}selected{% endif %}
+      >
+        {{ currency.pretty }}
+      </option>
+    {% endfor %}
+  </select>
+  <div>
+    <div>Base currency</div>
+  </div>
+  <div>
+    <span>All accounts are normalized into this currency when combining</span>
+  </div>
+</label>

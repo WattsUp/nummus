@@ -45,8 +45,8 @@ def test_issues(
     assert not captured.err
 
     with empty_portfolio.begin_session() as s:
-        c = s.query(Config).where(Config.key == ConfigKey.LAST_HEALTH_CHECK_TS).one()
-        assert c.value == utc_frozen.isoformat()
+        v = Config.fetch(s, ConfigKey.LAST_HEALTH_CHECK_TS)
+        assert v == utc_frozen.isoformat()
 
 
 def test_no_limit_severe(
@@ -83,8 +83,8 @@ def test_no_limit_severe(
     assert not captured.err
 
     with empty_portfolio.begin_session() as s:
-        c = s.query(Config).where(Config.key == ConfigKey.LAST_HEALTH_CHECK_TS).one()
-        assert c.value == utc_frozen.isoformat()
+        v = Config.fetch(s, ConfigKey.LAST_HEALTH_CHECK_TS)
+        assert v == utc_frozen.isoformat()
 
 
 def test_ignore_all(
@@ -99,11 +99,11 @@ def test_ignore_all(
             c.test(s)
         ignores.extend(c.issues.keys())
     with empty_portfolio.begin_session() as s:
-        c = Config(
-            key=ConfigKey.LAST_HEALTH_CHECK_TS,
-            value=(utc_frozen - datetime.timedelta(days=1)).isoformat(),
+        Config.set_(
+            s,
+            ConfigKey.LAST_HEALTH_CHECK_TS,
+            (utc_frozen - datetime.timedelta(days=1)).isoformat(),
         )
-        s.add(c)
 
     c = Health(
         empty_portfolio.path,
@@ -129,8 +129,8 @@ def test_ignore_all(
     assert not captured.err
 
     with empty_portfolio.begin_session() as s:
-        c = s.query(Config).where(Config.key == ConfigKey.LAST_HEALTH_CHECK_TS).one()
-        assert c.value == utc_frozen.isoformat()
+        v = Config.fetch(s, ConfigKey.LAST_HEALTH_CHECK_TS)
+        assert v == utc_frozen.isoformat()
 
         assert query_count(s.query(HealthCheckIssue)) == len(ignores)
 

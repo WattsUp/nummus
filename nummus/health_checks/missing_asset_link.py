@@ -5,16 +5,16 @@ from __future__ import annotations
 import datetime
 from typing import override, TYPE_CHECKING
 
-from nummus import utils
 from nummus.health_checks.base import Base
 from nummus.models import Account, TransactionCategory, TransactionSplit, YIELD_PER
-
-if TYPE_CHECKING:
-    from sqlalchemy import orm
-
+from nummus.models.currency import CURRENCY_FORMATS
 
 if TYPE_CHECKING:
     from decimal import Decimal
+
+    from sqlalchemy import orm
+
+    from nummus.models.currency import Currency
 
 
 class MissingAssetLink(Base):
@@ -25,11 +25,18 @@ class MissingAssetLink(Base):
 
     @override
     def test(self, s: orm.Session) -> None:
-        accounts = Account.map_name(s)
+        query = s.query(Account).with_entities(
+            Account.id_,
+            Account.name,
+            Account.currency,
+        )
+        accounts: dict[int, tuple[str, Currency]] = {
+            r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
+        }
         if len(accounts) == 0:
             self._commit_issues(s, {})
             return
-        acct_len = max(len(acct) for acct in accounts.values())
+        acct_len = max(len(acct[0]) for acct in accounts.values())
         issues: dict[str, str] = {}
 
         categories = TransactionCategory.map_name_emoji(s)
@@ -63,10 +70,13 @@ class MissingAssetLink(Base):
             amount: Decimal
             uri = TransactionSplit.id_to_uri(t_id)
 
+            acct_name, currency = accounts[acct_id]
+            cf = CURRENCY_FORMATS[currency]
+
             msg = (
                 f"{datetime.date.fromordinal(date_ord)} -"
-                f" {accounts[acct_id]:{acct_len}}:"
-                f" {utils.format_financial(amount)} {categories[cat_id]} "
+                f" {acct_name:{acct_len}}:"
+                f" {cf(amount)} {categories[cat_id]} "
                 "does not have an asset"
             )
             issues[uri] = msg
@@ -94,10 +104,13 @@ class MissingAssetLink(Base):
             amount: Decimal
             uri = TransactionSplit.id_to_uri(t_id)
 
+            acct_name, currency = accounts[acct_id]
+            cf = CURRENCY_FORMATS[currency]
+
             msg = (
                 f"{datetime.date.fromordinal(date_ord)} -"
-                f" {accounts[acct_id]:{acct_len}}:"
-                f" {utils.format_financial(amount)} {categories[cat_id]} "
+                f" {acct_name:{acct_len}}:"
+                f" {cf(amount)} {categories[cat_id]} "
                 "has an asset"
             )
             issues[uri] = msg

@@ -15,6 +15,7 @@ from nummus import exceptions as exc
 from nummus import utils
 from nummus.controllers import base
 from nummus.models import Account, AssetValuation, TransactionCategoryGroup
+from nummus.models.currency import DEFAULT_CURRENCY
 from tests import conftest
 
 if TYPE_CHECKING:
@@ -349,6 +350,7 @@ def test_error_unique(
         category=account.category,
         closed=False,
         budgeted=False,
+        currency=DEFAULT_CURRENCY,
     )
     session.add(new_account)
     try:

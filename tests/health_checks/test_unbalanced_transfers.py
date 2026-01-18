@@ -4,9 +4,9 @@ import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from nummus import utils
 from nummus.health_checks.unbalanced_transfers import UnbalancedTransfers
 from nummus.models import HealthCheckIssue, query_count
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -81,16 +81,11 @@ def test_wrong_amount(
     assert i.value == today.isoformat()
     uri = i.uri
 
+    cf = CURRENCY_FORMATS[DEFAULT_CURRENCY]
     lines = (
         f"{today}: Sum of transfers on this day are non-zero",
-        (
-            f"  {account.name}: {utils.format_financial(Decimal(-200), plus=True):>14} "
-            "Transfers"
-        ),
-        (
-            f"  {account.name}: {utils.format_financial(Decimal(100), plus=True):>14} "
-            "Transfers"
-        ),
+        f"  {account.name}: {cf(Decimal(100), plus=True):>14} Transfers",
+        f"  {account.name}: {cf(Decimal(-200), plus=True):>14} Transfers",
     )
     assert c.issues == {uri: "\n".join(lines)}
 
@@ -119,12 +114,10 @@ def test_one_pair(
     assert i.value == today.isoformat()
     uri = i.uri
 
+    cf = CURRENCY_FORMATS[DEFAULT_CURRENCY]
     lines = (
         f"{today}: Sum of transfers on this day are non-zero",
-        (
-            f"  {account.name}: {utils.format_financial(Decimal(-100), plus=True):>14} "
-            "Transfers"
-        ),
+        f"  {account.name}: {cf(Decimal(-100), plus=True):>14} Transfers",
     )
     assert c.issues == {uri: "\n".join(lines)}
 
@@ -164,12 +157,10 @@ def test_wrong_date(
         .one()
     )
     assert i.check == c.name()
+    cf = CURRENCY_FORMATS[DEFAULT_CURRENCY]
     lines = (
         f"{today}: Sum of transfers on this day are non-zero",
-        (
-            f"  {account.name}: {utils.format_financial(Decimal(100), plus=True):>14} "
-            "Transfers"
-        ),
+        f"  {account.name}: {cf(Decimal(100), plus=True):>14} Transfers",
     )
     assert i.msg == "\n".join(lines)
 
@@ -182,9 +173,6 @@ def test_wrong_date(
     assert i.value == tomorrow.isoformat()
     lines = (
         f"{tomorrow}: Sum of transfers on this day are non-zero",
-        (
-            f"  {account.name}: {utils.format_financial(Decimal(-100), plus=True):>14} "
-            "Transfers"
-        ),
+        f"  {account.name}: {cf(Decimal(-100), plus=True):>14} Transfers",
     )
     assert i.msg == "\n".join(lines)

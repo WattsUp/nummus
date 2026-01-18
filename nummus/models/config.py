@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+from typing import Literal, overload
+
+from packaging.version import Version
 from sqlalchemy import orm
 
+from nummus import exceptions as exc
 from nummus.models.base import Base, BaseEnum, ORMStr, SQLEnum, string_column_args
+from nummus.models.currency import Currency
 
 
 class ConfigKey(BaseEnum):
@@ -16,6 +21,7 @@ class ConfigKey(BaseEnum):
     SECRET_KEY = 4
     WEB_KEY = 5
     LAST_HEALTH_CHECK_TS = 6
+    BASE_CURRENCY = 7
 
 
 class Config(Base):
@@ -48,3 +54,93 @@ class Config(Base):
 
         """
         return self.clean_strings(key, field)
+
+    @classmethod
+    def set_(cls, s: orm.Session, key: ConfigKey, value: str) -> None:
+        """Set a Configuration value.
+
+        Args:
+            s: SQL session to use
+            key: ConfigKey to query
+            value: Value to set
+
+        """
+        if s.query(Config).where(Config.key == key).update({"value": value}):
+            return
+        s.add(Config(key=key, value=value))
+
+    @overload
+    @classmethod
+    def fetch(
+        cls,
+        s: orm.Session,
+        key: ConfigKey,
+        *,
+        no_raise: Literal[False] = False,
+    ) -> str: ...
+
+    @overload
+    @classmethod
+    def fetch(
+        cls,
+        s: orm.Session,
+        key: ConfigKey,
+        *,
+        no_raise: Literal[True],
+    ) -> str | None: ...
+
+    @classmethod
+    def fetch(
+        cls,
+        s: orm.Session,
+        key: ConfigKey,
+        *,
+        no_raise: bool = False,
+    ) -> str | None:
+        """Fetch a Configuration value.
+
+        Args:
+            s: SQL session to use
+            key: ConfigKey to query
+            no_raise: True will return None if missing
+
+        Returns:
+            string value
+
+        Raises:
+            ProtectedObjectNotFoundError: If key is not found
+
+        """
+        try:
+            return s.query(Config.value).where(Config.key == key).one()[0]
+        except exc.NoResultFound as e:
+            if no_raise:
+                return None
+            msg = f"Config.{key} not found"
+            raise exc.ProtectedObjectNotFoundError(msg) from e
+
+    @classmethod
+    def db_version(cls, s: orm.Session) -> Version:
+        """Query the database version.
+
+        Args:
+            s: SQL session to use
+
+        Returns:
+            Version of database
+
+        """
+        return Version(Config.fetch(s, ConfigKey.VERSION))
+
+    @classmethod
+    def base_currency(cls, s: orm.Session) -> Currency:
+        """Query the basse currency.
+
+        Args:
+            s: SQL session to use
+
+        Returns:
+            Base currency all accounts are converted into
+
+        """
+        return Currency(int(Config.fetch(s, ConfigKey.BASE_CURRENCY)))

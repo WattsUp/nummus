@@ -6,7 +6,7 @@
   >
     <h1>Investing performance</h1>
     <h2 class="{{ ctx.pnl | pnl_color }} flex items-center justify-end">
-      {{ ctx.pnl | money0 }}
+      {{ ctx.currency_format(ctx.pnl, coarse=True) }}
       <icon class="sm">{{ ctx.pnl | pnl_arrow }}</icon>
     </h2>
     <icon>chevron_forward</icon>

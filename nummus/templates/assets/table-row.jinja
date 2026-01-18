@@ -1,6 +1,6 @@
 <label class="flex w-full items-center gap-2 py-0.5">
   <div>{{ valuation.date }}</div>
-  <div class="ml-auto">{{ valuation.value | money }}</div>
+  <div class="ml-auto">{{ cf(valuation.value) }}</div>
   {% if ctx.editable %}
     <button
       class="btn-text btn-sq"

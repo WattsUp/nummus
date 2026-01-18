@@ -11,6 +11,7 @@
       JSON.parse('{{ ctx.by_payee | tojson(precision=4) }}'),
       JSON.parse('{{ ctx.by_category | tojson(precision=4) }}'),
       JSON.parse('{{ ctx.by_label | tojson(precision=4) }}'),
+      JSON.parse('{{ ctx.currency_format._asdict() | tojson(precision=4) }}'),
     );
   });
 </script>

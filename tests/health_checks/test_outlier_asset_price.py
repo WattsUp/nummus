@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from nummus import utils
 from nummus.health_checks.outlier_asset_price import OutlierAssetPrice
 from nummus.models import (
     HealthCheckIssue,
     query_count,
 )
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -79,9 +79,10 @@ def test_check(
     assert i.value == t_split.uri
     uri = i.uri
 
+    cf = CURRENCY_FORMATS[DEFAULT_CURRENCY]
     target = (
         f"{t_split.date}: {asset.name} "
-        f"was traded at {utils.format_financial(amount / -10)} which is "
-        f"{target_word} valuation of {utils.format_financial(asset_valuation.value)}"
+        f"was traded at {cf(amount / -10)} which is "
+        f"{target_word} valuation of {cf(asset_valuation.value)}"
     )
     assert c.issues == {uri: target}

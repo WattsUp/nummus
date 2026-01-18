@@ -20,6 +20,7 @@ from nummus.models import (
     TransactionSplit,
     YIELD_PER,
 )
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -108,6 +109,7 @@ def test_ctx_split(
         t_split,
         assets,
         {labels["engineer"]: "engineer"},
+        CURRENCY_FORMATS[DEFAULT_CURRENCY],
     )
 
     assert ctx["parent_uri"] == txn.uri
@@ -140,6 +142,7 @@ def test_ctx_split_asset(
         t_split,
         assets,
         {labels["engineer"]: "engineer"},
+        CURRENCY_FORMATS[DEFAULT_CURRENCY],
     )
 
     assert ctx["parent_uri"] == txn.uri
@@ -175,6 +178,7 @@ def test_ctx_row(
         TransactionCategory.map_name_emoji(session),
         {labels["engineer"]: "engineer"},
         set(),
+        CURRENCY_FORMATS[DEFAULT_CURRENCY],
     )
 
     assert ctx["parent_uri"] == txn.uri
@@ -339,13 +343,15 @@ def test_table_results_empty(
         r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
     }
 
+    accounts = Account.map_name(session)
     result = txn_controller._table_results(
         session.query(TransactionSplit),
         assets,
-        Account.map_name(session),
+        accounts,
         TransactionCategory.map_name_emoji(session),
         Label.map_name(session),
         {},
+        dict.fromkeys(accounts, CURRENCY_FORMATS[DEFAULT_CURRENCY]),
     )
     assert result == []
 
@@ -369,6 +375,7 @@ def test_table_results(
         categories,
         labels,
         {},
+        dict.fromkeys(accounts, CURRENCY_FORMATS[DEFAULT_CURRENCY]),
     )
     target = [
         (
@@ -386,6 +393,7 @@ def test_table_results(
                         )
                     },
                     set(),
+                    CURRENCY_FORMATS[DEFAULT_CURRENCY],
                 ),
             ],
         )

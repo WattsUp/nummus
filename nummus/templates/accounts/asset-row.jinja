@@ -18,7 +18,7 @@
             class="{{ asset.profit | pnl_color }} flex items-center justify-end"
           >
             <icon class="sm">{{ asset.profit | pnl_arrow }}</icon>
-            {{ asset.profit | abs | money }}
+            {{ cf(asset.profit | abs) }}
           </div>
         {% endif %}
       </div>
@@ -32,10 +32,10 @@
             <span class="max-md:hidden">
               {% if asset.qty %}
                 {{ asset.qty | qty }}
-                @ {{ asset.price | money }}:
+                @ {{ cf(asset.price) }}:
               {% endif %}
             </span>
-            {{ asset.value | money }}
+            {{ cf(asset.value) }}
             ({{ asset.value_ratio | percent | replace(' ', '') }})
           {% else %}
             Not currently held

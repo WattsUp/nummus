@@ -11,6 +11,7 @@ from nummus.models import (
     AccountCategory,
     AssetCategory,
 )
+from nummus.models.currency import Currency, CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     import datetime
@@ -41,7 +42,10 @@ def test_ctx_account_empty(
         "institution": account.institution,
         "category": account.category,
         "category_type": AccountCategory,
+        "currency": account.currency,
+        "currency_type": Currency,
         "value": Decimal(),
+        "value_base": None,
         "closed": account.closed,
         "budgeted": account.budgeted,
         "updated_days_ago": None,
@@ -51,6 +55,7 @@ def test_ctx_account_empty(
         "n_future": 0,
         "performance": None,
         "assets": [],
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
     assert ctx == target
 
@@ -70,7 +75,10 @@ def test_ctx_account(
         "institution": account.institution,
         "category": account.category,
         "category_type": AccountCategory,
+        "currency": account.currency,
+        "currency_type": Currency,
         "value": sum(txn.amount for txn in transactions[:2]) or Decimal(),
+        "value_base": None,
         "closed": account.closed,
         "budgeted": account.budgeted,
         "updated_days_ago": -7,
@@ -80,6 +88,7 @@ def test_ctx_account(
         "n_future": 2,
         "performance": None,
         "assets": [],
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
     assert ctx == target
 
@@ -92,7 +101,13 @@ def test_ctx_performance_empty(
     start = utils.date_add_months(today, -12)
     labels, mode = base.date_labels(start.toordinal(), today.toordinal())
 
-    ctx = accounts.ctx_performance(session, account, today, "1yr")
+    ctx = accounts.ctx_performance(
+        session,
+        account,
+        today,
+        "1yr",
+        CURRENCY_FORMATS[DEFAULT_CURRENCY],
+    )
 
     target: accounts.PerformanceContext = {
         "pnl_past_year": Decimal(),
@@ -109,6 +124,7 @@ def test_ctx_performance_empty(
         "cost_basis": [Decimal()] * len(labels),
         "period": "1yr",
         "period_options": base.PERIOD_OPTIONS,
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
     }
     assert ctx == target
 
@@ -124,7 +140,13 @@ def test_ctx_performance(
     session.commit()
     labels, mode = base.date_labels(transactions[0].date_ord, today.toordinal())
 
-    ctx = accounts.ctx_performance(session, account, today, "max")
+    ctx = accounts.ctx_performance(
+        session,
+        account,
+        today,
+        "max",
+        CURRENCY_FORMATS[DEFAULT_CURRENCY],
+    )
 
     twrr = Decimal(8) / Decimal(100)
     twrr_per_annum = (1 + twrr) ** (utils.DAYS_IN_YEAR / len(labels)) - 1
@@ -145,6 +167,7 @@ def test_ctx_performance(
         "cost_basis": [Decimal(100)] * len(labels),
         "period": "max",
         "period_options": base.PERIOD_OPTIONS,
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
     }
     assert ctx == target
 
@@ -210,6 +233,7 @@ def test_ctx_accounts_empty(today: datetime.date, session: orm.Session) -> None:
         "categories": {},
         "include_closed": False,
         "n_closed": 0,
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
     assert ctx == target
 
@@ -247,5 +271,6 @@ def test_ctx_accounts(
         },
         "include_closed": True,
         "n_closed": 1,
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
     assert ctx == target

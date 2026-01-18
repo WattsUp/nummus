@@ -11,6 +11,7 @@ from nummus.models import (
     AssetCategory,
     YIELD_PER,
 )
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
 
@@ -42,6 +43,7 @@ def test_ctx_chart_empty(
         "index_min": None,
         "index_max": None,
         "mwrr": [Decimal()],
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
     }
 
     accounts: performance.AccountsContext = {
@@ -52,6 +54,7 @@ def test_ctx_chart_empty(
         "mwrr": Decimal(),
         "accounts": [],
         "options": [],
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
 
     query = session.query(Asset.name).order_by(Asset.name)
@@ -124,6 +127,7 @@ def test_ctx_chart(
         "index_min": None,
         "index_max": None,
         "mwrr": None,
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
     }
 
     accounts: performance.AccountsContext = {
@@ -146,6 +150,7 @@ def test_ctx_chart(
         "options": [
             base.NamePairState(account.uri, account.name, state=False),
         ],
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
 
     query = (
@@ -198,6 +203,7 @@ def test_ctx_chart_exclude(
         "index_min": None,
         "index_max": None,
         "mwrr": [Decimal()] * 7,
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
     }
 
     accounts: performance.AccountsContext = {
@@ -210,6 +216,7 @@ def test_ctx_chart_exclude(
         "options": [
             base.NamePairState(account.uri, account.name, state=True),
         ],
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
 
     query = (

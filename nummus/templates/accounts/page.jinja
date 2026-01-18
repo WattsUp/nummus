@@ -22,6 +22,7 @@
   type="hidden"
   value="{{ acct.uri }}"
 />
+{% set cf = acct.currency_format %}
 <div class="text-on-surface-variant flex flex-wrap items-center gap-2 text-sm">
   <span>@{{ acct.institution }}</span>
   {% if acct.number %}
@@ -47,12 +48,12 @@
         {{ acct.n_future }} future transaction{{ 's' if acct.n_future != 1 }}
         pending
       </span>
-      <span>{{ acct.change_future | money }}</span>
+      <span>{{ cf(acct.change_future) }}</span>
     {% elif acct.updated_days_ago == 0 %}
       <span>
         {{ acct.n_today }} transaction{{ 's' if acct.n_today != 1 }} today
       </span>
-      <span>{{ acct.change_today | money }}</span>
+      <span>{{ cf(acct.change_today) }}</span>
     {% else %}
       Updated {{ acct.updated_days_ago | days }} ago
     {% endif %}
@@ -63,9 +64,7 @@
     <div class="grid gap-x-2 text-center font-bold max-lg:grid-cols-2">
       <div class="col-span-2">
         <h2 class="text-2xl">Balance</h2>
-        <h1 class="text-tertiary font-serif text-6xl">
-          {{ acct.value | money }}
-        </h1>
+        <h1 class="text-tertiary font-serif text-6xl">{{ cf(acct.value) }}</h1>
       </div>
       <div class="lg:col-start-3">
         <h2 class="text-2xl">Year return</h2>
@@ -73,7 +72,7 @@
           class="text-tertiary flex items-center justify-center font-serif text-3xl md:text-4xl"
         >
           <icon>{{ perf.pnl_past_year | pnl_arrow }}</icon>
-          {{ perf.pnl_past_year | abs | money }}
+          {{ cf(perf.pnl_past_year | abs) }}
         </h1>
       </div>
       <div class="lg:col-start-4">
@@ -82,7 +81,7 @@
           class="text-tertiary flex items-center justify-center font-serif text-3xl md:text-4xl"
         >
           <icon>{{ perf.pnl_total | pnl_arrow }}</icon>
-          {{ perf.pnl_total | abs | money }}
+          {{ cf(perf.pnl_total | abs) }}
         </h1>
       </div>
     </div>
@@ -93,7 +92,7 @@
 {% else %}
   <div class="text-center font-bold">
     <h2 class="text-2xl">Balance</h2>
-    <h1 class="text-tertiary font-serif text-6xl">{{ acct.value | money }}</h1>
+    <h1 class="text-tertiary font-serif text-6xl">{{ cf(acct.value) }}</h1>
   </div>
 {% endif %}
 {% if acct.assets %}

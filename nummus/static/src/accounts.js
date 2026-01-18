@@ -7,6 +7,7 @@ const accounts = {
    * @param {Object} raw Raw data from accounts controller
    */
   update: function (raw) {
+    const cf = newCurrencyFormat(raw.currency_format);
     const labels = raw.labels;
     const dateMode = raw.mode;
     const avg = raw.avg.map((v) => Number(v));
@@ -55,21 +56,32 @@ const accounts = {
       },
     ];
     if (this.chart && ctx == this.chart.ctx) {
-      nummusChart.update(this.chart, labels, dateMode, datasets);
+      nummusChart.update(this.chart, cf, labels, dateMode, datasets);
     } else {
       this.ctx = ctx;
-      this.chart = nummusChart.create(ctx, labels, dateMode, datasets, null, {
-        plugins: {
-          tooltip: {
-            callbacks: {
-              footer: function (context) {
-                let profit = context[0].raw - context[1].raw;
-                return "Return: " + formatterF2.format(profit);
+      this.chart = nummusChart.create(
+        ctx,
+        cf,
+        labels,
+        dateMode,
+        datasets,
+        null,
+        {
+          plugins: {
+            tooltip: {
+              callbacks: {
+                footer: function (context) {
+                  let profit = context[0].raw - context[1].raw;
+                  return (
+                    "Return: " +
+                    context[0].chart.config.options.currencyFormat(profit)
+                  );
+                },
               },
             },
           },
         },
-      });
+      );
     }
   },
   /**

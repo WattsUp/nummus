@@ -53,6 +53,8 @@ def test_v0_1_migration(
         f"{Fore.GREEN}Portfolio migrated to v0.11.0\n"
         f"{Fore.GREEN}Portfolio migrated to v0.13.0\n"
         f"{Fore.GREEN}Portfolio migrated to v0.15.0\n"
+        f"{Fore.CYAN}Portfolio currency set to USD (US Dollar), use web to edit\n"
+        f"{Fore.GREEN}Portfolio migrated to v0.16.0\n"
         f"{Fore.GREEN}Portfolio model schemas updated\n"
     )
     assert captured.out == target

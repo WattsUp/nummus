@@ -3,9 +3,9 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from nummus import utils
 from nummus.health_checks.missing_asset_link import MissingAssetLink
 from nummus.models import HealthCheckIssue, query_count
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -48,8 +48,9 @@ def test_missing_link(
     assert i.value == t_split.uri
     uri = i.uri
 
+    cf = CURRENCY_FORMATS[DEFAULT_CURRENCY]
     target = (
-        f"{t_split.date} - {account.name}: {utils.format_financial(t_split.amount)} "
+        f"{t_split.date} - {account.name}: {cf(t_split.amount)} "
         "Securities Traded does not have an asset"
     )
     assert c.issues == {uri: target}
@@ -75,8 +76,9 @@ def test_extra_link(
     assert i.value == t_split.uri
     uri = i.uri
 
+    cf = CURRENCY_FORMATS[DEFAULT_CURRENCY]
     target = (
-        f"{t_split.date} - {account.name}: {utils.format_financial(t_split.amount)} "
+        f"{t_split.date} - {account.name}: {cf(t_split.amount)} "
         "Other Income has an asset"
     )
     assert c.issues == {uri: target}

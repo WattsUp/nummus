@@ -9,6 +9,7 @@
     netWorth.update(
       JSON.parse('{{ ctx.chart | tojson }}'),
       JSON.parse('{{ ctx.accounts | tojson }}'),
+      JSON.parse('{{ ctx.currency_format._asdict() | tojson }}'),
     );
   });
 </script>

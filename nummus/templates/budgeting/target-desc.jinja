@@ -1,5 +1,6 @@
 {% set money_period = ("/week" if target.period == "WEEK") %}
 {% set next_period = ("year" if target.period == "YEAR" else "month") %}
+{% set cf = target.currency_format %}
 {% if target.type == "ACCUMULATE" %}
   <p>
     {% if target.repeat_every > 1 %}
@@ -7,8 +8,8 @@
     {% else %}
       Each {{ next_period }}
     {% endif %}
-    assign {{ target.amount | money }}{{ money_period }}. This accumulates the
-    any unspent amount.
+    assign {{ cf(target.amount) }}{{ money_period }}. This accumulates the any
+    unspent amount.
   </p>
   <p class="italic">Use for: bills, subscriptions, savings</p>
 {% elif target.type == "REFILL" %}
@@ -18,9 +19,9 @@
     {% else %}
       Each {{ next_period }}
     {% endif %}
-    have {{ target.amount | money }}{{ money_period }} on hand. Any unspent
-    amount applies to next {{ next_period }}'s
-    {{ target.amount | money }}{{ money_period }}.
+    have {{ cf(target.amount) }}{{ money_period }} on hand. Any unspent amount
+    applies to next {{ next_period }}'s
+    {{ cf(target.amount) }}{{ money_period }}.
   </p>
   <p class="italic">Use for: gasoline, fun money, dining out</p>
 {% endif %}

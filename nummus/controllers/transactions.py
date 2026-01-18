@@ -28,10 +28,14 @@ from nummus.models import (
     update_rows_list,
     YIELD_PER,
 )
+from nummus.models.config import Config
+from nummus.models.currency import CURRENCY_FORMATS
 
 if TYPE_CHECKING:
     import sqlalchemy
     from sqlalchemy import orm
+
+    from nummus.models.currency import Currency, CurrencyFormat
 
 PAGE_LEN = 25
 
@@ -55,6 +59,7 @@ class TxnContext(TypedDict):
     labels: list[str]
     similar_uri: str | None
     any_asset_splits: bool
+    currency_format: CurrencyFormat
 
 
 class SplitContext(TypedDict):
@@ -66,6 +71,7 @@ class SplitContext(TypedDict):
     memo: str | None
     labels: list[base.NamePair]
     amount: Decimal | None
+    currency_format: CurrencyFormat
 
     asset_name: NotRequired[str | None]
     asset_ticker: NotRequired[str | None]
@@ -108,6 +114,7 @@ class TableContext(OptionsContext):
     uncleared: bool
     start: str | None
     end: str | None
+    currency_format: CurrencyFormat
 
 
 class TableQuery(NamedTuple):
@@ -280,11 +287,13 @@ def new() -> str | flask.Response:
     with p.begin_session() as s:
         query = (
             s.query(Account)
-            .with_entities(Account.id_, Account.name)
+            .with_entities(Account.id_, Account.name, Account.currency)
             .where(Account.closed.is_(False))
             .order_by(Account.name)
         )
-        accounts: dict[int, str] = query_to_dict(query)
+        accounts: dict[int, tuple[str, Currency]] = {
+            r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
+        }
 
         uncategorized_id, uncategorized_uri = TransactionCategory.uncategorized(s)
 
@@ -297,6 +306,14 @@ def new() -> str | flask.Response:
         query = s.query(Label.name)
         labels = sorted(item for item, in query.distinct())
 
+        acct_uri = (
+            flask.request.form.get("account") or flask.request.args.get("account") or ""
+        )
+        if acct_uri:
+            cf = CURRENCY_FORMATS[accounts[Account.uri_to_id(acct_uri)][1]]
+        else:
+            cf = CURRENCY_FORMATS[Config.base_currency(s)]
+
         empty_split: SplitContext = {
             "parent_uri": "",
             "category_id": uncategorized_id,
@@ -304,15 +321,17 @@ def new() -> str | flask.Response:
             "memo": None,
             "labels": [],
             "amount": None,
+            "currency_format": cf,
         }
         ctx: TxnContext = {
             "uri": "",
             "account": "",
-            "account_uri": flask.request.args.get("account") or "",
+            "account_uri": acct_uri,
             "accounts": [
                 base.NamePairState(Account.id_to_uri(acct_id), name, state=False)
-                for acct_id, name in accounts.items()
+                for acct_id, (name, _) in accounts.items()
             ],
+            "currency_format": cf,
             "cleared": False,
             "date": today,
             "date_max": today + datetime.timedelta(days=utils.DAYS_IN_WEEK),
@@ -336,7 +355,6 @@ def new() -> str | flask.Response:
         if flask.request.method == "PUT":
             form = flask.request.form
             amount = utils.evaluate_real_statement(form["amount"]) or Decimal()
-            ctx["account_uri"] = form.get("account") or ""
             ctx["amount"] = amount
             ctx["payee"] = form["payee"]
             try:
@@ -370,6 +388,7 @@ def new() -> str | flask.Response:
                         key=operator.itemgetter(1),
                     ),
                     "amount": amount,
+                    "currency_format": cf,
                 }
                 for cat_id, memo, labels, amount in zip(
                     split_categories,
@@ -381,9 +400,9 @@ def new() -> str | flask.Response:
             ]
             headline_error = (
                 (
-                    f"Assign {utils.format_financial(remaining)} to splits"
+                    f"Assign {cf(remaining)} to splits"
                     if remaining > 0
-                    else f"Remove {utils.format_financial(-remaining)} from splits"
+                    else f"Remove {cf(-remaining)} from splits"
                 )
                 if remaining != 0
                 else ""
@@ -543,10 +562,15 @@ def _transaction_split_edit(s: orm.Session, txn: Transaction) -> str:
         split_amounts = [txn.amount]
 
     remaining = txn.amount - sum(filter(None, split_amounts))
-    if remaining > 0:
-        return f"Assign {utils.format_financial(remaining)} to splits"
-    if remaining < 0:
-        return f"Remove {utils.format_financial(-remaining)} from splits"
+    if remaining != 0:
+        currency = (
+            s.query(Account.currency).where(Account.id_ == txn.account_id).one()[0]
+        )
+        cf = CURRENCY_FORMATS[currency]
+
+        if remaining < 0:
+            return f"Remove {cf(-remaining)} from splits"
+        return f"Assign {cf(remaining)} to splits"
 
     splits = [
         {
@@ -604,6 +628,7 @@ def split(uri: str) -> str:
 
         parent_amount = utils.parse_real(form["amount"]) or Decimal()
         account_id = Account.uri_to_id(form["account"])
+        currency = s.query(Account.currency).where(Account.id_ == account_id).one()[0]
         payee = form["payee"]
         date = utils.parse_date(form["date"])
 
@@ -625,6 +650,8 @@ def split(uri: str) -> str:
             split_amounts.append(None)
 
         _, uncategorized_uri = TransactionCategory.uncategorized(s)
+
+        cf = CURRENCY_FORMATS[currency]
 
         ctx_splits: list[SplitContext] = []
         for memo, cat_uri, labels, amount in zip(
@@ -648,6 +675,7 @@ def split(uri: str) -> str:
                 "asset_ticker": None,
                 "asset_price": None,
                 "asset_quantity": None,
+                "currency_format": cf,
             }
             ctx_splits.append(item)
 
@@ -656,9 +684,9 @@ def split(uri: str) -> str:
         remaining = parent_amount - split_sum
         headline_error = (
             (
-                f"Sum of splits {utils.format_financial(split_sum)} "
-                f"not equal to total {utils.format_financial(parent_amount)}. "
-                f"{utils.format_financial(remaining)} to assign"
+                f"Sum of splits {cf(split_sum)} "
+                f"not equal to total {cf(parent_amount)}. "
+                f"{cf(remaining)} to assign"
             )
             if remaining != 0
             else ""
@@ -729,35 +757,50 @@ def validation() -> str:
         raise NotImplementedError
 
     if validate_splits:
-        parent_amount = utils.evaluate_real_statement(args["amount"]) or Decimal()
-        split_amounts = [
-            utils.evaluate_real_statement(x) for x in args.getlist("split-amount")
-        ]
-        if len(split_amounts) == 0:
-            # No splits is okay for single split
-            msg = ""
-        else:
-            split_sum = sum(filter(None, split_amounts)) or Decimal()
-
-            remaining = parent_amount - split_sum
-            msg = (
-                (
-                    f"Assign {utils.format_financial(remaining)} to splits"
-                    if remaining > 0
-                    else f"Remove {utils.format_financial(-remaining)} from splits"
-                )
-                if remaining != 0
-                else ""
-            )
-
-        # Render sum of splits to headline since its a global error
-        return flask.render_template(
-            "shared/dialog-headline-error.jinja",
-            oob=True,
-            headline_error=msg,
-        )
+        return _validate_splits()
 
     raise NotImplementedError
+
+
+def _validate_splits() -> str:
+    args = flask.request.args
+    parent_amount = utils.evaluate_real_statement(args["amount"]) or Decimal()
+    split_amounts = [
+        utils.evaluate_real_statement(x) for x in args.getlist("split-amount")
+    ]
+    if len(split_amounts) == 0:
+        # No splits is okay for single split
+        msg = ""
+    else:
+        split_sum = sum(filter(None, split_amounts)) or Decimal()
+
+        remaining = parent_amount - split_sum
+        if remaining == 0:
+            msg = ""
+        else:
+            uri = args.get("account")
+            p = web.portfolio
+            with p.begin_session() as s:
+                currency = (
+                    s.query(Account.currency)
+                    .where(Account.id_ == Account.uri_to_id(uri))
+                    .one()[0]
+                    if uri
+                    else Config.base_currency(s)
+                )
+            cf = CURRENCY_FORMATS[currency]
+            msg = (
+                f"Assign {cf(remaining)} to splits"
+                if remaining > 0
+                else f"Remove {cf(-remaining)} from splits"
+            )
+
+    # Render sum of splits to headline since its a global error
+    return flask.render_template(
+        "shared/dialog-headline-error.jinja",
+        oob=True,
+        headline_error=msg,
+    )
 
 
 def table_query(
@@ -872,11 +915,12 @@ def ctx_txn(
             Account.id_,
             Account.name,
             Account.closed,
+            Account.currency,
         )
         .order_by(Account.name)
     )
-    accounts: dict[int, tuple[str, bool]] = {
-        r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
+    accounts: dict[int, tuple[str, bool, Currency]] = {
+        r[0]: (r[1], r[2], r[3]) for r in query.yield_per(YIELD_PER)
     }
     query = s.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
     assets: dict[int, tuple[str, str | None]] = {
@@ -884,6 +928,7 @@ def ctx_txn(
     }
     query = s.query(Label.id_, Label.name)
     labels: dict[int, str] = query_to_dict(query)
+    cf = CURRENCY_FORMATS[accounts[account_id][2]]
 
     query = (
         s.query(LabelLink)
@@ -900,6 +945,7 @@ def ctx_txn(
                 t_split,
                 assets,
                 {label_id: labels[label_id] for label_id in label_links[t_split.id_]},
+                cf,
             )
             for t_split in txn.splits
         ]
@@ -923,8 +969,9 @@ def ctx_txn(
         "account_uri": Account.id_to_uri(account_id),
         "accounts": [
             base.NamePairState(Account.id_to_uri(acct_id), name, closed)
-            for acct_id, (name, closed) in accounts.items()
+            for acct_id, (name, closed, _) in accounts.items()
         ],
+        "currency_format": cf,
         "cleared": txn.cleared,
         "date": date or txn.date,
         "date_max": today + datetime.timedelta(days=utils.DAYS_IN_WEEK),
@@ -944,6 +991,7 @@ def ctx_split(
     t_split: TransactionSplit,
     assets: dict[int, tuple[str, str | None]],
     labels: dict[int, str],
+    currency_format: CurrencyFormat,
 ) -> SplitContext:
     """Get the context to build the transaction edit dialog.
 
@@ -951,6 +999,7 @@ def ctx_split(
         t_split: TransactionSplit to build context for
         assets: Dict {id: (asset name, ticker)}
         labels: Labels for TransactionSplit
+        currency_format: Formatter for the account
 
     Returns:
         Dictionary HTML context
@@ -979,6 +1028,7 @@ def ctx_split(
         "asset_ticker": asset_ticker,
         "asset_price": abs(t_split.amount / qty) if qty else None,
         "asset_quantity": qty,
+        "currency_format": currency_format,
     }
 
 
@@ -989,6 +1039,7 @@ def ctx_row(
     categories: dict[int, str],
     labels: dict[int, str],
     split_parents: set[int],
+    currency_format: CurrencyFormat,
 ) -> RowContext:
     """Get the context to build the transaction edit dialog.
 
@@ -999,13 +1050,14 @@ def ctx_row(
         categories: Category name mapping
         labels: Labels for TransactionSplit
         split_parents: Set {Transaction.id_ that have more than 1 TransactionSplit}
+        currency_format: Formatter for the account
 
     Returns:
         Dictionary HTML context
 
     """
     return {
-        **ctx_split(t_split, assets, labels),
+        **ctx_split(t_split, assets, labels, currency_format),
         "date": t_split.date,
         "account": accounts[t_split.account_id],
         "category": categories[t_split.category_id],
@@ -1129,12 +1181,19 @@ def ctx_table(
         tuple(TableContext, title)
 
     """
-    accounts = Account.map_name(s)
+    query = s.query(Account).with_entities(Account.id_, Account.name, Account.currency)
+    accounts: dict[int, str] = {}
+    currency_formats: dict[int, CurrencyFormat] = {}
+    for acct_id, name, currency in query.yield_per(YIELD_PER):
+        accounts[acct_id] = name
+        currency_formats[acct_id] = CURRENCY_FORMATS[currency]
+
     categories_emoji = TransactionCategory.map_name_emoji(s)
     categories = {
         cat_id: TransactionCategory.clean_emoji_name(name)
         for cat_id, name in categories_emoji.items()
     }
+
     query = s.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
     assets: dict[int, tuple[str, str | None]] = {
         r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
@@ -1232,6 +1291,7 @@ def ctx_table(
         categories_emoji,
         labels,
         t_split_order,
+        currency_formats,
     )
     title = _table_title(
         selected_account and accounts[Account.uri_to_id(selected_account)],
@@ -1257,6 +1317,7 @@ def ctx_table(
         "uncleared": uncleared,
         "start": selected_start,
         "end": selected_end,
+        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
     }, title
 
 
@@ -1267,6 +1328,7 @@ def _table_results(
     categories: dict[int, str],
     labels: dict[int, str],
     t_split_order: dict[int, int],
+    currency_formats: dict[int, CurrencyFormat],
 ) -> list[tuple[datetime.date, list[SplitContext]]]:
     """Get the table results from query.
 
@@ -1277,6 +1339,7 @@ def _table_results(
         categories: Account name mapping
         labels: Label name mapping
         t_split_order: Mapping of id_ to order if it matters
+        currency_formats: Mapping of account id and CurrencyFormat
 
     Returns:
         TransactionSplits grouped by date
@@ -1326,6 +1389,7 @@ def _table_results(
             categories,
             {label_id: labels[label_id] for label_id in label_links[t_split.id_]},
             has_splits,
+            currency_formats[t_split.account_id],
         )
         t_splits_flat.append(
             (t_split_ctx, t_split_order.get(t_split.id_, -t_split.date_ord)),

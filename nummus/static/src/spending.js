@@ -18,12 +18,14 @@ const spending = {
    * @param {Object} byPayee Spending by payee from spending controller
    * @param {Object} byCategory Spending by category from spending controller
    * @param {Object} byLabel Spending by label from spending controller
+   * @param {Object} currencyFormat See Python side: Currency
    */
-  update(byAccount, byPayee, byCategory, byLabel) {
-    this.updateOne("spending-by-account", byAccount);
-    this.updateOne("spending-by-payee", byPayee);
-    this.updateOne("spending-by-category", byCategory);
-    this.updateOne("spending-by-label", byLabel);
+  update(byAccount, byPayee, byCategory, byLabel, currencyFormat) {
+    const cf = newCurrencyFormat(currencyFormat);
+    this.updateOne("spending-by-account", byAccount, cf);
+    this.updateOne("spending-by-payee", byPayee, cf);
+    this.updateOne("spending-by-category", byCategory, cf);
+    this.updateOne("spending-by-label", byLabel, cf);
 
     updateColorSwatches();
   },
@@ -32,8 +34,9 @@ const spending = {
    *
    * @param {String} id - Top div id
    * @param {Array} raw - Array [[name, value], ...]
+   * @param {function} currencyFormat Function to format number, see newCurrencyFormat
    */
-  updateOne(id, raw) {
+  updateOne(id, raw, currencyFormat) {
     const canvas = htmx.find(`#${id} canvas`);
     const breakdown = htmx.find(`#${id}>div:last-of-type`);
     const ctx = canvas.getContext("2d");
@@ -86,7 +89,7 @@ const spending = {
       row.appendChild(name);
 
       const value = document.createElement("div");
-      value.innerHTML = formatterF2.format(v);
+      value.innerHTML = currencyFormat(v);
       row.appendChild(value);
 
       breakdown.appendChild(row);
@@ -115,17 +118,18 @@ const spending = {
       row.appendChild(name);
 
       const value = document.createElement("div");
-      value.innerHTML = formatterF2.format(totalOther);
+      value.innerHTML = currencyFormat(totalOther);
       row.appendChild(value);
 
       breakdown.appendChild(row);
     }
 
     if (this.charts[id] && ctx == this.charts[id].ctx) {
-      nummusChart.updatePie(this.charts[id], data);
+      nummusChart.updatePie(this.charts[id], currencyFormat, data);
     } else {
       this.charts[id] = nummusChart.createPie(
         ctx,
+        currencyFormat,
         data,
         [pluginHoverHighlight],
         { plugins: { hoverHighlight: { parent: `${id}>div:last-of-type` } } },

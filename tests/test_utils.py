@@ -220,19 +220,6 @@ def test_parse_real(s: str | None, precision: int, target: Decimal | None) -> No
 
 
 @pytest.mark.parametrize(
-    ("x", "plus", "target"),
-    [
-        (Decimal("1000.1"), False, "$1,000.10"),
-        (Decimal("1000.1"), True, "+$1,000.10"),
-        (Decimal("-1000.1"), False, "-$1,000.10"),
-        (Decimal(), False, "$0.00"),
-    ],
-)
-def test_format_financial(x: Decimal, plus: bool, target: str) -> None:
-    assert utils.format_financial(x, plus=plus) == target
-
-
-@pytest.mark.parametrize(
     ("s", "target"),
     [
         ("", None),

@@ -15,9 +15,13 @@ from nummus import utils, web
 from nummus.controllers import base
 from nummus.models import Account, AccountCategory, Asset, TransactionSplit
 from nummus.models.asset import AssetCategory
+from nummus.models.config import Config
+from nummus.models.currency import CURRENCY_FORMATS
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
+
+    from nummus.models.currency import Currency, CurrencyFormat
 
 _DEFAULT_INDEX = "S&P 500"
 
@@ -44,6 +48,7 @@ class AccountsContext(TypedDict):
     mwrr: Decimal | None
     accounts: list[AccountContext]
     options: list[base.NamePairState]
+    currency_format: CurrencyFormat
 
 
 class ChartData(base.ChartData):
@@ -54,6 +59,7 @@ class ChartData(base.ChartData):
     index_min: list[Decimal] | None
     index_max: list[Decimal] | None
     mwrr: list[Decimal] | None
+    currency_format: dict[str, object]
 
 
 class Context(TypedDict):
@@ -178,6 +184,7 @@ def dashboard() -> str:
             "pnl": total_profit[-1],
             "twrr": twrr[-1],
             "indices": indices,
+            "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
         }
     return flask.render_template(
         "performance/dashboard.jinja",
@@ -233,6 +240,7 @@ def ctx_chart(
 
     query = s.query(Account).where(Account.id_.in_(acct_ids))
     mapping: dict[int, str] = {}
+    currencies: dict[int, Currency] = {}
     acct_ids.clear()
     account_options: list[base.NamePairState] = []
     for acct in query.all():
@@ -243,13 +251,24 @@ def ctx_chart(
             )
             if not excluded:
                 mapping[acct.id_] = acct.name
+                currencies[acct.id_] = acct.currency
                 acct_ids.add(acct.id_)
+
+    base_currency = Config.base_currency(s)
+    forex = Asset.get_forex(
+        s,
+        start_ord,
+        end_ord,
+        base_currency,
+        set(currencies.values()),
+    )
 
     acct_values, acct_profits, _ = Account.get_value_all(
         s,
         start_ord,
         end_ord,
         ids=acct_ids,
+        forex=forex,
     )
 
     total: list[Decimal] = [
@@ -297,6 +316,7 @@ def ctx_chart(
         (twrr, index_twrr, mwrr_interpolation),
     )
 
+    cf = CURRENCY_FORMATS[base_currency]
     chart: ChartData = {
         **data_twrr,
         "index": data_index["avg"],
@@ -304,6 +324,7 @@ def ctx_chart(
         "index_min": data_index["min"],
         "index_max": data_index["max"],
         "mwrr": None if mwrr is None else data_mwrr["avg"],
+        "currency_format": cf._asdict(),
     }
 
     accounts: AccountsContext = {
@@ -314,6 +335,7 @@ def ctx_chart(
         "mwrr": mwrr,
         "accounts": ctx_accounts,
         "options": sorted(account_options, key=operator.itemgetter(0)),
+        "currency_format": cf,
     }
 
     return {

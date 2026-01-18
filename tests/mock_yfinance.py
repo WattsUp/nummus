@@ -5,6 +5,8 @@ import datetime
 import pandas as pd
 import yfinance.exceptions
 
+from nummus.models.currency import DEFAULT_CURRENCY
+
 
 class MockFunds:
     def __init__(self, symbol: str) -> None:
@@ -33,8 +35,8 @@ class MockTicker:
     @property
     def info(self) -> dict[str, object]:
         if self._symbol == "BANANA":
-            return {"sector": "Healthcare"}
-        return {}
+            return {"sector": "Healthcare", "currency": DEFAULT_CURRENCY.name}
+        return {"currency": DEFAULT_CURRENCY.name}
 
     @property
     def funds_data(self) -> MockFunds:
@@ -50,7 +52,7 @@ class MockTicker:
     ) -> pd.DataFrame:
         assert actions
         assert raise_errors
-        if self._symbol not in {"BANANA", "^BANANA"}:
+        if self._symbol not in {"BANANA", "^BANANA", "BANANA=X"}:
             msg = f"{self._symbol}: No timezone found, symbol may be delisted"
             raise Exception(msg)
 

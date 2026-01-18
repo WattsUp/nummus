@@ -13,9 +13,7 @@ import prometheus_client
 import prometheus_flask_exporter
 import prometheus_flask_exporter.multiprocess
 
-from nummus import __version__, controllers
-from nummus import exceptions as exc
-from nummus import utils, web_assets
+from nummus import __version__, controllers, utils, web_assets
 from nummus.controllers import auth, base
 from nummus.models import Config, ConfigKey
 from nummus.portfolio import Portfolio
@@ -76,12 +74,7 @@ class FlaskExtension:
     @classmethod
     def _init_auth(cls, app: flask.Flask, p: Portfolio) -> None:
         with p.begin_session() as s:
-            secret_key = (
-                s.query(Config.value).where(Config.key == ConfigKey.SECRET_KEY).scalar()
-            )
-            if secret_key is None:  # pragma: no cover
-                msg = "Config SECRET_KEY was not found"
-                raise exc.ProtectedObjectNotFoundError(msg)
+            secret_key = Config.fetch(s, ConfigKey.SECRET_KEY)
 
         app.secret_key = secret_key
         app.config.update(
@@ -108,9 +101,6 @@ class FlaskExtension:
 
     @classmethod
     def _init_jinja_env(cls, env: jinja2.Environment) -> None:
-        env.filters["money"] = utils.format_financial
-        env.filters["money0"] = lambda x: utils.format_financial(x, 0)
-        env.filters["money6"] = lambda x: utils.format_financial(x, 6)
         env.filters["seconds"] = utils.format_seconds
         env.filters["days"] = utils.format_days
         env.filters["days_abv"] = lambda x: utils.format_days(

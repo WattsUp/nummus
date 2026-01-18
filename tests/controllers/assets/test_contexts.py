@@ -7,6 +7,7 @@ import pytest
 
 from nummus import utils
 from nummus.controllers import assets, base
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     import datetime
@@ -32,6 +33,7 @@ def test_ctx_performance_empty(
         "min": None,
         "period": "1yr",
         "period_options": base.PERIOD_OPTIONS,
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
     }
     assert ctx == target
 
@@ -52,6 +54,7 @@ def test_ctx_performance(
         "min": None,
         "period": "max",
         "period_options": base.PERIOD_OPTIONS,
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
     }
     assert ctx == target
 
@@ -196,6 +199,7 @@ def test_ctx_rows_unheld(
                 "qty": Decimal(),
                 "price": Decimal(),
                 "value": Decimal(),
+                "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
             },
         ],
     }
@@ -220,6 +224,7 @@ def test_ctx_rows(
                 "qty": Decimal(10),
                 "price": asset_valuation.value,
                 "value": Decimal(10) * asset_valuation.value,
+                "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
             },
         ],
     }

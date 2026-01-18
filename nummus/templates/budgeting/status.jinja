@@ -7,7 +7,9 @@
 {% endif %}
 <div class="h-17 {{ class }} flex flex-col justify-center rounded-md p-2">
   <div class="flex items-center gap-2">
-    <div class="grow text-2xl font-bold">{{ ctx.assignable | money }}</div>
+    <div class="grow text-2xl font-bold">
+      {{ ctx.currency_format(ctx.assignable) }}
+    </div>
     {% if ctx.assignable > 0 %}
       <button
         class="{{ 'btn-filled-error' if ctx.n_overspent > 0 else 'btn-filled' }}"

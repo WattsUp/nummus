@@ -7,7 +7,7 @@
     hx-push-url="true"
   >
     <h1>Net worth</h1>
-    <h2>{{ ctx.net_worth | money0 }}</h2>
+    <h2>{{ ctx.currency_format(ctx.net_worth, coarse=True) }}</h2>
     <icon>chevron_forward</icon>
   </a>
   <div class="grow">
@@ -17,7 +17,10 @@
     <script>
       // prettier-ignore
       onLoad(() => {
-        netWorth.updateDashboard(JSON.parse('{{ ctx.chart | tojson }}'));
+        netWorth.updateDashboard(
+          JSON.parse('{{ ctx.chart | tojson }}'),
+          JSON.parse('{{ ctx.currency_format._asdict() | tojson }}'),
+        );
       });
     </script>
   </div>

@@ -24,12 +24,16 @@ from nummus.models import (
     YIELD_PER,
 )
 from nummus.models.asset import AssetSplit
+from nummus.models.config import Config
+from nummus.models.currency import Currency, CURRENCY_FORMATS
 from nummus.models.transaction import TransactionSplit
 
 if TYPE_CHECKING:
     import sqlalchemy
     import werkzeug
     from sqlalchemy import orm
+
+    from nummus.models.currency import CurrencyFormat
 
 
 PAGE_LEN = 50
@@ -56,6 +60,9 @@ class AssetContext(TypedDict):
     value: Decimal
     value_date: datetime.date | None
     deletable: bool
+    currency: Currency
+    currency_type: type[Currency]
+    currency_format: CurrencyFormat
 
     table: TableContext | None
     holdings: list[AccountHoldings]
@@ -97,6 +104,8 @@ class PerformanceContext(base.ChartData):
     period: str
     period_options: dict[str, str]
 
+    currency_format: dict[str, object]
+
 
 class RowContext(TypedDict):
     """Context for asset row."""
@@ -107,6 +116,7 @@ class RowContext(TypedDict):
     qty: Decimal
     price: Decimal
     value: Decimal
+    currency_format: CurrencyFormat
 
 
 def page_all() -> flask.Response:
@@ -173,34 +183,39 @@ def new() -> str | flask.Response:
         HTML response
 
     """
-    if flask.request.method == "GET":
-        ctx: AssetContext = {
-            "uri": None,
-            "name": "",
-            "description": None,
-            "ticker": "",
-            "category": AssetCategory.STOCKS,
-            "category_type": AssetCategory,
-            "value": Decimal(),
-            "value_date": None,
-            "table": None,
-            "holdings": [],
-            "performance": None,
-            "deletable": False,
-        }
-        return flask.render_template(
-            "assets/edit.jinja",
-            asset=ctx,
-        )
-
     p = web.portfolio
 
     with p.begin_session() as s:
+        if flask.request.method == "GET":
+            currency = Config.base_currency(s)
+            ctx: AssetContext = {
+                "uri": None,
+                "name": "",
+                "description": None,
+                "ticker": "",
+                "category": AssetCategory.STOCKS,
+                "category_type": AssetCategory,
+                "currency": currency,
+                "currency_type": Currency,
+                "currency_format": CURRENCY_FORMATS[currency],
+                "value": Decimal(),
+                "value_date": None,
+                "table": None,
+                "holdings": [],
+                "performance": None,
+                "deletable": False,
+            }
+            return flask.render_template(
+                "assets/edit.jinja",
+                asset=ctx,
+            )
+
         form = flask.request.form
         name = form["name"].strip()
         description = form["description"].strip()
         ticker = form["ticker"].strip()
         category = AssetCategory(form["category"])
+        currency = Currency(form["currency"])
 
         try:
             with s.begin_nested():
@@ -209,6 +224,7 @@ def new() -> str | flask.Response:
                     description=description,
                     category=category,
                     ticker=ticker,
+                    currency=currency,
                 )
                 s.add(a)
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
@@ -259,6 +275,7 @@ def asset(uri: str) -> str | werkzeug.Response:
         description = form["description"].strip()
         ticker = form["ticker"].strip()
         category = AssetCategory(form["category"])
+        currency = Currency(form["currency"])
 
         try:
             with s.begin_nested():
@@ -267,6 +284,7 @@ def asset(uri: str) -> str | werkzeug.Response:
                 a.description = description
                 a.ticker = ticker
                 a.category = category
+                a.currency = currency
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return base.error(e)
 
@@ -318,6 +336,7 @@ def table(uri: str) -> str | flask.Response:
     args = flask.request.args
     with p.begin_session() as s:
         a = base.find(s, Asset, uri)
+        cf = CURRENCY_FORMATS[a.currency]
         val_table = ctx_table(
             s,
             a,
@@ -332,6 +351,7 @@ def table(uri: str) -> str | flask.Response:
     html = flask.render_template(
         "assets/table-rows.jinja",
         ctx=val_table,
+        cf=cf,
         include_oob=first_page,
     )
     if not first_page:
@@ -606,26 +626,26 @@ def ctx_rows(
 
     query = (
         s.query(Asset)
-        .with_entities(Asset.id_, Asset.name, Asset.category, Asset.ticker)
         .where(Asset.category != AssetCategory.INDEX)
         .order_by(Asset.category)
     )
     if not include_unheld:
         query = query.where(Asset.id_.in_(held_ids))
     prices = Asset.get_value_all(s, today_ord, today_ord, held_ids)
-    for a_id, name, category, ticker in query.yield_per(YIELD_PER):
-        qty = qtys[a_id]
-        price = prices[a_id][0]
+    for asset in query.yield_per(YIELD_PER):
+        qty = qtys[asset.id_]
+        price = prices[asset.id_][0]
         value = qty * price
 
-        categories[category].append(
+        categories[asset.category].append(
             {
-                "uri": Asset.id_to_uri(a_id),
-                "name": name,
-                "ticker": ticker,
+                "uri": asset.uri,
+                "name": asset.name,
+                "ticker": asset.ticker,
                 "qty": qty,
                 "price": price,
                 "value": value,
+                "currency_format": CURRENCY_FORMATS[asset.currency],
             },
         )
     return categories
@@ -710,6 +730,9 @@ def ctx_asset(
         "ticker": a.ticker,
         "category": a.category,
         "category_type": AssetCategory,
+        "currency": a.currency,
+        "currency_type": Currency,
+        "currency_format": CURRENCY_FORMATS[a.currency],
         "value": current_value,
         "value_date": current_date,
         "performance": ctx_performance(s, a, today, period_chart),
@@ -756,6 +779,7 @@ def ctx_performance(
         **base.chart_data(start_ord, end_ord, values),
         "period": period,
         "period_options": base.PERIOD_OPTIONS,
+        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)]._asdict(),
     }
 
 

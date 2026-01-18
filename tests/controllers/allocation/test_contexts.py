@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from nummus.controllers import allocation
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     import datetime
@@ -17,9 +18,14 @@ def test_ctx_empty(today: datetime.date, session: orm.Session) -> None:
     ctx = allocation.ctx_allocation(session, today)
 
     target: allocation.AllocationContext = {
-        "chart": {"categories": {}, "sectors": {}},
+        "chart": {
+            "categories": {},
+            "sectors": {},
+            "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
+        },
         "categories": [],
         "sectors": [],
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
     assert ctx == target
 
@@ -68,6 +74,7 @@ def test_ctx(
                     },
                 ],
             },
+            "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY]._asdict(),
         },
         "categories": [
             {
@@ -80,6 +87,7 @@ def test_ctx(
                         "price": Decimal(2),
                         "value": Decimal(20),
                         "weight": Decimal(1),
+                        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
                     },
                 ],
                 "name": "Stocks",
@@ -97,6 +105,7 @@ def test_ctx(
                         "price": Decimal(2),
                         "value": Decimal(4),
                         "weight": Decimal("0.2"),
+                        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
                     },
                 ],
                 "name": "Basic Materials",
@@ -112,11 +121,13 @@ def test_ctx(
                         "price": Decimal(2),
                         "value": Decimal(16),
                         "weight": Decimal("0.8"),
+                        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
                     },
                 ],
                 "name": "Technology",
                 "value": Decimal(16),
             },
         ],
+        "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
     assert ctx == target

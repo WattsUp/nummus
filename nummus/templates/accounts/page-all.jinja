@@ -21,12 +21,14 @@
   <div class="col-span-2">
     <h2 class="text-xl">Net worth</h2>
     <h1 class="text-tertiary font-serif text-6xl">
-      {{ ctx.net_worth | money0 }}
+      {{ ctx.currency_format(ctx.net_worth, coarse=True) }}
     </h1>
   </div>
   <div class="max-lg:col-start-1">
     <h2 class="text-xl">Assets</h2>
-    <h1 class="text-tertiary font-serif text-4xl">{{ ctx.assets | money0 }}</h1>
+    <h1 class="text-tertiary font-serif text-4xl">
+      {{ ctx.currency_format(ctx.assets, coarse=True) }}
+    </h1>
     <div class="border-primary h-2 w-full rounded-xl border">
       <div
         class="bg-primary h-full rounded-xl"
@@ -37,7 +39,7 @@
   <div>
     <h2 class="text-xl">Liabilites</h2>
     <h1 class="text-tertiary font-serif text-4xl">
-      {{ ctx.liabilities | money0 }}
+      {{ ctx.currency_format(ctx.liabilities, coarse=True) }}
     </h1>
     <div class="border-primary h-2 w-full rounded-xl border">
       <div
@@ -73,7 +75,7 @@
           class="text-primary bg-surface sticky top-10 z-10 flex justify-between font-serif text-2xl md:top-0"
         >
           <span>{{ category.pretty }}</span>
-          <span>{{ total | money }}</span>
+          <span>{{ ctx.currency_format(total) }}</span>
         </div>
         {% for acct in accounts %}
           {% include "accounts/account-row.jinja" %}

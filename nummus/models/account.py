@@ -20,6 +20,7 @@ from nummus.models.base import (
     string_column_args,
     YIELD_PER,
 )
+from nummus.models.currency import Currency
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
 from nummus.models.utils import obj_session
@@ -66,7 +67,8 @@ class Account(Base):
         institution: Account holding institution
         category: Type of Account
         closed: True if Account is closed, will hide from view and not update
-        emergency: True if Account is included in emergency fund
+        budgeted: True if Account is included in budgeting
+        currency: Currency this asset is valued in
         opened_on: Date of first Transaction
         updated_on: Date of latest Transaction
 
@@ -81,6 +83,7 @@ class Account(Base):
     category: orm.Mapped[AccountCategory] = orm.mapped_column(SQLEnum(AccountCategory))
     closed: ORMBool
     budgeted: ORMBool
+    currency: orm.Mapped[Currency] = orm.mapped_column(SQLEnum(Currency))
 
     __table_args__ = (
         UniqueConstraint("number", "institution"),
@@ -128,6 +131,7 @@ class Account(Base):
         start_ord: int,
         end_ord: int,
         ids: Iterable[int] | None = None,
+        forex: dict[Currency, list[Decimal]] | None = None,
     ) -> ValueResultAll:
         """Get the value of all Accounts from start to end date.
 
@@ -136,6 +140,7 @@ class Account(Base):
             start_ord: First date ordinal to evaluate
             end_ord: Last date ordinal to evaluate (inclusive)
             ids: Limit results to specific Accounts by ID
+            forex: Currency exchange rates, None will not normalize
 
         Returns:
             ValueResultAll
@@ -287,13 +292,21 @@ class Account(Base):
         }
 
         # Skip assets with zero quantity
-        a_ids: set[int] = set()
-        for assets in assets_accounts.values():
-            a_ids.update(assets.keys())
-        for assets in assets_day_zero.values():
-            a_ids.update(assets.keys())
+        a_ids: set[int] = utils.set_sub_keys(assets_accounts)
+        a_ids.update(utils.set_sub_keys(assets_day_zero))
 
         asset_prices = Asset.get_value_all(s, start_ord, end_ord, a_ids)
+
+        forex_by_account: dict[int, list[Decimal]] | None = None
+        if forex is not None:
+            query = (
+                s.query(Account)
+                .with_entities(Account.id_, Account.currency)
+                .where(Account.id_.in_(ids))
+            )
+            forex_by_account = {
+                acct_id: forex[currency] for acct_id, currency in query.all()
+            }
 
         return cls._merge_value_data(
             n,
@@ -302,6 +315,7 @@ class Account(Base):
             assets_accounts,
             assets_day_zero,
             asset_prices,
+            forex_by_account,
         )
 
     @classmethod
@@ -313,12 +327,22 @@ class Account(Base):
         assets_accounts: dict[int, dict[int, list[Decimal]]],
         assets_day_zero: dict[int, dict[int, Decimal]],
         asset_prices: dict[int, list[Decimal]],
+        forex: dict[int, list[Decimal]] | None,
     ) -> ValueResultAll:
+
+        def apply_forex[T: list[Decimal] | list[Decimal | None]](
+            acct_id: int,
+            values: T,
+        ) -> T:
+            if forex is None:
+                return values
+            return utils.element_multiply(values, forex[acct_id])
+
         acct_values: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal()] * n)
         asset_values: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal()] * n)
         for acct_id, cash_flow in cash_flow_accounts.items():
             assets = assets_accounts.get(acct_id, {})
-            cash = utils.integrate(cash_flow)
+            cash = apply_forex(acct_id, utils.integrate(cash_flow))
 
             if len(assets) == 0:
                 acct_values[acct_id] = cash
@@ -326,7 +350,7 @@ class Account(Base):
 
             summed = cash
             for a_id, quantities in assets.items():
-                price = asset_prices[a_id]
+                price = apply_forex(acct_id, asset_prices[a_id])
                 asset_value = asset_values[a_id]
                 for i, qty in enumerate(quantities):
                     if qty:
@@ -338,13 +362,15 @@ class Account(Base):
 
         acct_profit: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal()] * n)
         for acct_id, values in acct_values.items():
-            cost_basis_flow = cost_basis_accounts[acct_id]
+            cost_basis_flow = apply_forex(acct_id, cost_basis_accounts[acct_id])
             v = cost_basis_flow[0]
             v = values[0] if v is None else v + values[0]
 
+            forex_0 = Decimal(1) if forex is None else forex[acct_id][0]
+
             # Reduce the cost basis on day one to add the asset value to profit
             for a_id, qty in assets_day_zero.get(acct_id, {}).items():
-                v -= qty * asset_prices[a_id][0]
+                v -= qty * asset_prices[a_id][0] * forex_0
 
             cost_basis_flow[0] = v
 

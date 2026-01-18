@@ -5,19 +5,21 @@
 >
   <h1>Emergency fund</h1>
 </div>
+{% set cf = ctx.currency_format %}
 <div
   class="mb-2 grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-x-2 text-center font-bold"
 >
   <div class="max-lg:col-span-full">
     <h2 class="text-xl">Current balance</h2>
     <h1 class="text-tertiary font-serif text-6xl">
-      {{ ctx.current | money0 }}
+      {{ cf(ctx.current, coarse=True) }}
     </h1>
   </div>
   <div class="md:col-span-2">
     <h2 class="text-xl">Recommended balance</h2>
     <h1 class="text-tertiary font-serif text-6xl">
-      {{ ctx.target_lower | money0 }} - {{ ctx.target_upper | money0 }}
+      {{ cf(ctx.target_lower, coarse=True) }} -
+      {{ cf(ctx.target_upper, coarse=True) }}
     </h1>
   </div>
 </div>
@@ -62,20 +64,20 @@
     {% if ctx.days is none %}
       No spending found to estimate emergency budget.
     {% elif ctx.delta_lower > 0 %}
-      You have {{ ctx.current | money0 }} in your emergency fund. You need
-      {{ ctx.target_lower | money0 }} for emergencies to cover 3 months of
-      budgeted expenses. Consider increasing your emergency fund by
-      {{ ctx.delta_lower | money0 }}.
+      You have {{ cf(ctx.current, coarse=True) }} in your emergency fund. You
+      need {{ cf(ctx.target_lower, coarse=True) }} for emergencies to cover 3
+      months of budgeted expenses. Consider increasing your emergency fund by
+      {{ cf(ctx.delta_lower, coarse=True) }}.
     {% elif ctx.delta_upper > 0 %}
-      You have {{ ctx.current | money0 }} in your emergency fund which will
-      cover {{ ctx.days | days }} of budgeted expenses. You only need
-      {{ ctx.target_upper | money0 }} to cover 6 months of budgeted expenses.
-      Unless you have a planned spending goal this year, the extra
-      {{ ctx.delta_upper | money0 }} could be invested.
+      You have {{ cf(ctx.current, coarse=True) }} in your emergency fund which
+      will cover {{ ctx.days | days }} of budgeted expenses. You only need
+      {{ cf(ctx.target_upper, coarse=True) }} to cover 6 months of budgeted
+      expenses. Unless you have a planned spending goal this year, the extra
+      {{ cf(ctx.delta_upper, coarse=True) }} could be invested.
     {% else %}
-      You have {{ ctx.current | money0 }} in your emergency fund which will
-      cover {{ ctx.days | days }} of budgeted expenses. You are in good shape to
-      cover the recommended 3 to 6 months of budgeted expenses.
+      You have {{ cf(ctx.current, coarse=True) }} in your emergency fund which
+      will cover {{ ctx.days | days }} of budgeted expenses. You are in good
+      shape to cover the recommended 3 to 6 months of budgeted expenses.
     {% endif %}
     Edit emergency fund balance on the
     <a
@@ -121,7 +123,7 @@
     {% for info in ctx.categories %}
       <tr>
         <td>{{ info.emoji_name }}</td>
-        <td class="text-right">{{ info.monthly | money }}</td>
+        <td class="text-right">{{ cf(info.monthly) }}</td>
       </tr>
     {% endfor %}
   </tbody>

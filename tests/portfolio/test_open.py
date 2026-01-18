@@ -7,7 +7,13 @@ import pytest
 
 from nummus import encryption
 from nummus import exceptions as exc
-from nummus.models import Asset, Config, ConfigKey, query_count, TransactionCategory
+from nummus.models import (
+    Asset,
+    Config,
+    ConfigKey,
+    query_count,
+    TransactionCategory,
+)
 from nummus.portfolio import Portfolio
 
 if TYPE_CHECKING:
@@ -54,7 +60,7 @@ def test_unencrypted(tmp_path: Path) -> None:
     assert not Portfolio.is_encrypted_path(path)
 
     with p.begin_session() as s:
-        assert query_count(s.query(Config)) == 4
+        assert query_count(s.query(Config)) == 5
         assert query_count(s.query(TransactionCategory)) > 0
         assert query_count(s.query(Asset)) > 0
 
@@ -98,9 +104,7 @@ def test_no_encryption_test(
 
 def test_bad_encryption_test(empty_portfolio: Portfolio) -> None:
     with empty_portfolio.begin_session() as s:
-        s.query(Config).where(Config.key == ConfigKey.ENCRYPTION_TEST).update(
-            {"value": "fake"},
-        )
+        Config.set_(s, ConfigKey.ENCRYPTION_TEST, "fake")
 
     with pytest.raises(exc.UnlockingError):
         Portfolio(empty_portfolio.path, None)
@@ -124,7 +128,7 @@ def test_encrypted(tmp_path: Path, rand_str: str) -> None:
     assert Portfolio.is_encrypted_path(path)
 
     with p.begin_session() as s:
-        assert query_count(s.query(Config)) == 5
+        assert query_count(s.query(Config)) == 6
         assert query_count(s.query(TransactionCategory)) > 0
         assert query_count(s.query(Asset)) > 0
 
@@ -149,9 +153,7 @@ def test_encrypted_bad_enc_test(
 ) -> None:
     p, key = empty_portfolio_encrypted
     with p.begin_session() as s:
-        s.query(Config).where(Config.key == ConfigKey.ENCRYPTION_TEST).update(
-            {"value": "fake"},
-        )
+        Config.set_(s, ConfigKey.ENCRYPTION_TEST, "fake")
 
     with pytest.raises(exc.UnlockingError):
         Portfolio(p.path, key)

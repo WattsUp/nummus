@@ -2,16 +2,17 @@
 {% with headline="Cover overspending" if overspent else "Move available funds", save_url=url_for("budgeting.move", uri=category.uri, month=category.month) %}
   {% include "shared/dialog-headline.jinja" %}
 {% endwith %}
+{% set cf = category.currency_format %}
 <form class="w-88 grid gap-2" onsubmit="return false">
   <div>
     {% if not overspent %}
       {{ category.name or "Assignable income" }}
-      has {{ category.available | money }} available
+      has {{ cf(category.available) }} available
     {% elif category.name is none %}
-      More money is assigned than held by {{ -category.available | money }}
+      More money is assigned than held by {{ cf(-category.available) }}
     {% else %}
       {{ category.name }}
-      is overspent by {{ -category.available | money }}
+      is overspent by {{ cf(-category.available) }}
     {% endif %}
   </div>
   {% if overspent %}
@@ -49,7 +50,7 @@
               value="{{ uri }}"
               {% if uri == category.destination %}selected{% endif %}
             >
-              {{ name }} {{ available | money }}
+              {{ name }} {{ cf(available) }}
             </option>
           {% endfor %}
         </optgroup>

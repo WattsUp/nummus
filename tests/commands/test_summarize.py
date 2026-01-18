@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import time_machine
 
 from nummus.commands.summarize import Summarize
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     import datetime
@@ -35,6 +36,7 @@ def test_empty_summary(
         "total_asset_value": Decimal(),
         "assets": [],
         "db_size": empty_portfolio.path.stat().st_size,
+        "cf": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
     assert result == target
 
@@ -68,6 +70,7 @@ def test_non_empty_summary(
                 "age": "3 days",
                 "profit": Decimal(10),
                 "value": Decimal(110),
+                "cf": CURRENCY_FORMATS[DEFAULT_CURRENCY],
             },
         ],
         "total_asset_value": Decimal(20),
@@ -79,9 +82,11 @@ def test_non_empty_summary(
                 "profit": Decimal(10),
                 "ticker": "BANANA",
                 "value": Decimal(20),
+                "cf": CURRENCY_FORMATS[DEFAULT_CURRENCY],
             },
         ],
         "db_size": empty_portfolio.path.stat().st_size,
+        "cf": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
     assert result == target
 
@@ -109,6 +114,7 @@ def test_exclude_empty(
         "total_asset_value": Decimal(),
         "assets": [],
         "db_size": empty_portfolio.path.stat().st_size,
+        "cf": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
     assert result == target
 

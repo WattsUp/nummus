@@ -625,7 +625,11 @@ def test_validation_amounts(
     result, _ = web_client.GET(
         (
             "transactions.validation",
-            {"amount": "10", "split-amount": split_amount, "split": split},
+            {
+                "amount": "10",
+                "split-amount": split_amount,
+                "split": split,
+            },
         ),
     )
 

@@ -36,14 +36,14 @@ from nummus.models import (
     TransactionSplit,
     YIELD_PER,
 )
+from nummus.models.currency import DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     import contextlib
 
     from nummus.importers.base import TxnDict
-    from nummus.models import (
-        Base,
-    )
+    from nummus.models import Base
+    from nummus.models.currency import Currency
 
 
 class AssetUpdate(NamedTuple):
@@ -208,31 +208,14 @@ class Portfolio:
                     *[m.min_version() for m in migrations.MIGRATORS],
                 )
 
-                c_version = Config(
-                    key=ConfigKey.VERSION,
-                    value=str(v),
-                )
-                c_enc_test = Config(
-                    key=ConfigKey.ENCRYPTION_TEST,
-                    value=test_value,
-                )
-                c_cipher = Config(
-                    key=ConfigKey.CIPHER,
-                    value=cipher_b64,
-                )
-                c_key = Config(
-                    key=ConfigKey.SECRET_KEY,
-                    value=secrets.token_hex(),
-                )
-
-                s.add_all((c_version, c_enc_test, c_cipher, c_key))
+                Config.set_(s, ConfigKey.VERSION, str(v))
+                Config.set_(s, ConfigKey.ENCRYPTION_TEST, test_value)
+                Config.set_(s, ConfigKey.CIPHER, cipher_b64)
+                Config.set_(s, ConfigKey.SECRET_KEY, secrets.token_hex())
+                Config.set_(s, ConfigKey.BASE_CURRENCY, str(DEFAULT_CURRENCY.value))
 
                 if enc is not None and key is not None:
-                    c_web_key = Config(
-                        key=ConfigKey.WEB_KEY,
-                        value=enc.encrypt(key),
-                    )
-                    s.add(c_web_key)
+                    Config.set_(s, ConfigKey.WEB_KEY, enc.encrypt(key))
         path_db.chmod(0o600)  # Only owner can read/write
 
         p = Portfolio(path_db, key)
@@ -348,30 +331,6 @@ class Portfolio:
         """
         return self.decrypt(enc_secret).decode()
 
-    @property
-    def db_version(self) -> Version:
-        """Check the version of portfolio is current and does not need migration.
-
-        Returns:
-            Version of database
-
-        Raises:
-            ProtectedObjectNotFoundError: If VERSION is not found
-
-        """
-        with self.begin_session() as s:
-            try:
-                v = (
-                    s.query(Config.value)
-                    .where(Config.key == ConfigKey.VERSION)
-                    .one()[0]
-                )
-            except exc.NoResultFound as e:
-                msg = "Config.VERSION not found"
-                raise exc.ProtectedObjectNotFoundError(msg) from e
-
-            return Version(v)
-
     def migration_required(self, version_str: str | None) -> Version | None:
         """Check if migration is required.
 
@@ -382,7 +341,11 @@ class Portfolio:
             Version to migrate to or None if migration not required
 
         """
-        v_db = self.db_version if version_str is None else Version(version_str)
+        if version_str is None:
+            with self.begin_session() as s:
+                v_db = Config.db_version(s)
+        else:
+            v_db = Version(version_str)
         for m in migrations.MIGRATORS[::-1]:
             v_m = m.min_version()
             if v_db < v_m:
@@ -958,6 +921,11 @@ class Portfolio:
         updated: list[AssetUpdate] = []
 
         with self.begin_session() as s:
+            # Get FOREXes, add if need be
+            currencies: set[Currency] = {r[0] for r in s.query(Account.currency).all()}
+            base_currency = Config.base_currency(s)
+            Asset.create_forex(s, base_currency, currencies)
+
             assets = s.query(Asset).where(Asset.ticker.isnot(None)).all()
             ids = [asset.id_ for asset in assets]
 
@@ -1059,9 +1027,7 @@ class Portfolio:
 
         # Use new encryption key
         with self.begin_session() as s:
-            value_encrypted: str | None = (
-                s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
-            )
+            value_encrypted = Config.fetch(s, ConfigKey.WEB_KEY)
             value = key if value_encrypted is None else self.decrypt_s(value_encrypted)
         dst.change_web_key(value)
 
@@ -1093,6 +1059,4 @@ class Portfolio:
 
         key_encrypted = self.encrypt(key)
         with self.begin_session() as s:
-            s.query(Config).where(Config.key == ConfigKey.WEB_KEY).update(
-                {Config.value: key_encrypted},
-            )
+            Config.set_(s, ConfigKey.WEB_KEY, key_encrypted)

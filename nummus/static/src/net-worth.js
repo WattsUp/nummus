@@ -10,8 +10,10 @@ const netWorth = {
    *
    * @param {Object} raw Raw data from net worth controller
    * @param {Object} rawAccounts Raw account data from net worth controller
+   * @param {Object} currencyFormat See Python side: Currency
    */
-  update: function (raw, rawAccounts) {
+  update: function (raw, rawAccounts, currencyFormat) {
+    const cf = newCurrencyFormat(currencyFormat);
     const labels = raw.labels;
     const dateMode = raw.mode;
     const avg = raw.avg.map((v) => Number(v));
@@ -81,9 +83,9 @@ const netWorth = {
       }
 
       if (this.chart && ctx == this.chart.ctx) {
-        nummusChart.update(this.chart, labels, dateMode, datasets);
+        nummusChart.update(this.chart, cf, labels, dateMode, datasets);
       } else {
-        this.chart = nummusChart.create(ctx, labels, dateMode, datasets);
+        this.chart = nummusChart.create(ctx, cf, labels, dateMode, datasets);
       }
     }
 
@@ -120,7 +122,8 @@ const netWorth = {
               let label = context.dataset.label || "";
               if (label) label += ": ";
               const y = context.dataset.dataRaw[context.dataIndex];
-              if (y != null) label += formatterF2.format(y);
+              if (y != null)
+                label += context.chart.config.options.currencyFormat(y);
               return label;
             },
           },
@@ -133,10 +136,11 @@ const netWorth = {
       const ctx = canvas.getContext("2d");
       const datasets = nummusChart.datasetsStacked(assets);
       if (this.chartAssets && ctx == this.chartAssets.ctx) {
-        nummusChart.update(this.chartAssets, labels, dateMode, datasets);
+        nummusChart.update(this.chartAssets, cf, labels, dateMode, datasets);
       } else {
         this.chartAssets = nummusChart.create(
           ctx,
+          cf,
           labels,
           dateMode,
           datasets,
@@ -151,10 +155,17 @@ const netWorth = {
       const ctx = canvas.getContext("2d");
       const datasets = nummusChart.datasetsStacked(liabilities);
       if (this.chartLiabilities && ctx == this.chartLiabilities.ctx) {
-        nummusChart.update(this.chartLiabilities, labels, dateMode, datasets);
+        nummusChart.update(
+          this.chartLiabilities,
+          cf,
+          labels,
+          dateMode,
+          datasets,
+        );
       } else {
         this.chartLiabilities = nummusChart.create(
           ctx,
+          cf,
           labels,
           dateMode,
           datasets,
@@ -168,8 +179,10 @@ const netWorth = {
    * Create Net Worth Dashboard Chart
    *
    * @param {Object} raw Raw data from net worth controller
+   * @param {Object} currencyFormat See Python side: Currency
    */
-  updateDashboard: function (raw) {
+  updateDashboard: function (raw, currencyFormat) {
+    const cf = newCurrencyFormat(currencyFormat);
     const labels = raw.labels;
     const dateMode = raw.mode;
     const total = raw.avg.map((v) => Number(v));
@@ -188,13 +201,21 @@ const netWorth = {
       fill: true,
     };
     if (this.chart && ctx == this.chart.ctx) {
-      nummusChart.update(this.chart, labels, dateMode, [dataset]);
+      nummusChart.update(this.chart, cf, labels, dateMode, [dataset]);
     } else {
-      this.chart = nummusChart.create(ctx, labels, dateMode, [dataset], null, {
-        scales: {
-          y: { ticks: { display: false }, grid: { drawTicks: false } },
+      this.chart = nummusChart.create(
+        ctx,
+        cf,
+        labels,
+        dateMode,
+        [dataset],
+        null,
+        {
+          scales: {
+            y: { ticks: { display: false }, grid: { drawTicks: false } },
+          },
         },
-      });
+      );
     }
   },
 };

@@ -9,7 +9,6 @@ import flask
 import flask.typing
 import flask_login
 
-from nummus import exceptions as exc
 from nummus import web
 from nummus.controllers import base
 from nummus.models import Config, ConfigKey
@@ -117,9 +116,6 @@ def login() -> str | werkzeug.Response:
     Returns:
         HTML response
 
-    Raises:
-        ProtectedObjectNotFoundError: If WEB_KEY not found
-
     """
     p = web.portfolio
     form = flask.request.form
@@ -129,13 +125,7 @@ def login() -> str | werkzeug.Response:
         return base.error("Password must not be blank")
 
     with p.begin_session() as s:
-        expected_encoded = (
-            s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
-        )
-        if expected_encoded is None:  # pragma: no cover
-            # Don't need to test ProtectedObjectNotFoundError
-            msg = "WEB_KEY not found in portfolio"
-            raise exc.ProtectedObjectNotFoundError(msg)
+        expected_encoded = Config.fetch(s, ConfigKey.WEB_KEY)
 
         expected = p.decrypt(expected_encoded)
         if password.encode() != expected:

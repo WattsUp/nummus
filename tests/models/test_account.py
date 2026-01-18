@@ -7,6 +7,7 @@ import pytest
 
 from nummus import exceptions as exc
 from nummus.models import Account, AccountCategory
+from nummus.models.currency import DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -25,6 +26,7 @@ def test_init_properties(
         "category": AccountCategory.CASH,
         "closed": False,
         "budgeted": False,
+        "currency": DEFAULT_CURRENCY,
     }
     acct = Account(**d)
 

@@ -13,7 +13,7 @@ import shutil
 import string
 import sys
 from decimal import Decimal
-from typing import NamedTuple, TYPE_CHECKING
+from typing import NamedTuple, overload, TYPE_CHECKING
 
 import emoji as emoji_mod
 from colorama import Fore
@@ -278,25 +278,6 @@ def parse_real(s: str | None, precision: int = 2) -> Decimal | None:
         return None
     value = -Decimal(clean) if "-" in s or "(" in s else Decimal(clean)
     return round(value, precision)
-
-
-def format_financial(x: Decimal, precision: int = 2, *, plus: bool = False) -> str:
-    """Format a number to financial notation.
-
-    Args:
-        x: Number to format
-        precision: Number of decimals
-        plus: True will print a + for positive amounts
-
-    Returns:
-        x formatted similar to $1,000.00 or -$1,000.00
-
-    """
-    if x < 0:
-        return f"-${-x:,.{precision}f}"
-    if plus:
-        return f"+${x:,.{precision}f}"
-    return f"${x:,.{precision}f}"
 
 
 def parse_bool(s: str | None) -> bool | None:
@@ -1045,3 +1026,50 @@ def low_pass(data: list[Decimal], rc: int) -> list[Decimal]:
         data[i] = current
 
     return data
+
+
+@overload
+def element_multiply(
+    a: list[Decimal],
+    b: list[Decimal],
+) -> list[Decimal]: ...
+
+
+@overload
+def element_multiply(
+    a: list[Decimal | None],
+    b: list[Decimal],
+) -> list[Decimal | None]: ...
+
+
+def element_multiply(
+    a: list[Decimal] | list[Decimal | None],
+    b: list[Decimal],
+) -> list[Decimal] | list[Decimal | None]:
+    """Multiply two lists element-wise.
+
+    Args:
+        a: First list
+        b: Second list
+
+    Returns:
+        [a[0] * b[0], ..., a[n] * b[n]]
+
+    """
+    return [None if aa is None else (aa * bb) for aa, bb in zip(a, b, strict=True)]
+
+
+def set_sub_keys[_, T, V](dicts: dict[_, dict[T, V]]) -> set[T]:
+    """Create a set from the subkeys of a nested dict.
+
+    Args:
+        dicts: Dict of dicts
+
+    Returns:
+        Set{*d.keys() for d in dicts.values()}
+
+    """
+    keys: set[T] = set()
+    for d in dicts.values():
+        keys.update(d.keys())
+    return keys

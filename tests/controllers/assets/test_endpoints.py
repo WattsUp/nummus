@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from nummus import utils
 from nummus.controllers import base
 from nummus.models import Asset, AssetCategory, AssetValuation, query_count
+from nummus.models.currency import Currency, CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     import datetime
@@ -33,9 +33,8 @@ def test_page(
 ) -> None:
     result, _ = web_client.GET(("assets.page", {"uri": asset.uri}))
     assert asset.name in result
-    target = (
-        f"{utils.format_financial(asset_valuation.value)} as of {asset_valuation.date}"
-    )
+    cf = CURRENCY_FORMATS[DEFAULT_CURRENCY]
+    target = f"{cf(asset_valuation.value)} as of {asset_valuation.date}"
     assert target in result
     assert "no more valuations match query" in result
     assert "new" not in result
@@ -60,6 +59,7 @@ def test_new(
         data={
             "name": "New name",
             "category": "STOCKS",
+            "currency": "USD",
             "description": "Nothing to see",
             "ticker": "1234",
         },
@@ -71,6 +71,7 @@ def test_new(
     a = session.query(Asset).one()
     assert a.name == "New name"
     assert a.category == AssetCategory.STOCKS
+    assert a.currency == Currency.USD
     assert a.description == "Nothing to see"
     assert a.ticker == "1234"
 
@@ -81,6 +82,7 @@ def test_new_error(web_client: WebClient) -> None:
         data={
             "name": "a",
             "category": "STOCKS",
+            "currency": "USD",
             "description": "Nothing to see",
             "ticker": "1234",
         },
@@ -123,6 +125,7 @@ def test_asset_edit(web_client: WebClient, session: orm.Session, asset: Asset) -
         data={
             "name": "New name",
             "category": "BONDS",
+            "currency": "EUR",
             "ticker": "",
             "description": "Nothing to see",
         },
@@ -134,6 +137,7 @@ def test_asset_edit(web_client: WebClient, session: orm.Session, asset: Asset) -
     session.refresh(asset)
     assert asset.name == "New name"
     assert asset.category == AssetCategory.BONDS
+    assert asset.currency == Currency.EUR
     assert asset.ticker is None
     assert asset.description == "Nothing to see"
 
@@ -144,6 +148,7 @@ def test_asset_edit_error(web_client: WebClient, asset: Asset) -> None:
         data={
             "name": "a",
             "category": "BONDS",
+            "currency": "EUR",
             "ticker": "",
             "description": "Nothing to see",
         },

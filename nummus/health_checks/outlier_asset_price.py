@@ -12,9 +12,14 @@ from sqlalchemy import func
 from nummus import utils
 from nummus.health_checks.base import Base
 from nummus.models import Asset, TransactionSplit, YIELD_PER
+from nummus.models.account import Account
+from nummus.models.currency import CURRENCY_FORMATS
+from nummus.models.utils import query_to_dict
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
+
+    from nummus.models.currency import Currency
 
 
 class OutlierAssetPrice(Base):
@@ -55,10 +60,17 @@ class OutlierAssetPrice(Base):
             today_ord + utils.DAYS_IN_WEEK,
         )
 
+        query = s.query(Account).with_entities(
+            Account.id_,
+            Account.currency,
+        )
+        accounts: dict[int, Currency] = query_to_dict(query)
+
         query = (
             s.query(TransactionSplit)
             .with_entities(
                 TransactionSplit.id_,
+                TransactionSplit.account_id,
                 TransactionSplit.date_ord,
                 TransactionSplit.asset_id,
                 TransactionSplit.amount,
@@ -70,10 +82,11 @@ class OutlierAssetPrice(Base):
             )
             .where(TransactionSplit.asset_id.isnot(None))
         )
-        for t_id, date_ord, a_id, amount, qty in query.yield_per(
+        for t_id, acct_id, date_ord, a_id, amount, qty in query.yield_per(
             YIELD_PER,
         ):
             t_id: int
+            acct_id: int
             date_ord: int
             a_id: int
             amount: Decimal
@@ -90,24 +103,26 @@ class OutlierAssetPrice(Base):
             v_price_low = v_price * (1 - self._RANGE)
             v_price_high = v_price * (1 + self._RANGE)
             if t_price < v_price_low:
+                cf = CURRENCY_FORMATS[accounts[acct_id]]
                 issues.append(
                     (
                         uri,
                         f"{datetime.date.fromordinal(date_ord)}: {assets[a_id]}",
                         (
-                            f"was traded at {utils.format_financial(t_price)} which is "
-                            f"below valuation of {utils.format_financial(v_price)}"
+                            f"was traded at {cf(t_price)} which is "
+                            f"below valuation of {cf(v_price)}"
                         ),
                     ),
                 )
             elif t_price > v_price_high:
+                cf = CURRENCY_FORMATS[accounts[acct_id]]
                 issues.append(
                     (
                         uri,
                         f"{datetime.date.fromordinal(date_ord)}: {assets[a_id]}",
                         (
-                            f"was traded at {utils.format_financial(t_price)} which is "
-                            f"above valuation of {utils.format_financial(v_price)}"
+                            f"was traded at {cf(t_price)} which is "
+                            f"above valuation of {cf(v_price)}"
                         ),
                     ),
                 )

@@ -7,14 +7,16 @@ from typing import override, TYPE_CHECKING
 
 from sqlalchemy import func
 
-from nummus import utils
 from nummus.health_checks.base import Base
 from nummus.models import Account, Transaction, YIELD_PER
+from nummus.models.currency import CURRENCY_FORMATS
 
 if TYPE_CHECKING:
     from decimal import Decimal
 
     from sqlalchemy import orm
+
+    from nummus.models.currency import Currency
 
 
 class DuplicateTransactions(Base):
@@ -25,7 +27,14 @@ class DuplicateTransactions(Base):
 
     @override
     def test(self, s: orm.Session) -> None:
-        accounts = Account.map_name(s)
+        query = s.query(Account).with_entities(
+            Account.id_,
+            Account.name,
+            Account.currency,
+        )
+        accounts: dict[int, tuple[str, Currency]] = {
+            r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
+        }
 
         issues: list[tuple[str, str, str]] = []
 
@@ -55,9 +64,12 @@ class DuplicateTransactions(Base):
             # Create a robust uri for this duplicate
             uri = f"{acct_id}.{date_ord}.{amount_raw}"
 
+            acct_name, currency = accounts[acct_id]
+            cf = CURRENCY_FORMATS[currency]
+
             date = datetime.date.fromordinal(date_ord)
-            source = f"{date} - {accounts[acct_id]}"
-            issues.append((uri, source, utils.format_financial(amount)))
+            source = f"{date} - {acct_name}"
+            issues.append((uri, source, cf(amount)))
 
         if len(issues) != 0:
             source_len = max(len(item[1]) for item in issues)

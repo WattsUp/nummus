@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from nummus import utils
 from nummus.health_checks.uncleared_transactions import UnclearedTransactions
 from nummus.models import HealthCheckIssue, query_count
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -50,7 +50,7 @@ def test_check(
 
     target = (
         f"{t_split.date} - {account.name}: "
-        f"{utils.format_financial(t_split.amount)} to {t_split.payee} "
+        f"{CURRENCY_FORMATS[DEFAULT_CURRENCY](t_split.amount)} to {t_split.payee} "
         "is uncleared"
     )
     assert c.issues == {uri: target}
