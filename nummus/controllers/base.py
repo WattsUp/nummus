@@ -403,8 +403,8 @@ def update_client_timezone(response: flask.Response) -> flask.Response:
         current_tz_minutes,
         type=int,
     )
-    if tz_minutes != current_tz_minutes:
-        response.headers["HX-Refresh"] = "true"
+    # Don't full page reload if tz changed, it will get updated very quickly
+    # It also likely is to happen when logging in, so no effect with bad TZ
     flask.session["tz_minutes"] = tz_minutes
     return response
 
