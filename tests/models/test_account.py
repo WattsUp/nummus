@@ -6,13 +6,14 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus import exceptions as exc
-from nummus.models import Account, AccountCategory
+from nummus.models.account import Account, AccountCategory
 from nummus.models.currency import DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus.models import Asset, AssetValuation, Transaction
+    from nummus.models.asset import Asset, AssetValuation
+    from nummus.models.transaction import Transaction
     from tests.conftest import RandomStringGenerator
 
 

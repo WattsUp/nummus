@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 import flask
 import pytest
 
-from nummus import encryption
 from nummus import exceptions as exc
 from nummus import web
-from nummus.models import Config, ConfigKey
+from nummus.encryption.top import ENCRYPTION_AVAILABLE
+from nummus.models.config import Config, ConfigKey
 from tests import conftest
 
 if TYPE_CHECKING:
@@ -39,7 +39,7 @@ def test_no_secret_key(
         web.create_app()
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="No encryption available")
 @pytest.mark.encryption
 def test_create_app_encrypted(
     monkeypatch: pytest.MonkeyPatch,
@@ -53,7 +53,7 @@ def test_create_app_encrypted(
     assert len(app.before_request_funcs[None]) == 2
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="No encryption available")
 @pytest.mark.encryption
 def test_create_app_encrypted_key_file(
     monkeypatch: pytest.MonkeyPatch,
@@ -144,3 +144,17 @@ def test_jinja_filters(
             value=value,
         )
         assert result == target
+
+
+def test_add_routes() -> None:
+    app = flask.Flask(__file__)
+    app.debug = False
+    web.FlaskExtension._add_routes(app)
+
+    routes = app.url_map
+    for rule in routes.iter_rules():
+        assert not rule.endpoint.startswith("nummus.controllers.")
+        assert not rule.endpoint.startswith(".")
+        assert rule.rule.startswith("/")
+        assert not rule.rule.startswith("/d/")
+        assert not (rule.rule != "/" and rule.rule.endswith("/"))

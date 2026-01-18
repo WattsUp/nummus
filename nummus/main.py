@@ -15,7 +15,18 @@ from pathlib import Path
 
 import argcomplete
 
-from nummus import commands, version
+from nummus import version
+from nummus.commands.backup import Backup, Restore
+from nummus.commands.change_password import ChangePassword
+from nummus.commands.clean import Clean
+from nummus.commands.create import Create
+from nummus.commands.export import Export
+from nummus.commands.health import Health
+from nummus.commands.import_files import Import
+from nummus.commands.migrate import Migrate
+from nummus.commands.summarize import Summarize
+from nummus.commands.unlock import Unlock
+from nummus.commands.update_assets import UpdateAssets
 
 
 def main(command_line: list[str] | None = None) -> int:
@@ -55,7 +66,21 @@ calculates net worth, and predicts future performance."""
 
     subparsers = parser.add_subparsers(dest="cmd", metavar="<command>", required=True)
 
-    for cmd_class in commands.COMMANDS.values():
+    cmds = [
+        Create,
+        Unlock,
+        Backup,
+        Restore,
+        Migrate,
+        ChangePassword,
+        Clean,
+        Import,
+        Health,
+        Summarize,
+        UpdateAssets,
+        Export,
+    ]
+    for cmd_class in cmds:
         sub = subparsers.add_parser(
             cmd_class.NAME,
             help=cmd_class.HELP,
@@ -68,7 +93,7 @@ calculates net worth, and predicts future performance."""
 
     args_d = vars(args)
     cmd: str = args_d.pop("cmd")
-    c = commands.COMMANDS[cmd](**args_d)
+    c = next(c for c in cmds if cmd == c.NAME)(**args_d)
     return c.run()
 
 

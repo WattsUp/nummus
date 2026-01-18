@@ -6,22 +6,17 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus.health_checks.category_direction import CategoryDirection
-from nummus.models import (
-    HealthCheckIssue,
-    query_count,
-    Transaction,
-    TransactionSplit,
-)
 from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
+from nummus.models.health_checks import HealthCheckIssue
+from nummus.models.transaction import Transaction, TransactionSplit
+from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     import datetime
 
     from sqlalchemy import orm
 
-    from nummus.models import (
-        Account,
-    )
+    from nummus.models.account import Account
 
 
 def test_empty(session: orm.Session) -> None:

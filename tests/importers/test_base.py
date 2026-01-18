@@ -5,16 +5,19 @@ from typing import override, TYPE_CHECKING
 import pytest
 
 from nummus import exceptions as exc
-from nummus import importers
-from nummus.importers import base
+from nummus.importers.base import TransactionImporter
+from nummus.importers.raw_csv import CSVTransactionImporter
+from nummus.importers.top import get_importer, get_importers
 from tests import data
 from tests.data.custom_importer import BananaBankImporter
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from nummus.importers.base import TxnDicts
 
-class Derived(base.TransactionImporter):
+
+class Derived(TransactionImporter):
     @classmethod
     def is_importable(
         cls,
@@ -28,7 +31,7 @@ class Derived(base.TransactionImporter):
         return False
 
     @override
-    def run(self) -> base.TxnDicts:
+    def run(self) -> TxnDicts:
         return []
 
 
@@ -54,8 +57,8 @@ def test_init_with_pdf_buf(data_path: Path) -> None:
 @pytest.mark.parametrize(
     ("file", "target"),
     [
-        ("transactions_required.csv", importers.CSVTransactionImporter),
-        ("transactions_extras.csv", importers.CSVTransactionImporter),
+        ("transactions_required.csv", CSVTransactionImporter),
+        ("transactions_extras.csv", CSVTransactionImporter),
         ("transactions_lacking.csv", None),
         ("banana_bank_statement.pdf", None),
     ],
@@ -64,30 +67,30 @@ def test_get_importer(
     tmp_path: Path,
     data_path: Path,
     file: str,
-    target: type[importers.TransactionImporter] | None,
+    target: type[TransactionImporter] | None,
 ) -> None:
-    available = importers.get_importers(None)
+    available = get_importers(None)
     path = data_path / file
     path_debug = tmp_path / "portfolio.importer_debug"
     assert not path_debug.exists()
     if target is None:
         with pytest.raises(exc.UnknownImporterError):
-            importers.get_importer(path, path_debug, available)
+            get_importer(path, path_debug, available)
     else:
-        i = importers.get_importer(path, path_debug, available)
+        i = get_importer(path, path_debug, available)
         assert isinstance(i, target)
     assert path_debug.exists()
 
 
 def test_get_importers() -> None:
-    target = (importers.CSVTransactionImporter,)
-    assert importers.get_importers(None) == target
+    target = (CSVTransactionImporter,)
+    assert get_importers(None) == target
 
 
 def test_get_importers_custom(data_path: Path) -> None:
-    target_base = (importers.CSVTransactionImporter,)
+    target_base = (CSVTransactionImporter,)
     target_extra = (BananaBankImporter,)
-    result = importers.get_importers(data_path)
+    result = get_importers(data_path)
     assert result[: len(target_base)] == target_base
     # Since importers are imported separately, can't check direct equality
     n_strip = len(data.__name__) + 1

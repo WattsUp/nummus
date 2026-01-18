@@ -10,10 +10,12 @@ from typing import override, TYPE_CHECKING
 from sqlalchemy import func
 
 from nummus import utils
-from nummus.health_checks.base import Base
-from nummus.models import Asset, TransactionSplit, YIELD_PER
+from nummus.health_checks.base import HealthCheck
 from nummus.models.account import Account
+from nummus.models.asset import Asset
+from nummus.models.base import YIELD_PER
 from nummus.models.currency import CURRENCY_FORMATS
+from nummus.models.transaction import TransactionSplit
 from nummus.models.utils import query_to_dict
 
 if TYPE_CHECKING:
@@ -22,7 +24,7 @@ if TYPE_CHECKING:
     from nummus.models.currency import Currency
 
 
-class OutlierAssetPrice(Base):
+class OutlierAssetPrice(HealthCheck):
     """Checks if an asset was bought/sold at an outlier price."""
 
     _DESC = textwrap.dedent(

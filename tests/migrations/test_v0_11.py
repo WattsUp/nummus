@@ -4,15 +4,16 @@ import shutil
 from typing import TYPE_CHECKING
 
 from nummus.migrations.v0_11 import MigratorV0_11
-from nummus.models import (
+from nummus.models.asset import (
     AssetSector,
     AssetSplit,
     AssetValuation,
+)
+from nummus.models.budget import (
     BudgetAssignment,
     Target,
-    Transaction,
-    TransactionSplit,
 )
+from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.portfolio import Portfolio
 
 if TYPE_CHECKING:

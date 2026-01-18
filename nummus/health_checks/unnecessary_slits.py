@@ -7,8 +7,11 @@ from typing import NamedTuple, override, TYPE_CHECKING
 
 from sqlalchemy import func
 
-from nummus.health_checks.base import Base
-from nummus.models import Account, TransactionCategory, TransactionSplit, YIELD_PER
+from nummus.health_checks.base import HealthCheck
+from nummus.models.account import Account
+from nummus.models.base import YIELD_PER
+from nummus.models.transaction import TransactionSplit
+from nummus.models.transaction_category import TransactionCategory
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -23,7 +26,7 @@ class RawIssue(NamedTuple):
     category: str
 
 
-class UnnecessarySplits(Base):
+class UnnecessarySplits(HealthCheck):
     """Checks for split transactions with same payee and category."""
 
     _DESC = "Checks for split transactions with same payee and category."

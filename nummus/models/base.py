@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import enum
 from decimal import Decimal
-from typing import override, TYPE_CHECKING
+from typing import ClassVar, override, TYPE_CHECKING
 
 import sqlalchemy
 from sqlalchemy import CheckConstraint, orm, sql, types
@@ -39,7 +39,39 @@ class Base(orm.DeclarativeBase):
 
     """
 
+    _MODELS: ClassVar[set[type[Base]]] = set()
+
     __table_id__: int | None
+
+    @override
+    def __init_subclass__(cls, *, skip_register: bool = False, **kw: object) -> None:
+        super().__init_subclass__(**kw)
+        if skip_register:
+            return
+
+        Base._MODELS.add(cls)
+
+        # Compute on each new subclass since don't know which is last
+        i = 0
+        for m in sorted(Base._MODELS, key=lambda m: m.__name__):
+            # Set __table_id__ in ascending order
+            if hasattr(m, "__table_id__") and m.__table_id__ is None:
+                continue
+            m.__table_id__ = i << base_uri.TABLE_OFFSET
+            i += 1
+
+    @classmethod
+    def metadata_create_all(cls, s: orm.Session) -> None:
+        """Create all tables for nummus models.
+
+        Creates tables then commits
+
+        Args:
+            s: Session to create tables for
+
+        """
+        cls.metadata.create_all(s.get_bind(), [m.sql_table() for m in cls._MODELS])
+        s.commit()
 
     @classmethod
     def sql_table(cls) -> sqlalchemy.Table:

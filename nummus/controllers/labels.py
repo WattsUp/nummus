@@ -9,8 +9,8 @@ import flask
 from nummus import exceptions as exc
 from nummus import web
 from nummus.controllers import base
-from nummus.models import Label, LabelLink
 from nummus.models.base import YIELD_PER
+from nummus.models.label import Label, LabelLink
 
 if TYPE_CHECKING:
     from sqlalchemy import orm

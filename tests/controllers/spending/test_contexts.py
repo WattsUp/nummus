@@ -5,24 +5,22 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus.controllers import base, spending
-from nummus.models import (
-    Account,
-    Label,
-    query_count,
+from nummus.models.account import Account
+from nummus.models.currency import DEFAULT_CURRENCY
+from nummus.models.label import Label
+from nummus.models.transaction import TransactionSplit
+from nummus.models.transaction_category import (
     TransactionCategory,
     TransactionCategoryGroup,
-    TransactionSplit,
 )
-from nummus.models.currency import DEFAULT_CURRENCY
+from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     import datetime
 
     from sqlalchemy import orm
 
-    from nummus.models import (
-        Transaction,
-    )
+    from nummus.models.transaction import Transaction
 
 
 @pytest.mark.parametrize(

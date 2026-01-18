@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus import exceptions as exc
-from nummus.models import BudgetGroup
+from nummus.models.budget import BudgetGroup
 
 if TYPE_CHECKING:
     from sqlalchemy import orm

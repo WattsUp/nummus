@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 
 from nummus import exceptions as exc
-from nummus.models import _MODELS, base_uri
+from nummus.models import base_uri
 from nummus.models.account import Account
 from nummus.models.asset import Asset, AssetSector, AssetSplit, AssetValuation
+from nummus.models.base import Base
 from nummus.models.base_uri import Cipher
 from nummus.models.budget import BudgetAssignment, BudgetGroup, Target
 from nummus.models.config import Config
@@ -18,9 +18,6 @@ from nummus.models.imported_file import ImportedFile
 from nummus.models.label import Label, LabelLink
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
-
-if TYPE_CHECKING:
-    from nummus.models.base import Base
 
 MODELS_URI = [
     Account,
@@ -121,7 +118,7 @@ def test_distribution() -> None:
 
 
 def test_table_ids_all_covered() -> None:
-    models = set(_MODELS)
+    models = set(Base._MODELS)
 
     for model in MODELS_URI:
         models.remove(model)

@@ -5,9 +5,12 @@ from __future__ import annotations
 import datetime
 from typing import override, TYPE_CHECKING
 
-from nummus.health_checks.base import Base
-from nummus.models import Account, TransactionCategory, TransactionSplit, YIELD_PER
+from nummus.health_checks.base import HealthCheck
+from nummus.models.account import Account
+from nummus.models.base import YIELD_PER
 from nummus.models.currency import CURRENCY_FORMATS
+from nummus.models.transaction import TransactionSplit
+from nummus.models.transaction_category import TransactionCategory
 
 if TYPE_CHECKING:
     from decimal import Decimal
@@ -17,7 +20,7 @@ if TYPE_CHECKING:
     from nummus.models.currency import Currency
 
 
-class MissingAssetLink(Base):
+class MissingAssetLink(HealthCheck):
     """Checks for transactions that should be linked to an asset that aren't."""
 
     _DESC = "Checks for transactions that should be linked to an asset that aren't."

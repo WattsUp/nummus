@@ -5,21 +5,18 @@ from __future__ import annotations
 import datetime
 from typing import override, TYPE_CHECKING
 
-from nummus.health_checks.base import Base
-from nummus.models import (
-    Account,
-    Asset,
-    Transaction,
-    TransactionCategory,
-    TransactionSplit,
-    YIELD_PER,
-)
+from nummus.health_checks.base import HealthCheck
+from nummus.models.account import Account
+from nummus.models.asset import Asset
+from nummus.models.base import YIELD_PER
+from nummus.models.transaction import Transaction, TransactionSplit
+from nummus.models.transaction_category import TransactionCategory
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
 
-class EmptyFields(Base):
+class EmptyFields(HealthCheck):
     """Checks for empty fields that are better when populated."""
 
     _DESC = "Checks for empty fields that are better when populated."

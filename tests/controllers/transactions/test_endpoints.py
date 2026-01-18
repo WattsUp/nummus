@@ -7,15 +7,11 @@ import flask
 import pytest
 
 from nummus.controllers import base
-from nummus.models import (
-    Account,
-    Label,
-    LabelLink,
-    Transaction,
-    TransactionCategory,
-    TransactionSplit,
-)
+from nummus.models.account import Account
 from nummus.models.base import YIELD_PER
+from nummus.models.label import Label, LabelLink
+from nummus.models.transaction import Transaction, TransactionSplit
+from nummus.models.transaction_category import TransactionCategory
 
 if TYPE_CHECKING:
     import datetime

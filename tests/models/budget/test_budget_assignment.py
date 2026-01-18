@@ -8,20 +8,17 @@ import pytest
 
 from nummus import exceptions as exc
 from nummus import utils
-from nummus.models import (
+from nummus.models.budget import (
     BudgetAssignment,
     BudgetAvailableCategory,
-    Transaction,
-    TransactionCategory,
-    TransactionSplit,
 )
+from nummus.models.transaction import Transaction, TransactionSplit
+from nummus.models.transaction_category import TransactionCategory
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus.models import (
-        Account,
-    )
+    from nummus.models.account import Account
 
 
 def test_init_properties(

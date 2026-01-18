@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from typing import override, TYPE_CHECKING
 
-from nummus.commands.base import BaseCommand
+from nummus.commands.base import Command
 
 if TYPE_CHECKING:
     import argparse
     from pathlib import Path
 
 
-class Unlock(BaseCommand):
+class Unlock(Command):
     """Test unlocking portfolio."""
 
     NAME = "unlock"

@@ -6,9 +6,14 @@ import pytest
 from packaging.version import Version
 
 from nummus import exceptions as exc
-from nummus import migrations
-from nummus.migrations.base import SchemaMigrator
-from nummus.models import Asset, AssetCategory, AssetValuation, dump_table_configs
+from nummus.migrations.base import Migrator, SchemaMigrator
+from nummus.models.asset import (
+    Asset,
+    AssetCategory,
+    AssetValuation,
+)
+from nummus.models.utils import dump_table_configs
+from nummus.portfolio import Portfolio
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -16,7 +21,7 @@ if TYPE_CHECKING:
     from nummus.portfolio import Portfolio
 
 
-class MockMigrator(migrations.Migrator):
+class MockMigrator(Migrator):
 
     _VERSION = "999.0.0"
 

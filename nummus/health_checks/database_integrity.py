@@ -6,13 +6,13 @@ from typing import override, TYPE_CHECKING
 
 import sqlalchemy
 
-from nummus.health_checks.base import Base
+from nummus.health_checks.base import HealthCheck
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
 
-class DatabaseIntegrity(Base):
+class DatabaseIntegrity(HealthCheck):
     """Checks for issues in the underlying SQL database."""
 
     _DESC = "Checks for issues in the underlying SQL database."

@@ -8,23 +8,21 @@ import pytest
 import werkzeug.datastructures
 
 from nummus.controllers import base, budgeting
-from nummus.models import (
+from nummus.models.budget import (
     BudgetAssignment,
     BudgetGroup,
-    query_count,
     Target,
     TargetPeriod,
     TargetType,
-    TransactionCategory,
 )
+from nummus.models.transaction_category import TransactionCategory
+from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     import flask
     from sqlalchemy import orm
 
-    from nummus.models import (
-        Transaction,
-    )
+    from nummus.models.transaction import Transaction
     from tests.controllers.conftest import WebClient
 
 

@@ -7,16 +7,16 @@ from typing import override, TYPE_CHECKING
 
 from colorama import Fore
 
-from nummus.commands.base import BaseCommand
+from nummus.commands.base import Command
 
 if TYPE_CHECKING:
     import argparse
     from pathlib import Path
 
-    from nummus import health_checks
+    from nummus.health_checks.base import HealthCheck
 
 
-class Health(BaseCommand):
+class Health(Command):
     """Health check portfolio."""
 
     NAME = "health"
@@ -107,8 +107,9 @@ class Health(BaseCommand):
         # Defer for faster time to main
         import datetime
 
-        from nummus import health_checks
-        from nummus.models import Config, ConfigKey, HealthCheckIssue
+        from nummus.health_checks.top import HEALTH_CHECKS
+        from nummus.models.config import Config, ConfigKey
+        from nummus.models.health_checks import HealthCheckIssue
 
         p = self._p
 
@@ -125,7 +126,7 @@ class Health(BaseCommand):
         any_issues = False
         any_severe_issues = False
         first_uri: str | None = None
-        for check_type in health_checks.CHECKS:
+        for check_type in HEALTH_CHECKS:
             r = self._test_check(check_type)
             if r:
                 first_uri = first_uri or r
@@ -148,7 +149,7 @@ class Health(BaseCommand):
             return -1
         return 0
 
-    def _test_check(self, check_type: type[health_checks.Base]) -> str | None:
+    def _test_check(self, check_type: type[HealthCheck]) -> str | None:
         """Test a health check.
 
         Args:

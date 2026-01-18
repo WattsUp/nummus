@@ -6,7 +6,9 @@ import sqlalchemy
 from pandas.core.indexes.api import textwrap
 
 from nummus.health_checks.database_integrity import DatabaseIntegrity
-from nummus.models import Config, HealthCheckIssue, query_count
+from nummus.models.config import Config
+from nummus.models.health_checks import HealthCheckIssue
+from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     from sqlalchemy import orm

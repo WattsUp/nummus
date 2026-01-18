@@ -3,20 +3,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from nummus.health_checks.empty_fields import EmptyFields
-from nummus.models import (
-    HealthCheckIssue,
-    query_count,
-    TransactionCategory,
-)
+from nummus.models.health_checks import HealthCheckIssue
+from nummus.models.transaction_category import TransactionCategory
+from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus.models import (
-        Account,
-        Asset,
-        Transaction,
-    )
+    from nummus.models.account import Account
+    from nummus.models.asset import Asset
+    from nummus.models.transaction import Transaction
 
 
 def test_empty(session: orm.Session) -> None:

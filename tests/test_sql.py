@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING
 import pytest
 from sqlalchemy import orm
 
-from nummus import encryption, sql
+from nummus import sql
+from nummus.encryption.top import Encryption, ENCRYPTION_AVAILABLE
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -37,11 +38,11 @@ def test_get_engine_unencrypted(tmp_path: Path) -> None:
     assert b"SQLite" in path.read_bytes()
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="No encryption available")
 @pytest.mark.encryption
 def test_get_engine_encrypted(tmp_path: Path, rand_str: str) -> None:
     key = rand_str.encode()
-    enc, _ = encryption.Encryption.create(key)
+    enc, _ = Encryption.create(key)
 
     # Absolute file
     path = (tmp_path / "absolute.db").absolute()

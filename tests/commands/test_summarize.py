@@ -16,7 +16,12 @@ if TYPE_CHECKING:
     from sqlalchemy import orm
 
     from nummus.commands.summarize import _Summary
-    from nummus.models import Account, Asset, AssetValuation, Transaction
+    from nummus.models.account import Account
+    from nummus.models.asset import (
+        Asset,
+        AssetValuation,
+    )
+    from nummus.models.transaction import Transaction
     from nummus.portfolio import Portfolio
 
 

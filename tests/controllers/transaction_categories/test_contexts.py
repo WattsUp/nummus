@@ -3,7 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from nummus.controllers import base, transaction_categories
-from nummus.models import TransactionCategory, TransactionCategoryGroup, YIELD_PER
+from nummus.models.base import YIELD_PER
+from nummus.models.transaction_category import (
+    TransactionCategory,
+    TransactionCategoryGroup,
+)
 
 if TYPE_CHECKING:
     from sqlalchemy import orm

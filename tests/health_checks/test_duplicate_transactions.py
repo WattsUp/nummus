@@ -3,8 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from nummus.health_checks.duplicate_transactions import DuplicateTransactions
-from nummus.models import HealthCheckIssue, query_count, Transaction, TransactionSplit
-from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
+from nummus.models.currency import (
+    CURRENCY_FORMATS,
+    DEFAULT_CURRENCY,
+)
+from nummus.models.health_checks import HealthCheckIssue
+from nummus.models.transaction import Transaction, TransactionSplit
+from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
 

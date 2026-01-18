@@ -3,19 +3,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from nummus.health_checks.missing_valuations import MissingAssetValuations
-from nummus.models import (
-    HealthCheckIssue,
+from nummus.models.health_checks import HealthCheckIssue
+from nummus.models.utils import (
     query_count,
 )
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus.models import (
+    from nummus.models.asset import (
         Asset,
         AssetValuation,
-        Transaction,
     )
+    from nummus.models.transaction import Transaction
 
 
 def test_empty(session: orm.Session) -> None:

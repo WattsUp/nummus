@@ -10,12 +10,14 @@ import flask
 import pytest
 
 import nummus
-from nummus import __version__, controllers
 from nummus import exceptions as exc
 from nummus import utils
 from nummus.controllers import base
-from nummus.models import Account, AssetValuation, TransactionCategoryGroup
+from nummus.models.account import Account
+from nummus.models.asset import AssetValuation
 from nummus.models.currency import DEFAULT_CURRENCY
+from nummus.models.transaction_category import TransactionCategoryGroup
+from nummus.version import __version__
 from tests import conftest
 
 if TYPE_CHECKING:
@@ -24,7 +26,7 @@ if TYPE_CHECKING:
     import werkzeug.test
     from sqlalchemy import orm
 
-    from nummus.models import Asset
+    from nummus.models.asset import Asset
     from tests.conftest import RandomStringGenerator
     from tests.controllers.conftest import HTMLValidator, WebClient
 
@@ -391,20 +393,6 @@ def test_page_hx(web_client: WebClient) -> None:
     assert "<title>" in result
     assert "<html" not in result
     assert "HX-Request" in headers["Vary"]
-
-
-def test_add_routes() -> None:
-    app = flask.Flask(__file__)
-    app.debug = False
-    controllers.add_routes(app)
-
-    routes = app.url_map
-    for rule in routes.iter_rules():
-        assert not rule.endpoint.startswith("nummus.controllers.")
-        assert not rule.endpoint.startswith(".")
-        assert rule.rule.startswith("/")
-        assert not rule.rule.startswith("/d/")
-        assert not (rule.rule != "/" and rule.rule.endswith("/"))
 
 
 def test_metrics(web_client: WebClient, asset: Asset) -> None:

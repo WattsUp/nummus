@@ -4,7 +4,8 @@ import shutil
 from typing import TYPE_CHECKING
 
 from nummus.migrations.v0_10 import MigratorV0_10
-from nummus.models import dump_table_configs, TransactionCategory
+from nummus.models.transaction import TransactionCategory
+from nummus.models.utils import dump_table_configs
 from nummus.portfolio import Portfolio
 
 if TYPE_CHECKING:

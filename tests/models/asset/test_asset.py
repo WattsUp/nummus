@@ -7,28 +7,30 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus import exceptions as exc
-from nummus.models import (
+from nummus.models.asset import (
     Asset,
     AssetCategory,
     AssetSector,
     AssetValuation,
-    LabelLink,
-    query_count,
-    query_to_dict,
-    update_rows,
     USSector,
 )
 from nummus.models.currency import Currency, DEFAULT_CURRENCY
+from nummus.models.label import LabelLink
+from nummus.models.utils import (
+    query_count,
+    query_to_dict,
+    update_rows,
+)
 from tests import conftest
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus.models import (
-        Account,
+    from nummus.models.account import Account
+    from nummus.models.asset import (
         AssetSplit,
-        Transaction,
     )
+    from nummus.models.transaction import Transaction
     from tests.conftest import RandomStringGenerator
 
 

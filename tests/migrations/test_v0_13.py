@@ -4,12 +4,11 @@ import shutil
 from typing import TYPE_CHECKING
 
 from nummus.migrations.v0_13 import MigratorV0_13
-from nummus.models import (
+from nummus.models.label import Label, LabelLink
+from nummus.models.transaction import TransactionSplit
+from nummus.models.utils import (
     dump_table_configs,
-    Label,
-    LabelLink,
     query_count,
-    TransactionSplit,
 )
 from nummus.portfolio import Portfolio
 

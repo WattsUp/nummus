@@ -13,10 +13,32 @@ import prometheus_client
 import prometheus_flask_exporter
 import prometheus_flask_exporter.multiprocess
 
-from nummus import __version__, controllers, utils, web_assets
-from nummus.controllers import auth, base
-from nummus.models import Config, ConfigKey
+from nummus import controllers
+from nummus import exceptions as exc
+from nummus import utils, web_assets
+from nummus.controllers import (
+    accounts,
+    allocation,
+    assets,
+    auth,
+    base,
+    budgeting,
+    common,
+    emergency_fund,
+    health,
+    import_file,
+    income,
+    labels,
+    net_worth,
+    performance,
+    settings,
+    spending,
+    transaction_categories,
+    transactions,
+)
+from nummus.models.config import Config, ConfigKey
 from nummus.portfolio import Portfolio
+from nummus.version import __version__
 
 if TYPE_CHECKING:
     import jinja2
@@ -39,7 +61,7 @@ class FlaskExtension:
         self._original_url_for = app.url_for
         app.url_for = self.url_for
 
-        controllers.add_routes(app)
+        self._add_routes(app)
         web_assets.build_bundles(app)
         self._init_auth(app, self._portfolio)
         self._init_jinja_env(app.jinja_env)
@@ -70,6 +92,40 @@ class FlaskExtension:
                 key = path_key.read_text("utf-8").strip()
 
         return Portfolio(path, key)
+
+    @classmethod
+    def _add_routes(cls, app: flask.Flask) -> None:
+        module = [
+            accounts,
+            allocation,
+            assets,
+            auth,
+            budgeting,
+            common,
+            emergency_fund,
+            health,
+            import_file,
+            income,
+            net_worth,
+            performance,
+            settings,
+            spending,
+            labels,
+            transactions,
+            transaction_categories,
+        ]
+        n_trim = len(controllers.__name__) + 1
+        urls: set[str] = set()
+        for m in module:
+            routes: base.Routes = m.ROUTES
+            for url, (view_func, methods) in routes.items():
+                endpoint = f"{m.__name__[n_trim:]}.{view_func.__name__}"
+                if url in urls:  # pragma: no cover
+                    raise exc.DuplicateURLError(url, endpoint)
+                if url.startswith("/d/") and not app.debug:
+                    continue
+                urls.add(url)
+                app.add_url_rule(url, endpoint, view_func, methods=methods)
 
     @classmethod
     def _init_auth(cls, app: flask.Flask, p: Portfolio) -> None:

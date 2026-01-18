@@ -6,16 +6,16 @@ import datetime
 import textwrap
 from typing import override, TYPE_CHECKING
 
-from nummus.health_checks.base import Base
-from nummus.models import (
-    Account,
-    query_to_dict,
+from nummus.health_checks.base import HealthCheck
+from nummus.models.account import Account
+from nummus.models.base import YIELD_PER
+from nummus.models.currency import CURRENCY_FORMATS
+from nummus.models.transaction import TransactionSplit
+from nummus.models.transaction_category import (
     TransactionCategory,
     TransactionCategoryGroup,
-    TransactionSplit,
-    YIELD_PER,
 )
-from nummus.models.currency import CURRENCY_FORMATS
+from nummus.models.utils import query_to_dict
 
 if TYPE_CHECKING:
     from decimal import Decimal
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from nummus.models.currency import Currency
 
 
-class CategoryDirection(Base):
+class CategoryDirection(HealthCheck):
     """Checks for direction (inflow/outflow) of transactions match category."""
 
     _DESC = textwrap.dedent(

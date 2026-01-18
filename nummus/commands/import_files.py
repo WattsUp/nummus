@@ -8,13 +8,13 @@ from typing import override, TYPE_CHECKING
 
 from colorama import Fore
 
-from nummus.commands.base import BaseCommand
+from nummus.commands.base import Command
 
 if TYPE_CHECKING:
     import argparse
 
 
-class Import(BaseCommand):
+class Import(Command):
     """Import files into portfolio."""
 
     NAME = "import"

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus import exceptions as exc
-from nummus.models import Target, TargetPeriod, TargetType
+from nummus.models.budget import Target, TargetPeriod, TargetType
 from tests import conftest
 
 if TYPE_CHECKING:

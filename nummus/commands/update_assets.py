@@ -7,14 +7,14 @@ from typing import override, TYPE_CHECKING
 
 from colorama import Fore
 
-from nummus.commands.base import BaseCommand
+from nummus.commands.base import Command
 
 if TYPE_CHECKING:
     import argparse
     from pathlib import Path
 
 
-class UpdateAssets(BaseCommand):
+class UpdateAssets(Command):
     """Update valuations for assets."""
 
     NAME = "update-assets"

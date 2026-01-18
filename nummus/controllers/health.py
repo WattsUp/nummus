@@ -9,9 +9,12 @@ from typing import TYPE_CHECKING, TypedDict
 
 import flask
 
-from nummus import health_checks, web
+from nummus import web
 from nummus.controllers import base
-from nummus.models import Config, ConfigKey, HealthCheckIssue, YIELD_PER
+from nummus.health_checks.top import HEALTH_CHECKS
+from nummus.models.base import YIELD_PER
+from nummus.models.config import Config, ConfigKey
+from nummus.models.health_checks import HealthCheckIssue
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -120,7 +123,7 @@ def ctx_checks(s: orm.Session, *, run: bool) -> HealthContext:
             issues[i.check][i.uri] = i.msg
 
     checks: list[HealthCheckContext] = []
-    for check_type in health_checks.CHECKS:
+    for check_type in HEALTH_CHECKS:
         name = check_type.name()
 
         if run:

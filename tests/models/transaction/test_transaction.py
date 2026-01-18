@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from nummus.models import Transaction
+from nummus.models.transaction import Transaction
 
 if TYPE_CHECKING:
     import datetime
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy import orm
 
-    from nummus.models import Account
+    from nummus.models.account import Account
     from tests.conftest import RandomStringGenerator
 
 
