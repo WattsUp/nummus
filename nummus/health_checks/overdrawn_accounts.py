@@ -8,18 +8,19 @@ from typing import override, TYPE_CHECKING
 
 from sqlalchemy import func
 
-from nummus import utils
 from nummus.health_checks.base import Base
 from nummus.models import (
     Account,
     AccountCategory,
-    query_to_dict,
     TransactionSplit,
     YIELD_PER,
 )
+from nummus.models.currency import CURRENCY_FORMATS
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
+
+    from nummus.models.currency import Currency
 
 
 class OverdrawnAccounts(Base):
@@ -38,10 +39,12 @@ class OverdrawnAccounts(Base):
         ]
         query = (
             s.query(Account)
-            .with_entities(Account.id_, Account.name)
+            .with_entities(Account.id_, Account.name, Account.currency)
             .where(Account.category.not_in(categories_exclude))
         )
-        accounts: dict[int, str] = query_to_dict(query)
+        accounts: dict[int, tuple[str, Currency]] = {
+            r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
+        }
         acct_ids = set(accounts)
 
         issues: list[tuple[str, str, str]] = []
@@ -62,7 +65,8 @@ class OverdrawnAccounts(Base):
             return
         n = end_ord - start_ord + 1
 
-        for acct_id, name in accounts.items():
+        for acct_id, (acct_name, currency) in accounts.items():
+            cf = CURRENCY_FORMATS[currency]
             # Get cash holdings across all time
             cash_flow: list[Decimal | None] = [None] * n
             query = (
@@ -97,8 +101,8 @@ class OverdrawnAccounts(Base):
                     signalled = True
                     date = datetime.date.fromordinal(date_ord)
                     uri = f"{acct_id}.{date_ord}"
-                    source = f"{date} - {name}"
-                    issues.append((uri, source, utils.format_financial(cash)))
+                    source = f"{date} - {acct_name}"
+                    issues.append((uri, source, cf(cash)))
                 elif cash >= 0:
                     signalled = False
 

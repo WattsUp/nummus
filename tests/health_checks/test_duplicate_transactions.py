@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from nummus import utils
 from nummus.health_checks.duplicate_transactions import DuplicateTransactions
 from nummus.models import HealthCheckIssue, query_count, Transaction, TransactionSplit
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
 
@@ -60,5 +60,6 @@ def test_duplicate(
     assert i.value == f"{txn.account_id}.{txn.date_ord}.{amount_raw}"
     uri = i.uri
 
-    target = f"{txn.date} - Monkey bank checking: {utils.format_financial(txn.amount)}"
+    cf = CURRENCY_FORMATS[DEFAULT_CURRENCY]
+    target = f"{txn.date} - Monkey bank checking: {cf(txn.amount)}"
     assert c.issues == {uri: target}

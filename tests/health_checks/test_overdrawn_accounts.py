@@ -3,9 +3,9 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from nummus import utils
 from nummus.health_checks.overdrawn_accounts import OverdrawnAccounts
 from nummus.models import HealthCheckIssue, query_count
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -46,7 +46,6 @@ def test_check(
     assert i.value == f"{account.id_}.{t_split.date_ord}"
     uri = i.uri
 
-    target = (
-        f"{t_split.date} - {account.name}: {utils.format_financial(t_split.amount)}"
-    )
+    cf = CURRENCY_FORMATS[DEFAULT_CURRENCY]
+    target = f"{t_split.date} - {account.name}: {cf(t_split.amount)}"
     assert c.issues == {uri: target}

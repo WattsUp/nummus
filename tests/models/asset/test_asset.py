@@ -18,7 +18,7 @@ from nummus.models import (
     update_rows,
     USSector,
 )
-from nummus.models.currency import DEFAULT_CURRENCY
+from nummus.models.currency import Currency, DEFAULT_CURRENCY
 from tests import conftest
 
 if TYPE_CHECKING:
@@ -272,10 +272,11 @@ def test_update_valuations_empty(session: orm.Session, asset: Asset) -> None:
 
 
 @pytest.mark.parametrize(
-    ("category", "ticker"),
+    ("category", "ticker", "i_txn"),
     [
-        (AssetCategory.STOCKS, "BANANA"),
-        (AssetCategory.INDEX, "^BANANA"),
+        (AssetCategory.STOCKS, "BANANA", 1),
+        (AssetCategory.INDEX, "^BANANA", 1),
+        (AssetCategory.FOREX, "BANANA=X", 0),
     ],
 )
 def test_update_valuations(
@@ -283,29 +284,25 @@ def test_update_valuations(
     session: orm.Session,
     transactions: list[Transaction],
     category: AssetCategory,
+    asset: Asset,
     ticker: str,
+    i_txn: int,
 ) -> None:
-    _ = transactions
-
-    # Get first Asset
-    asset = session.query(Asset).where(Asset.category == category).first()
-    assert asset is not None
+    asset.category = category
     asset.ticker = ticker
 
     start, end = asset.update_valuations(through_today=True)
     # 7 days before first transaction
-    assert start == (today - datetime.timedelta(days=2 + 7))
+    assert start is not None
+    assert end is not None
+    assert start == (transactions[i_txn].date - datetime.timedelta(days=7))
     assert end == today
-    n_weekdays = {
-        0: 6,
-        1: 7,
-        2: 8,
-        3: 8,
-        4: 8,
-        5: 7,
-        6: 6,
-    }[today.weekday()]
-    assert query_count(session.query(AssetValuation)) == n_weekdays
+
+    n = 0
+    while start <= end:
+        n += 0 if start.weekday() in {5, 6} else 1
+        start += datetime.timedelta(days=1)
+    assert query_count(session.query(AssetValuation)) == n
 
 
 def test_update_valuations_delisted(
@@ -414,3 +411,46 @@ def test_autodetect_interpolate_daily(
     _ = valuations
     asset.autodetect_interpolate()
     assert not asset.interpolate
+
+
+def test_create_forex(session: orm.Session, asset: Asset) -> None:
+    asset.ticker = "EURUSD=X"
+    asset.category = AssetCategory.FOREX
+
+    Asset.create_forex(session, Currency.USD, {*Currency})
+
+    query = session.query(Asset).where(Asset.category == AssetCategory.FOREX)
+    # -1 since don't need USDUSD=x
+    assert query_count(query) == len(Currency) - 1
+
+
+def test_create_forex_none(session: orm.Session) -> None:
+    Asset.create_forex(session, Currency.USD, set())
+
+    query = session.query(Asset).where(Asset.category == AssetCategory.FOREX)
+    assert query_count(query) == 0
+
+
+def test_get_forex_empty(session: orm.Session, today_ord: int) -> None:
+    result = Asset.get_forex(session, today_ord, today_ord, DEFAULT_CURRENCY)
+    assert result[DEFAULT_CURRENCY] == [Decimal(1)]
+
+
+def test_get_forex(
+    session: orm.Session,
+    today_ord: int,
+    asset: Asset,
+    asset_valuation: AssetValuation,
+) -> None:
+    asset.ticker = "EURUSD=X"
+    asset.category = AssetCategory.FOREX
+    asset.currency = Currency.USD
+
+    result = Asset.get_forex(
+        session,
+        today_ord,
+        today_ord,
+        Currency.USD,
+        {Currency.EUR},
+    )
+    assert result[Currency.EUR] == [asset_valuation.value]

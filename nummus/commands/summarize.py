@@ -7,10 +7,14 @@ from decimal import Decimal
 from typing import override, TYPE_CHECKING, TypedDict
 
 from nummus.commands.base import BaseCommand
+from nummus.models.config import Config
+from nummus.models.currency import CURRENCY_FORMATS
 
 if TYPE_CHECKING:
     import argparse
     from pathlib import Path
+
+    from nummus.models.currency import CurrencyFormat
 
 
 class _AccountSummary(TypedDict):
@@ -22,6 +26,7 @@ class _AccountSummary(TypedDict):
     value: Decimal
     age: str
     profit: Decimal
+    cf: CurrencyFormat
 
 
 class _AssetSummary(TypedDict):
@@ -33,6 +38,7 @@ class _AssetSummary(TypedDict):
     profit: Decimal
     category: str
     ticker: str | None
+    cf: CurrencyFormat
 
 
 class _Summary(TypedDict):
@@ -47,6 +53,7 @@ class _Summary(TypedDict):
     total_asset_value: Decimal
     assets: list[_AssetSummary]
     db_size: int
+    cf: CurrencyFormat
 
 
 class Summarize(BaseCommand):
@@ -163,6 +170,7 @@ class Summarize(BaseCommand):
                             today_ord - (acct.opened_on_ord or today_ord),
                         ),
                         "profit": profit,
+                        "cf": CURRENCY_FORMATS[acct.currency],
                     },
                 )
 
@@ -198,6 +206,7 @@ class Summarize(BaseCommand):
                         "category": a.category.name.replace("_", " ").capitalize(),
                         "value": v,
                         "profit": profit,
+                        "cf": CURRENCY_FORMATS[a.currency],
                     },
                 )
             summary_assets = sorted(
@@ -208,17 +217,19 @@ class Summarize(BaseCommand):
                     item["name"].lower(),
                 ),
             )
-        return {
-            "n_accounts": n_accounts,
-            "n_assets": n_assets,
-            "n_transactions": n_transactions,
-            "n_valuations": n_valuations,
-            "net_worth": net_worth,
-            "accounts": summary_accts,
-            "total_asset_value": total_asset_value,
-            "assets": summary_assets,
-            "db_size": self._p.path.stat().st_size,
-        }
+
+            return {
+                "n_accounts": n_accounts,
+                "n_assets": n_assets,
+                "n_transactions": n_transactions,
+                "n_valuations": n_valuations,
+                "net_worth": net_worth,
+                "accounts": summary_accts,
+                "total_asset_value": total_asset_value,
+                "assets": summary_assets,
+                "db_size": self._p.path.stat().st_size,
+                "cf": CURRENCY_FORMATS[Config.base_currency(s)],
+            }
 
     @classmethod
     def _print_summary(cls, summary: _Summary) -> None:
@@ -257,8 +268,8 @@ class Summarize(BaseCommand):
                 acct["name"],
                 acct["institution"],
                 acct["category"],
-                utils.format_financial(acct["value"]),
-                utils.format_financial(acct["profit"]),
+                acct["cf"](acct["value"]),
+                acct["cf"](acct["profit"]),
                 acct["age"],
             ]
             for acct in summary["accounts"]
@@ -270,7 +281,7 @@ class Summarize(BaseCommand):
                     "Total",
                     "",
                     "",
-                    utils.format_financial(summary["net_worth"]),
+                    summary["cf"](summary["net_worth"]),
                     "",
                     "",
                 ],
@@ -302,8 +313,8 @@ class Summarize(BaseCommand):
                 asset["description"] or "",
                 asset["category"],
                 asset["ticker"] or "",
-                utils.format_financial(asset["value"]),
-                utils.format_financial(asset["profit"]),
+                asset["cf"](asset["value"]),
+                asset["cf"](asset["profit"]),
             ]
             for asset in summary["assets"]
         )
@@ -314,7 +325,7 @@ class Summarize(BaseCommand):
                 "",
                 "",
                 "",
-                utils.format_financial(summary["total_asset_value"]),
+                summary["cf"](summary["total_asset_value"]),
                 "",
             ],
         )

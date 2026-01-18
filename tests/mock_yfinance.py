@@ -52,7 +52,7 @@ class MockTicker:
     ) -> pd.DataFrame:
         assert actions
         assert raise_errors
-        if self._symbol not in {"BANANA", "^BANANA"}:
+        if self._symbol not in {"BANANA", "^BANANA", "BANANA=X"}:
             msg = f"{self._symbol}: No timezone found, symbol may be delisted"
             raise Exception(msg)
 

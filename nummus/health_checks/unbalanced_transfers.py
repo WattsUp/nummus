@@ -9,7 +9,6 @@ from collections import defaultdict
 from decimal import Decimal
 from typing import override, TYPE_CHECKING
 
-from nummus import utils
 from nummus.health_checks.base import Base
 from nummus.models import (
     Account,
@@ -19,9 +18,12 @@ from nummus.models import (
     TransactionSplit,
     YIELD_PER,
 )
+from nummus.models.currency import CURRENCY_FORMATS
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
+
+    from nummus.models.currency import Currency
 
 
 class UnbalancedTransfers(Base):
@@ -45,7 +47,14 @@ class UnbalancedTransfers(Base):
         )
         cat_transfers_ids: dict[int, str] = query_to_dict(query)
 
-        accounts = Account.map_name(s)
+        query = s.query(Account).with_entities(
+            Account.id_,
+            Account.name,
+            Account.currency,
+        )
+        accounts: dict[int, tuple[str, Currency]] = {
+            r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
+        }
 
         query = (
             s.query(TransactionSplit)
@@ -60,7 +69,7 @@ class UnbalancedTransfers(Base):
         )
         current_date_ord: int | None = None
         total = defaultdict(Decimal)
-        current_splits: dict[int, list[tuple[str, Decimal]]] = defaultdict(list)
+        current_splits: dict[int, list[tuple[int, Decimal]]] = defaultdict(list)
         for acct_id, date_ord, amount, t_cat_id in query.yield_per(YIELD_PER):
             acct_id: int
             date_ord: int
@@ -73,6 +82,7 @@ class UnbalancedTransfers(Base):
                         current_date_ord,
                         current_splits,
                         cat_transfers_ids,
+                        accounts,
                     )
                     issues[uri] = msg
                 current_date_ord = date_ord
@@ -80,13 +90,14 @@ class UnbalancedTransfers(Base):
                 current_splits = defaultdict(list)
 
             total[t_cat_id] += amount
-            current_splits[t_cat_id].append((accounts[acct_id], amount))
+            current_splits[t_cat_id].append((acct_id, amount))
 
         if any(v != 0 for v in total.values()) and current_date_ord is not None:
             uri, msg = self._create_issue(
                 current_date_ord,
                 current_splits,
                 cat_transfers_ids,
+                accounts,
             )
             issues[uri] = msg
 
@@ -96,8 +107,9 @@ class UnbalancedTransfers(Base):
     def _create_issue(
         cls,
         date_ord: int,
-        categories: dict[int, list[tuple[str, Decimal]]],
+        categories: dict[int, list[tuple[int, Decimal]]],
         cat_transfers_ids: dict[int, str],
+        accounts: dict[int, tuple[str, Currency]],
     ) -> tuple[str, str]:
         date = datetime.date.fromordinal(date_ord)
         date_str = date.isoformat()
@@ -105,7 +117,7 @@ class UnbalancedTransfers(Base):
             f"{date}: Sum of transfers on this day are non-zero",
         ]
 
-        all_splits: list[tuple[str, Decimal, int]] = []
+        all_splits: list[tuple[str, str, int]] = []
         for t_cat_id, splits in categories.items():
             # Remove any that are exactly equal since those are probably
             # balanced amongst themselves
@@ -127,14 +139,16 @@ class UnbalancedTransfers(Base):
                 # new value at i
                 if not found_any:
                     i += 1
-            all_splits.extend((account, amount, t_cat_id) for account, amount in splits)
+
+            for acct_id, amount in splits:
+                acct_name, currency = accounts[acct_id]
+                cf = CURRENCY_FORMATS[currency]
+                all_splits.append((acct_name, cf(amount, plus=True), t_cat_id))
 
         all_splits = sorted(all_splits, key=operator.itemgetter(2, 0, 1))
         acct_len = max(len(item[0]) for item in all_splits)
         msg_l.extend(
-            f"  {acct:{acct_len}}: "
-            f"{utils.format_financial(amount, plus=True):>14} "
-            f"{cat_transfers_ids[t_cat_id]}"
+            f"  {acct:{acct_len}}: {amount:>14} {cat_transfers_ids[t_cat_id]}"
             for acct, amount, t_cat_id in all_splits
         )
         return date_str, "\n".join(msg_l)

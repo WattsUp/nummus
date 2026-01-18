@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from sqlalchemy import orm
 
     from nummus.models import TransactionSplit
+    from nummus.models.currency import Currency
 
 
 class Export(BaseCommand):
@@ -130,9 +131,9 @@ def write_csv(
     # Defer for faster time to main
     import tqdm
 
-    from nummus import utils
     from nummus.models import (
         Account,
+        CURRENCY_FORMATS,
         query_count,
         TransactionCategory,
         TransactionSplit,
@@ -140,7 +141,16 @@ def write_csv(
     )
 
     s = transactions_query.session
-    accounts = Account.map_name(s)
+
+    query = s.query(Account).with_entities(
+        Account.id_,
+        Account.name,
+        Account.currency,
+    )
+    accounts: dict[int, tuple[str, Currency]] = {
+        r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
+    }
+
     categories = TransactionCategory.map_name_emoji(s)
 
     query = transactions_query.with_entities(
@@ -175,14 +185,17 @@ def write_csv(
         desc="Exporting",
         disable=no_bars,
     ):
+        acct_name, currency = accounts[acct_id]
+        cf = CURRENCY_FORMATS[currency]
+
         lines.append(
             [
                 datetime.date.fromordinal(date).isoformat(),
-                accounts[acct_id],
+                acct_name,
                 payee,
                 memo,
                 categories[t_cat_id],
-                utils.format_financial(amount),
+                cf(amount),
             ],
         )
 

@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from nummus import utils
 from nummus.health_checks.category_direction import CategoryDirection
 from nummus.models import (
     HealthCheckIssue,
@@ -13,6 +12,7 @@ from nummus.models import (
     Transaction,
     TransactionSplit,
 )
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     import datetime
@@ -72,14 +72,15 @@ def test_check(
     assert i.value == t_uri
     uri = i.uri
 
+    cf = CURRENCY_FORMATS[DEFAULT_CURRENCY]
     if amount < 0:
         target = (
-            f"{today} - Monkey bank checking: {utils.format_financial(amount)} "
+            f"{today} - Monkey bank checking: {cf(amount)} "
             f"to [blank] has negative amount with income category {category_name}"
         )
     else:
         target = (
-            f"{today} - Monkey bank checking: {utils.format_financial(amount)} "
+            f"{today} - Monkey bank checking: {cf(amount)} "
             f"to [blank] has positive amount with expense category {category_name}"
         )
     assert c.issues == {uri: target}

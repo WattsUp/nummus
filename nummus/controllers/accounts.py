@@ -235,7 +235,9 @@ def new() -> str | flask.Response:
         budgeted = "budgeted" in form
 
         if budgeted and currency != base_currency:
-            return base.error("Budgeted account must be in base currency")
+            return base.error(
+                f"Budgeted account must be in {base_currency.name}",
+            )
 
         try:
             with s.begin_nested():
