@@ -470,22 +470,13 @@ def test_follow_links(web_client: WebClient) -> None:
         visit_all_links(link, "DELETE", hx=True)
 
 
-def test_update_client_timezone_refresh(web_client: WebClient) -> None:
-    _, headers = web_client.GET(
+def test_update_client_timezone(web_client: WebClient) -> None:
+    web_client.GET(
         "common.page_dashboard",
         headers={"Timezone-Offset": 8 * 60},
     )
-    assert "HX-Refresh" in headers
-
-
-def test_update_client_timezone(web_client: WebClient) -> None:
     with web_client.session() as session:
-        session["tz_minutes"] = 8 * 60
-        _, headers = web_client.GET(
-            "common.page_dashboard",
-            headers={"Timezone-Offset": 8 * 60},
-        )
-    assert "HX-Refresh" in headers
+        assert session["tz_minutes"] == 8 * 60
 
 
 def test_change_redirect_no_changes() -> None:

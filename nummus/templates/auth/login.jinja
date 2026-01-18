@@ -8,6 +8,7 @@
   {% endwith %}
   <body
     class="bg-primary-container text-on-primary-container"
+    hx-on::config-request="addTimezone(event)"
     hx-on::send-error="nummusSendError(event)"
     hx-on::response-error="nummusResponseError(event)"
   >
