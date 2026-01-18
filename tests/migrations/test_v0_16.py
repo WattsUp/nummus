@@ -4,11 +4,11 @@ import shutil
 from typing import TYPE_CHECKING
 
 from nummus.migrations.v0_16 import MigratorV0_16
-from nummus.models import dump_table_configs
 from nummus.models.account import Account
 from nummus.models.asset import Asset
 from nummus.models.config import Config
 from nummus.models.currency import Currency
+from nummus.models.utils import dump_table_configs
 from nummus.portfolio import Portfolio
 
 if TYPE_CHECKING:

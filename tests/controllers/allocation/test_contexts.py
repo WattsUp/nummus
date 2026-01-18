@@ -11,7 +11,12 @@ if TYPE_CHECKING:
 
     from sqlalchemy import orm
 
-    from nummus.models import Asset, AssetSector, AssetValuation, Transaction
+    from nummus.models.asset import (
+        Asset,
+        AssetSector,
+        AssetValuation,
+    )
+    from nummus.models.transaction import Transaction
 
 
 def test_ctx_empty(today: datetime.date, session: orm.Session) -> None:

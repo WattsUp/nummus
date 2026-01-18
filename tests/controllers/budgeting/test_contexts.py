@@ -8,24 +8,26 @@ import pytest
 
 from nummus import utils
 from nummus.controllers import budgeting
-from nummus.models import (
+from nummus.models.budget import (
     BudgetAssignment,
     TargetPeriod,
     TargetType,
-    TransactionCategory,
 )
-from nummus.models.transaction_category import TransactionCategoryGroup
+from nummus.models.transaction_category import (
+    TransactionCategory,
+    TransactionCategoryGroup,
+)
 
 if TYPE_CHECKING:
     import datetime
 
     from sqlalchemy import orm
 
-    from nummus.models import (
+    from nummus.models.budget import (
         BudgetGroup,
         Target,
-        Transaction,
     )
+    from nummus.models.transaction import Transaction
 
 
 def test_ctx_sidebar_global(

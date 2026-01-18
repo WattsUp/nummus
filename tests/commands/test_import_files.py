@@ -12,7 +12,8 @@ if TYPE_CHECKING:
     import datetime
     from pathlib import Path
 
-    from nummus.models import Account, Asset
+    from nummus.models.account import Account
+    from nummus.models.asset import Asset
     from nummus.portfolio import Portfolio
 
 

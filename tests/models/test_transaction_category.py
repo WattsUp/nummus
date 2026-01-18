@@ -5,12 +5,15 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus import exceptions as exc
-from nummus.models import TransactionCategory, TransactionCategoryGroup
+from nummus.models.transaction_category import (
+    TransactionCategory,
+    TransactionCategoryGroup,
+)
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus.models import BudgetGroup
+    from nummus.models.budget import BudgetGroup
 
 
 def test_init_properties(

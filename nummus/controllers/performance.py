@@ -13,10 +13,17 @@ from sqlalchemy import func
 
 from nummus import utils, web
 from nummus.controllers import base
-from nummus.models import Account, AccountCategory, Asset, TransactionSplit
-from nummus.models.asset import AssetCategory
+from nummus.models.account import Account, AccountCategory
+from nummus.models.asset import (
+    Asset,
+    AssetCategory,
+)
 from nummus.models.config import Config
-from nummus.models.currency import CURRENCY_FORMATS
+from nummus.models.currency import (
+    Currency,
+    CURRENCY_FORMATS,
+)
+from nummus.models.transaction import TransactionSplit
 
 if TYPE_CHECKING:
     from sqlalchemy import orm

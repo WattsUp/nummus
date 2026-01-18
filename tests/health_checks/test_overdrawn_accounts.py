@@ -4,13 +4,15 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from nummus.health_checks.overdrawn_accounts import OverdrawnAccounts
-from nummus.models import HealthCheckIssue, query_count
 from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
+from nummus.models.health_checks import HealthCheckIssue
+from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus.models import Account, Transaction
+    from nummus.models.account import Account
+    from nummus.models.transaction import Transaction
 
 
 def test_empty(session: orm.Session) -> None:

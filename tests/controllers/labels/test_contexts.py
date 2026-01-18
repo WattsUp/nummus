@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from nummus.controllers import base
 from nummus.controllers import labels as label_controller
-from nummus.models import Label
+from nummus.models.label import Label
 
 if TYPE_CHECKING:
     from sqlalchemy import orm

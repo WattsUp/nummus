@@ -70,7 +70,7 @@ test = [
 ]
 dev = [
   "nummus-financial[deploy,test]",
-  "ruff>=0.14.10",
+  "ruff>=0.14.13",
   "codespell>=2.4.1",
   "black>=25.9",
   "isort",
@@ -175,6 +175,7 @@ ignore = [
   "PLR0915", # Too many statements
   "PLR0917", # Too many positional arguments
   "CPY001",  # No copyright
+  "D104",    # Missing docstring in public package
   "D203",    # No blank line before pydocs
   "D213",    # Summary on not on second line
 ]
@@ -204,7 +205,6 @@ exclude = [
   "D101",
   "D102",
   "D103",
-  "D104",
   "D105",
   "D106",
   "D107",
@@ -236,6 +236,9 @@ runtime-evaluated-base-classes = [
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.lint.ruff]
+strictly-empty-init-modules = true
 
 [tool.setuptools]
 include-package-data = false

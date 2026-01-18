@@ -6,13 +6,16 @@ from typing import TYPE_CHECKING
 from colorama import Fore
 
 from nummus.commands.update_assets import UpdateAssets
-from nummus.models import Asset, AssetCategory
+from nummus.models.asset import (
+    Asset,
+    AssetCategory,
+)
 
 if TYPE_CHECKING:
 
     import pytest
 
-    from nummus.models import Transaction
+    from nummus.models.transaction import Transaction
     from nummus.portfolio import Portfolio
 
 

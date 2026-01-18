@@ -5,8 +5,13 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus.controllers import base
-from nummus.models import Asset, AssetCategory, AssetValuation, query_count
+from nummus.models.asset import (
+    Asset,
+    AssetCategory,
+    AssetValuation,
+)
 from nummus.models.currency import Currency, CURRENCY_FORMATS, DEFAULT_CURRENCY
+from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     import datetime
@@ -14,7 +19,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy import orm
 
-    from nummus.models import Transaction
+    from nummus.models.transaction import Transaction
     from tests.controllers.conftest import WebClient
 
 

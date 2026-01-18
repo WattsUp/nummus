@@ -20,29 +20,33 @@ import tqdm
 from packaging.version import Version
 from sqlalchemy import func, orm
 
-from nummus import __version__, encryption
 from nummus import exceptions as exc
-from nummus import importers, migrations, models, sql, utils
-from nummus.models import (
-    Account,
-    Asset,
-    Config,
-    ConfigKey,
-    ImportedFile,
+from nummus import sql, utils
+from nummus.encryption.top import Encryption, ENCRYPTION_AVAILABLE
+from nummus.importers.top import get_importer, get_importers
+from nummus.migrations.top import MIGRATORS
+from nummus.models.account import Account
+from nummus.models.asset import Asset
+from nummus.models.base import Base, YIELD_PER
+from nummus.models.base_uri import Cipher, load_cipher
+from nummus.models.config import Config, ConfigKey
+from nummus.models.currency import (
+    Currency,
+    DEFAULT_CURRENCY,
+)
+from nummus.models.imported_file import ImportedFile
+from nummus.models.transaction import Transaction, TransactionSplit
+from nummus.models.transaction_category import TransactionCategory
+from nummus.models.utils import (
     one_or_none,
     query_to_dict,
-    Transaction,
-    TransactionCategory,
-    TransactionSplit,
-    YIELD_PER,
 )
-from nummus.models.currency import DEFAULT_CURRENCY
+from nummus.version import __version__
 
 if TYPE_CHECKING:
     import contextlib
 
     from nummus.importers.base import TxnDict
-    from nummus.models import Base
     from nummus.models.currency import Currency
 
 
@@ -95,14 +99,14 @@ class Portfolio:
             self._enc = None
         elif self._path_salt.exists():
             enc_config = self._path_salt.read_bytes()
-            self._enc = encryption.Encryption(key, enc_config)
+            self._enc = Encryption(key, enc_config)
         else:
             msg = f"Portfolio at {self._path_db} does not have salt file"
             raise FileNotFoundError(msg)
         self._session_maker = orm.sessionmaker(self.get_engine())
         configs = self._unlock()
 
-        self._importers = importers.get_importers(self._path_importers)
+        self._importers = get_importers(self._path_importers)
 
         version_str = configs.get(ConfigKey.VERSION)
         if check_migration and (v := self.migration_required(version_str)):
@@ -179,15 +183,15 @@ class Portfolio:
 
         enc = None
         enc_config = None
-        if encryption.AVAILABLE and key is not None:
-            enc, enc_config = encryption.Encryption.create(key)
+        if ENCRYPTION_AVAILABLE and key is not None:
+            enc, enc_config = Encryption.create(key)
             path_salt.write_bytes(enc_config)
             path_salt.chmod(0o600)  # Only owner can read/write
         else:
             # Remove salt if unencrypted
             path_salt.unlink(missing_ok=True)
 
-        cipher_bytes = models.Cipher.generate().to_bytes()
+        cipher_bytes = Cipher.generate().to_bytes()
         cipher_b64 = base64.b64encode(cipher_bytes).decode()
 
         if enc is None:
@@ -198,14 +202,14 @@ class Portfolio:
         engine = sql.get_engine(path_db, enc)
         with orm.Session(engine) as s:
             with s.begin():
-                models.metadata_create_all(s)
+                Base.metadata_create_all(s)
 
             with s.begin():
                 # If developing a migration, current version will be less
-                # Set new portfolio to max of nummus version and MIGRATORS
+                # Set new portfolio to max of nummus version and Migrator.all()
                 v = max(
                     Version(__version__),
-                    *[m.min_version() for m in migrations.MIGRATORS],
+                    *[m.min_version() for m in MIGRATORS],
                 )
 
                 Config.set_(s, ConfigKey.VERSION, str(v))
@@ -263,7 +267,7 @@ class Portfolio:
         if cipher_b64 is None:
             msg = "Config.CIPHER not found"
             raise exc.ProtectedObjectNotFoundError(msg)
-        models.load_cipher(base64.b64decode(cipher_b64))
+        load_cipher(base64.b64decode(cipher_b64))
         # All good :)
         return configs
 
@@ -346,7 +350,7 @@ class Portfolio:
                 v_db = Config.db_version(s)
         else:
             v_db = Version(version_str)
-        for m in migrations.MIGRATORS[::-1]:
+        for m in MIGRATORS[::-1]:
             v_m = m.min_version()
             if v_db < v_m:
                 return v_m
@@ -381,7 +385,7 @@ class Portfolio:
                 date = datetime.date.fromordinal(existing_date_ord)
                 raise exc.FileAlreadyImportedError(date, path)
 
-            i = importers.get_importer(path, path_debug, self._importers)
+            i = get_importer(path, path_debug, self._importers)
             today = datetime.datetime.now(datetime.UTC).date()
 
             categories = TransactionCategory.map_name(s)

@@ -9,12 +9,9 @@ from typing import TYPE_CHECKING, TypedDict
 
 from nummus import web
 from nummus.controllers import base
-from nummus.models import (
-    Account,
-    Asset,
-    AssetSector,
-    YIELD_PER,
-)
+from nummus.models.account import Account
+from nummus.models.asset import Asset, AssetSector
+from nummus.models.base import YIELD_PER
 from nummus.models.config import Config
 from nummus.models.currency import CURRENCY_FORMATS
 
@@ -24,10 +21,7 @@ if TYPE_CHECKING:
     import flask
     from sqlalchemy import orm
 
-    from nummus.models import (
-        AssetCategory,
-        USSector,
-    )
+    from nummus.models.asset import AssetCategory, USSector
     from nummus.models.currency import CurrencyFormat
 
 

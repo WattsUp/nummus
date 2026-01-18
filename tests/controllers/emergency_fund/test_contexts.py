@@ -8,20 +8,15 @@ import pytest
 
 from nummus import utils
 from nummus.controllers import emergency_fund
-from nummus.models import (
-    Transaction,
-    TransactionCategory,
-    TransactionSplit,
-)
 from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
+from nummus.models.transaction import Transaction, TransactionSplit
+from nummus.models.transaction_category import TransactionCategory
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus.models import (
-        Account,
-        BudgetAssignment,
-    )
+    from nummus.models.account import Account
+    from nummus.models.budget import BudgetAssignment
 
 
 def test_empty(today: datetime.date, session: orm.Session) -> None:

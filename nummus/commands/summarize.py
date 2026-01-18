@@ -6,9 +6,7 @@ import datetime
 from decimal import Decimal
 from typing import override, TYPE_CHECKING, TypedDict
 
-from nummus.commands.base import BaseCommand
-from nummus.models.config import Config
-from nummus.models.currency import CURRENCY_FORMATS
+from nummus.commands.base import Command
 
 if TYPE_CHECKING:
     import argparse
@@ -56,7 +54,7 @@ class _Summary(TypedDict):
     cf: CurrencyFormat
 
 
-class Summarize(BaseCommand):
+class Summarize(Command):
     """Print summary information and statistics on Portfolio."""
 
     NAME = "summarize"
@@ -111,14 +109,12 @@ class Summarize(BaseCommand):
         from sqlalchemy import func
 
         from nummus import utils
-        from nummus.models import (
-            Account,
-            Asset,
-            AssetCategory,
-            AssetValuation,
-            query_count,
-            TransactionSplit,
-        )
+        from nummus.models.account import Account
+        from nummus.models.asset import Asset, AssetCategory, AssetValuation
+        from nummus.models.config import Config
+        from nummus.models.currency import CURRENCY_FORMATS
+        from nummus.models.transaction import TransactionSplit
+        from nummus.models.utils import query_count
 
         today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()

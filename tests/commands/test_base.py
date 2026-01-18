@@ -7,9 +7,8 @@ from typing import override, TYPE_CHECKING
 import pytest
 from colorama import Fore
 
-from nummus import encryption, migrations
 from nummus.commands.backup import Backup, Restore
-from nummus.commands.base import BaseCommand
+from nummus.commands.base import Command
 from nummus.commands.change_password import ChangePassword
 from nummus.commands.clean import Clean
 from nummus.commands.create import Create
@@ -20,6 +19,8 @@ from nummus.commands.migrate import Migrate
 from nummus.commands.summarize import Summarize
 from nummus.commands.unlock import Unlock
 from nummus.commands.update_assets import UpdateAssets
+from nummus.encryption.top import ENCRYPTION_AVAILABLE
+from nummus.migrations.top import MIGRATORS
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
     from nummus.portfolio import Portfolio
 
 
-class MockCommand(BaseCommand):
+class MockCommand(Command):
 
     @classmethod
     def setup_args(cls, parser: argparse.ArgumentParser) -> None:
@@ -68,7 +69,7 @@ def test_migration_required(capsys: pytest.CaptureFixture, data_path: Path) -> N
 
     captured = capsys.readouterr()
     assert not captured.out
-    v = migrations.MIGRATORS[-1].min_version()
+    v = MIGRATORS[-1].min_version()
     target = (
         f"{Fore.RED}Portfolio requires migration to v{v}\n"
         f"{Fore.YELLOW}Run 'nummus migrate' to resolve\n"
@@ -76,7 +77,7 @@ def test_migration_required(capsys: pytest.CaptureFixture, data_path: Path) -> N
     assert captured.err == target
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="Encryption is not installed")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="Encryption is not installed")
 @pytest.mark.encryption
 def test_unlock_encrypted_path(
     capsys: pytest.CaptureFixture,
@@ -95,7 +96,7 @@ def test_unlock_encrypted_path(
     assert not captured.err
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="Encryption is not installed")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="Encryption is not installed")
 @pytest.mark.encryption
 def test_unlock_encrypted_path_bad_key(
     capsys: pytest.CaptureFixture,
@@ -115,7 +116,7 @@ def test_unlock_encrypted_path_bad_key(
     assert captured.err == target
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="Encryption is not installed")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="Encryption is not installed")
 @pytest.mark.encryption
 def test_unlock_encrypted(
     capsys: pytest.CaptureFixture,
@@ -143,7 +144,7 @@ def test_unlock_encrypted(
     assert captured.err == target
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="Encryption is not installed")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="Encryption is not installed")
 @pytest.mark.encryption
 def test_unlock_encrypted_cancel(
     capsys: pytest.CaptureFixture,
@@ -167,7 +168,7 @@ def test_unlock_encrypted_cancel(
     assert captured.err == target
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="Encryption is not installed")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="Encryption is not installed")
 @pytest.mark.encryption
 def test_unlock_encrypted_failed(
     capsys: pytest.CaptureFixture,
@@ -218,7 +219,7 @@ def test_unlock_encrypted_failed(
 )
 def test_args(
     empty_portfolio: Portfolio,
-    cmd_class: type[BaseCommand],
+    cmd_class: type[Command],
     extra_args: list[str],
 ) -> None:
     parser = argparse.ArgumentParser()

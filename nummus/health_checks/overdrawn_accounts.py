@@ -8,14 +8,11 @@ from typing import override, TYPE_CHECKING
 
 from sqlalchemy import func
 
-from nummus.health_checks.base import Base
-from nummus.models import (
-    Account,
-    AccountCategory,
-    TransactionSplit,
-    YIELD_PER,
-)
+from nummus.health_checks.base import HealthCheck
+from nummus.models.account import Account, AccountCategory
+from nummus.models.base import YIELD_PER
 from nummus.models.currency import CURRENCY_FORMATS
+from nummus.models.transaction import TransactionSplit
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -23,7 +20,7 @@ if TYPE_CHECKING:
     from nummus.models.currency import Currency
 
 
-class OverdrawnAccounts(Base):
+class OverdrawnAccounts(HealthCheck):
     """Checks for accounts that had a negative cash balance when they shouldn't."""
 
     _DESC = "Checks for accounts that had a negative cash balance when they shouldn't."

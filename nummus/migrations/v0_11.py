@@ -5,15 +5,16 @@ from __future__ import annotations
 from typing import override, TYPE_CHECKING
 
 from nummus.migrations.base import Migrator
-from nummus.models import (
+from nummus.models.asset import (
     AssetSector,
     AssetSplit,
     AssetValuation,
+)
+from nummus.models.budget import (
     BudgetAssignment,
     Target,
-    Transaction,
-    TransactionSplit,
 )
+from nummus.models.transaction import Transaction, TransactionSplit
 
 if TYPE_CHECKING:
     from nummus import portfolio

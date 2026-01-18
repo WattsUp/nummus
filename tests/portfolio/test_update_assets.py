@@ -3,14 +3,17 @@ from __future__ import annotations
 import datetime
 from typing import TYPE_CHECKING
 
-from nummus.models import Asset, AssetCategory
-from nummus.portfolio import AssetUpdate
+from nummus.models.asset import (
+    Asset,
+    AssetCategory,
+)
+from nummus.portfolio import AssetUpdate, Portfolio
 
 if TYPE_CHECKING:
     import pytest
     from sqlalchemy import orm
 
-    from nummus.models import Transaction
+    from nummus.models.transaction import Transaction
     from nummus.portfolio import Portfolio
 
 

@@ -6,13 +6,15 @@ from abc import ABC, abstractmethod
 from typing import ClassVar, TYPE_CHECKING
 
 from nummus import utils
-from nummus.models import HealthCheckIssue, update_rows, YIELD_PER
+from nummus.models.base import YIELD_PER
+from nummus.models.health_checks import HealthCheckIssue
+from nummus.models.utils import update_rows
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
 
-class Base(ABC):
+class HealthCheck(ABC):
     """Base health check class."""
 
     _DESC: ClassVar[str]

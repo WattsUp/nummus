@@ -5,9 +5,12 @@ from typing import TYPE_CHECKING
 
 from colorama import Fore
 
-from nummus import health_checks
 from nummus.commands.health import Health
-from nummus.models import Config, ConfigKey, HealthCheckIssue, query_count
+from nummus.health_checks.top import HEALTH_CHECKS
+from nummus.models.config import Config, ConfigKey
+from nummus.models.health_checks import HealthCheckIssue
+from nummus.models.utils import query_count
+from nummus.portfolio import Portfolio
 
 if TYPE_CHECKING:
 
@@ -93,7 +96,7 @@ def test_ignore_all(
     utc_frozen: datetime.datetime,
 ) -> None:
     ignores: list[str] = []
-    for check_type in health_checks.CHECKS:
+    for check_type in HEALTH_CHECKS:
         c = check_type()
         with empty_portfolio.begin_session() as s:
             c.test(s)
@@ -140,7 +143,7 @@ def test_clear_ignores(
     empty_portfolio: Portfolio,
 ) -> None:
     ignores: list[str] = []
-    for check_type in health_checks.CHECKS:
+    for check_type in HEALTH_CHECKS:
         c = check_type()
         with empty_portfolio.begin_session() as s:
             c.test(s)

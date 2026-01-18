@@ -5,19 +5,14 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from nummus.controllers import base, net_worth
-from nummus.models import (
-    Transaction,
-    TransactionSplit,
-)
 from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
+from nummus.models.transaction import Transaction, TransactionSplit
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus.models import (
-        Account,
-        AssetValuation,
-    )
+    from nummus.models.account import Account
+    from nummus.models.asset import AssetValuation
     from tests.conftest import RandomStringGenerator
 
 

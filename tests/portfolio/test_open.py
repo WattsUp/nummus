@@ -5,15 +5,12 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from nummus import encryption
 from nummus import exceptions as exc
-from nummus.models import (
-    Asset,
-    Config,
-    ConfigKey,
-    query_count,
-    TransactionCategory,
-)
+from nummus.encryption.top import ENCRYPTION_AVAILABLE
+from nummus.models.asset import Asset
+from nummus.models.config import Config, ConfigKey
+from nummus.models.transaction_category import TransactionCategory
+from nummus.models.utils import query_count
 from nummus.portfolio import Portfolio
 
 if TYPE_CHECKING:
@@ -110,7 +107,7 @@ def test_bad_encryption_test(empty_portfolio: Portfolio) -> None:
         Portfolio(empty_portfolio.path, None)
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="No encryption available")
 @pytest.mark.encryption
 def test_encrypted(tmp_path: Path, rand_str: str) -> None:
     path = tmp_path / "portfolio.db"
@@ -133,7 +130,7 @@ def test_encrypted(tmp_path: Path, rand_str: str) -> None:
         assert query_count(s.query(Asset)) > 0
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="No encryption available")
 @pytest.mark.encryption
 def test_encrypted_no_salt(
     empty_portfolio_encrypted: tuple[Portfolio, str],
@@ -146,7 +143,7 @@ def test_encrypted_no_salt(
         Portfolio(p.path, key)
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="No encryption available")
 @pytest.mark.encryption
 def test_encrypted_bad_enc_test(
     empty_portfolio_encrypted: tuple[Portfolio, str],
@@ -159,7 +156,7 @@ def test_encrypted_bad_enc_test(
         Portfolio(p.path, key)
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="No encryption available")
 @pytest.mark.encryption
 def test_encrypt(
     empty_portfolio_encrypted: tuple[Portfolio, str],

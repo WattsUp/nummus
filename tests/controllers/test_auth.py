@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from nummus import encryption
+from nummus.encryption.top import ENCRYPTION_AVAILABLE
 
 if TYPE_CHECKING:
     from tests.controllers.conftest import WebClient, WebClientEncrypted
@@ -17,7 +17,7 @@ def test_page_login(web_client: WebClient) -> None:
     assert "Location" not in headers
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="No encryption available")
 @pytest.mark.encryption
 def test_unauth_redirect(web_client_encrypted: WebClientEncrypted) -> None:
     endpoint = "common.page_dashboard"
@@ -30,7 +30,7 @@ def test_unauth_redirect(web_client_encrypted: WebClientEncrypted) -> None:
     assert headers["HX-Redirect"] == f"{login}?next={urllib.parse.quote_plus(url)}"
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="No encryption available")
 @pytest.mark.encryption
 def test_unauth_static(web_client_encrypted: WebClientEncrypted) -> None:
     result, _ = web_client_encrypted.GET(
@@ -42,7 +42,7 @@ def test_unauth_static(web_client_encrypted: WebClientEncrypted) -> None:
     assert "/*! tailwindcss" in result
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="No encryption available")
 @pytest.mark.encryption
 def test_login(web_client_encrypted: WebClientEncrypted) -> None:
     web_client_encrypted.login()
@@ -50,7 +50,7 @@ def test_login(web_client_encrypted: WebClientEncrypted) -> None:
     assert "Dashboard" in result
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="No encryption available")
 @pytest.mark.encryption
 def test_page_login_already_logged_in(web_client_encrypted: WebClientEncrypted) -> None:
     web_client_encrypted.login()
@@ -65,14 +65,14 @@ def test_login_empty(web_client: WebClient) -> None:
     assert "Password must not be blank" in result
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="No encryption available")
 @pytest.mark.encryption
 def test_login_bad_password(web_client_encrypted: WebClientEncrypted) -> None:
     result, _ = web_client_encrypted.POST("auth.login", data={"password": "fake"})
     assert "Bad password" in result
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="No encryption available")
 @pytest.mark.encryption
 def test_logout(web_client_encrypted: WebClientEncrypted) -> None:
     web_client_encrypted.login()

@@ -4,19 +4,17 @@ from __future__ import annotations
 
 from typing import override, TYPE_CHECKING
 
-from nummus.health_checks.base import Base
-from nummus.models import (
-    BudgetAssignment,
-    query_to_dict,
-    TransactionCategory,
-    TransactionSplit,
-)
+from nummus.health_checks.base import HealthCheck
+from nummus.models.budget import BudgetAssignment
+from nummus.models.transaction import TransactionSplit
+from nummus.models.transaction_category import TransactionCategory
+from nummus.models.utils import query_to_dict
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
 
-class UnusedCategories(Base):
+class UnusedCategories(HealthCheck):
     """Checks for categories without transactions or budget assignment."""
 
     _DESC = "Checks for categories without transactions or budget assignments."

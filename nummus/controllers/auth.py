@@ -11,7 +11,7 @@ import flask_login
 
 from nummus import web
 from nummus.controllers import base
-from nummus.models import Config, ConfigKey
+from nummus.models.config import Config, ConfigKey
 
 if TYPE_CHECKING:
 

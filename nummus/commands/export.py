@@ -9,7 +9,7 @@ from typing import override, TYPE_CHECKING
 
 from colorama import Fore
 
-from nummus.commands.base import BaseCommand
+from nummus.commands.base import Command
 
 if TYPE_CHECKING:
     import argparse
@@ -17,11 +17,11 @@ if TYPE_CHECKING:
 
     from sqlalchemy import orm
 
-    from nummus.models import TransactionSplit
     from nummus.models.currency import Currency
+    from nummus.models.transaction import TransactionSplit
 
 
-class Export(BaseCommand):
+class Export(Command):
     """Export transactions."""
 
     NAME = "export"
@@ -86,7 +86,7 @@ class Export(BaseCommand):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from nummus.models import TransactionSplit
+        from nummus.models.transaction import TransactionSplit
 
         with self._p.begin_session() as s:
             query = (
@@ -131,14 +131,11 @@ def write_csv(
     # Defer for faster time to main
     import tqdm
 
-    from nummus.models import (
-        Account,
-        CURRENCY_FORMATS,
-        query_count,
-        TransactionCategory,
-        TransactionSplit,
-        YIELD_PER,
-    )
+    from nummus.models.account import Account
+    from nummus.models.base import YIELD_PER
+    from nummus.models.currency import CURRENCY_FORMATS
+    from nummus.models.transaction import TransactionCategory, TransactionSplit
+    from nummus.models.utils import query_count
 
     s = transactions_query.session
 

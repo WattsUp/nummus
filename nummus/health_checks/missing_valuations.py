@@ -7,14 +7,19 @@ from typing import override, TYPE_CHECKING
 
 from sqlalchemy import func
 
-from nummus.health_checks.base import Base
-from nummus.models import Asset, AssetValuation, query_to_dict, TransactionSplit
+from nummus.health_checks.base import HealthCheck
+from nummus.models.asset import (
+    Asset,
+    AssetValuation,
+)
+from nummus.models.transaction import TransactionSplit
+from nummus.models.utils import query_to_dict
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
 
-class MissingAssetValuations(Base):
+class MissingAssetValuations(HealthCheck):
     """Checks if an asset is held without any valuations."""
 
     _DESC = "Checks if an asset is held without any valuations."

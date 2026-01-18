@@ -5,12 +5,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from nummus.models import Transaction, TransactionSplit
+from nummus.models.transaction import Transaction, TransactionSplit
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus.models import Account, Asset
+    from nummus.models.account import Account
+    from nummus.models.asset import Asset
     from tests.conftest import RandomStringGenerator
 
 

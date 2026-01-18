@@ -5,7 +5,9 @@ from __future__ import annotations
 from typing import override, TYPE_CHECKING
 
 from nummus.migrations.base import Migrator
-from nummus.models import HealthCheckIssue, TransactionCategory, YIELD_PER
+from nummus.models.base import YIELD_PER
+from nummus.models.health_checks import HealthCheckIssue
+from nummus.models.transaction_category import TransactionCategory
 
 if TYPE_CHECKING:
     from nummus import portfolio

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus import exceptions as exc
-from nummus.models import Transaction, TransactionSplit
+from nummus.models.transaction import Transaction, TransactionSplit
 from tests import conftest
 
 if TYPE_CHECKING:
@@ -14,7 +14,8 @@ if TYPE_CHECKING:
 
     from sqlalchemy import orm
 
-    from nummus.models import Account, Asset
+    from nummus.models.account import Account
+    from nummus.models.asset import Asset
     from tests.conftest import RandomRealGenerator, RandomStringGenerator
 
 

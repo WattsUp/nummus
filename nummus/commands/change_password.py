@@ -9,10 +9,10 @@ from typing import override
 
 from colorama import Fore
 
-from nummus.commands.base import BaseCommand
+from nummus.commands.base import Command
 
 
-class ChangePassword(BaseCommand):
+class ChangePassword(Command):
     """Change portfolio password."""
 
     NAME = "change-password"

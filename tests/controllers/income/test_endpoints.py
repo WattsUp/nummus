@@ -7,10 +7,8 @@ if TYPE_CHECKING:
 
     from sqlalchemy import orm
 
-    from nummus.models import (
-        Account,
-        Transaction,
-    )
+    from nummus.models.account import Account
+    from nummus.models.transaction import Transaction
     from tests.controllers.conftest import WebClient
 
 

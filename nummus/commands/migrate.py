@@ -6,17 +6,17 @@ from typing import override, TYPE_CHECKING
 
 from colorama import Fore
 
-from nummus import __version__
-from nummus.commands.base import BaseCommand
+from nummus.commands.base import Command
+from nummus.version import __version__
 
 if TYPE_CHECKING:
     import argparse
     from pathlib import Path
 
-    from nummus.models import Base
+    from nummus.models.base import Base
 
 
-class Migrate(BaseCommand):
+class Migrate(Command):
     """Migrate portfolio."""
 
     NAME = "migrate"
@@ -45,8 +45,9 @@ class Migrate(BaseCommand):
         from packaging.version import Version
 
         from nummus import portfolio
-        from nummus.migrations import MIGRATORS, SchemaMigrator
-        from nummus.models import Config, ConfigKey
+        from nummus.migrations.base import SchemaMigrator
+        from nummus.migrations.top import MIGRATORS
+        from nummus.models.config import Config, ConfigKey
 
         p = self._p
 

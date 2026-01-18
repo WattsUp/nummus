@@ -7,9 +7,11 @@ from typing import override, TYPE_CHECKING
 
 from sqlalchemy import func
 
-from nummus.health_checks.base import Base
-from nummus.models import Account, Transaction, YIELD_PER
+from nummus.health_checks.base import HealthCheck
+from nummus.models.account import Account
+from nummus.models.base import YIELD_PER
 from nummus.models.currency import CURRENCY_FORMATS
+from nummus.models.transaction import Transaction
 
 if TYPE_CHECKING:
     from decimal import Decimal
@@ -19,7 +21,7 @@ if TYPE_CHECKING:
     from nummus.models.currency import Currency
 
 
-class DuplicateTransactions(Base):
+class DuplicateTransactions(HealthCheck):
     """Checks for transactions with same amount, date, and statement."""
 
     _DESC = "Checks for transactions with same amount, date, and statement."

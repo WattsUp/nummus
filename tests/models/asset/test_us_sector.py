@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from nummus.models import USSector
+from nummus.models.asset import USSector
 
 
 def test_init_properties() -> None:

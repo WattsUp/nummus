@@ -12,7 +12,8 @@ if TYPE_CHECKING:
 
     import pytest
 
-    from nummus.models import Account, Transaction
+    from nummus.models.account import Account
+    from nummus.models.transaction import Transaction
     from nummus.portfolio import Portfolio
 
 

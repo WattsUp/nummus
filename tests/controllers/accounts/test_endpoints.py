@@ -5,13 +5,14 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus.controllers import base
-from nummus.models import Account, AccountCategory
+from nummus.models.account import Account, AccountCategory
 from nummus.models.currency import Currency, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus.models import Asset, Transaction
+    from nummus.models.asset import Asset
+    from nummus.models.transaction import Transaction
     from tests.controllers.conftest import WebClient
 
 

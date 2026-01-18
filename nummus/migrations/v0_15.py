@@ -8,7 +8,9 @@ import sqlalchemy
 
 from nummus import exceptions as exc
 from nummus.migrations.base import Migrator
-from nummus.models import Base, dump_table_configs, Label, LabelLink
+from nummus.models.base import Base
+from nummus.models.label import Label, LabelLink
+from nummus.models.utils import dump_table_configs
 
 if TYPE_CHECKING:
     from nummus import portfolio

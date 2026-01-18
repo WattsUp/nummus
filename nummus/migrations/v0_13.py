@@ -8,7 +8,9 @@ from typing import override, TYPE_CHECKING
 import sqlalchemy
 
 from nummus.migrations.base import Migrator
-from nummus.models import Base, Label, LabelLink, TransactionSplit
+from nummus.models.base import Base
+from nummus.models.label import Label, LabelLink
+from nummus.models.transaction import TransactionSplit
 
 if TYPE_CHECKING:
     from nummus import portfolio

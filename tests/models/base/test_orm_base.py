@@ -38,7 +38,7 @@ class Derived(base.BaseEnum):
         return {"r": cls.RED, "b": cls.BLUE}
 
 
-class Parent(base.Base):
+class Parent(base.Base, skip_register=True):
     __tablename__ = "parent"
     __table_id__ = 0xF0000000
 
@@ -63,7 +63,7 @@ class Parent(base.Base):
         return Bytes(self.uri)
 
 
-class Child(base.Base):
+class Child(base.Base, skip_register=True):
     __tablename__ = "child"
     __table_id__ = 0xE0000000
 
@@ -79,7 +79,7 @@ class Child(base.Base):
         return self.clean_decimals(key, field)
 
 
-class NoURI(base.Base):
+class NoURI(base.Base, skip_register=True):
     __tablename__ = "no_uri"
     __table_id__ = None
 

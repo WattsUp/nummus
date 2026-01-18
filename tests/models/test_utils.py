@@ -7,16 +7,15 @@ import pytest
 from sqlalchemy import CheckConstraint, ForeignKeyConstraint, UniqueConstraint
 
 from nummus import exceptions as exc
-from nummus.models import (
-    Account,
+from nummus.models import utils
+from nummus.models.account import Account
+from nummus.models.asset import (
     Asset,
     AssetCategory,
     AssetSplit,
     AssetValuation,
-    Transaction,
-    TransactionSplit,
-    utils,
 )
+from nummus.models.transaction import Transaction, TransactionSplit
 
 if TYPE_CHECKING:
     import datetime

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from nummus import encryption
 from nummus import exceptions as exc
-from nummus.models import Config, ConfigKey
+from nummus.encryption.top import ENCRYPTION_AVAILABLE
+from nummus.models.config import Config, ConfigKey
 from nummus.portfolio import Portfolio
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="No encryption available")
 @pytest.mark.encryption
 def test_change_db_key(
     capsys: pytest.CaptureFixture,
@@ -47,7 +47,7 @@ def test_change_db_key_short(empty_portfolio: Portfolio) -> None:
         empty_portfolio.change_key("a")
 
 
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="No encryption available")
 @pytest.mark.encryption
 def test_change_web_key(
     empty_portfolio_encrypted: tuple[Portfolio, str],

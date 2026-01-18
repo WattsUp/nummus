@@ -5,23 +5,21 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from nummus.controllers import base, performance
-from nummus.models import (
-    AccountCategory,
+from nummus.models.account import AccountCategory
+from nummus.models.asset import (
     Asset,
     AssetCategory,
-    YIELD_PER,
 )
+from nummus.models.base import YIELD_PER
 from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
 
     from sqlalchemy import orm
 
-    from nummus.models import (
-        Account,
-        AssetValuation,
-        Transaction,
-    )
+    from nummus.models.account import Account
+    from nummus.models.asset import AssetValuation
+    from nummus.models.transaction import Transaction
 
 
 def test_ctx_chart_empty(

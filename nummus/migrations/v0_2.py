@@ -7,24 +7,19 @@ from typing import override, TYPE_CHECKING
 from sqlalchemy import func, sql
 
 from nummus.migrations.base import Migrator
-from nummus.models import (
-    Account,
-    Asset,
-    BudgetGroup,
-    Config,
-    HealthCheckIssue,
-    ImportedFile,
-    Transaction,
-    TransactionCategory,
-    TransactionSplit,
-    YIELD_PER,
-)
+from nummus.models.account import Account
+from nummus.models.asset import Asset
+from nummus.models.base import YIELD_PER
+from nummus.models.budget import BudgetGroup
+from nummus.models.config import Config
+from nummus.models.health_checks import HealthCheckIssue
+from nummus.models.imported_file import ImportedFile
+from nummus.models.transaction import Transaction, TransactionSplit
+from nummus.models.transaction_category import TransactionCategory
 
 if TYPE_CHECKING:
     from nummus import portfolio
-    from nummus.models import (
-        Base,
-    )
+    from nummus.models.base import Base
 
 
 class MigratorV0_2(Migrator):

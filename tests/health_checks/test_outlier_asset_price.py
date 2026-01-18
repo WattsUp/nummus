@@ -6,20 +6,18 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus.health_checks.outlier_asset_price import OutlierAssetPrice
-from nummus.models import (
-    HealthCheckIssue,
-    query_count,
-)
 from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
+from nummus.models.health_checks import HealthCheckIssue
+from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus.models import (
+    from nummus.models.asset import (
         Asset,
         AssetValuation,
-        Transaction,
     )
+    from nummus.models.transaction import Transaction
 
 
 def test_empty(session: orm.Session) -> None:

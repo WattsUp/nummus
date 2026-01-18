@@ -5,14 +5,14 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus import exceptions as exc
-from nummus.models import AssetSplit
+from nummus.models.asset import AssetSplit
 
 if TYPE_CHECKING:
     import datetime
 
     from sqlalchemy import orm
 
-    from nummus.models import Asset
+    from nummus.models.asset import Asset
     from tests.conftest import RandomRealGenerator
 
 

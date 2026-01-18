@@ -3,19 +3,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from nummus.health_checks.unnecessary_slits import UnnecessarySplits
-from nummus.models import (
-    HealthCheckIssue,
-    query_count,
-    TransactionSplit,
-)
+from nummus.models.health_checks import HealthCheckIssue
+from nummus.models.transaction import TransactionSplit
+from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus.models import (
-        Account,
-        Transaction,
-    )
+    from nummus.models.account import Account
+    from nummus.models.transaction import Transaction
 
 
 def test_empty(session: orm.Session) -> None:

@@ -5,18 +5,16 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus.controllers import base
-from nummus.models import (
+from nummus.models.transaction import TransactionSplit
+from nummus.models.transaction_category import (
     TransactionCategory,
     TransactionCategoryGroup,
-    TransactionSplit,
 )
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus.models import (
-        Transaction,
-    )
+    from nummus.models.transaction import Transaction
     from tests.controllers.conftest import WebClient
 
 

@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     import datetime
     from pathlib import Path
 
-    from nummus.models import Account
+    from nummus.models.account import Account
     from tests.controllers.conftest import WebClient
 
 

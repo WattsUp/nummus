@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from nummus import health_checks
+from nummus.health_checks.unused_categories import UnusedCategories
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -35,7 +35,7 @@ def test_refresh(web_client: WebClient, n_runs: int) -> None:
 
 
 def test_ignore(web_client: WebClient, session: orm.Session) -> None:
-    c = health_checks.UnusedCategories()
+    c = UnusedCategories()
     c.test(session)
     session.commit()
 

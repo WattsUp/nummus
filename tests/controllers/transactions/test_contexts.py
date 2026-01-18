@@ -9,25 +9,22 @@ import pytest
 from nummus import utils
 from nummus.controllers import base
 from nummus.controllers import transactions as txn_controller
-from nummus.models import (
-    Account,
-    Asset,
-    Label,
-    LabelLink,
-    query_count,
+from nummus.models.account import Account
+from nummus.models.asset import Asset
+from nummus.models.base import YIELD_PER
+from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
+from nummus.models.label import Label, LabelLink
+from nummus.models.transaction import TransactionSplit
+from nummus.models.transaction_category import (
     TransactionCategory,
     TransactionCategoryGroup,
-    TransactionSplit,
-    YIELD_PER,
 )
-from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
+from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus.models import (
-        Transaction,
-    )
+    from nummus.models.transaction import Transaction
 
 
 @pytest.mark.parametrize(

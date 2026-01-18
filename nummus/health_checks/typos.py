@@ -12,23 +12,24 @@ import spellchecker
 from sqlalchemy import func, orm
 
 from nummus import utils
-from nummus.health_checks.base import Base
-from nummus.models import (
-    Account,
+from nummus.health_checks.base import HealthCheck
+from nummus.models.account import Account
+from nummus.models.asset import (
     Asset,
     AssetCategory,
-    Label,
-    TransactionSplit,
-    YIELD_PER,
 )
+from nummus.models.base import YIELD_PER
+from nummus.models.label import Label
+from nummus.models.transaction import TransactionSplit
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
+
 _LIMIT_FREQUENCY = 10
 
 
-class Typos(Base):
+class Typos(HealthCheck):
     """Checks for very similar fields and common typos."""
 
     _DESC = "Checks for very similar fields and common typos."

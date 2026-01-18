@@ -7,10 +7,8 @@ import pytest
 
 from nummus import utils
 from nummus.controllers import accounts, base
-from nummus.models import (
-    AccountCategory,
-    AssetCategory,
-)
+from nummus.models.account import AccountCategory
+from nummus.models.asset import AssetCategory
 from nummus.models.currency import Currency, CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
@@ -18,12 +16,12 @@ if TYPE_CHECKING:
 
     from sqlalchemy import orm
 
-    from nummus.models import (
-        Account,
+    from nummus.models.account import Account
+    from nummus.models.asset import (
         Asset,
         AssetValuation,
-        Transaction,
     )
+    from nummus.models.transaction import Transaction
 
 
 @pytest.mark.parametrize("skip_today", [False, True])

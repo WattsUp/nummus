@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus import exceptions as exc
-from nummus.models import Label
+from nummus.models.label import Label
 
 if TYPE_CHECKING:
 

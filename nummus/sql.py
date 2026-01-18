@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     import sqlite3
     from pathlib import Path
 
-    from nummus.encryption import EncryptionInterface
+    from nummus.encryption.base import EncryptionInterface
 
 try:
     import sqlcipher3

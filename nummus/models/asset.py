@@ -373,7 +373,7 @@ class Asset(Base):
         Does not commit changes, call s.commit() afterwards.
         """
         # This function is best here but need to avoid circular imports
-        from nummus.models import TransactionSplit  # noqa: PLC0415
+        from nummus.models.transaction import TransactionSplit  # noqa: PLC0415
 
         s = obj_session(self)
 

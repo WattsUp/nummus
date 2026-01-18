@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus import exceptions as exc
-from nummus.models import AssetValuation
+from nummus.models.asset import AssetValuation
 
 if TYPE_CHECKING:
     import datetime
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy import orm
 
-    from nummus.models import Asset
+    from nummus.models.asset import Asset
     from tests.conftest import RandomRealGenerator
 
 

@@ -14,7 +14,13 @@ if TYPE_CHECKING:
 
     from sqlalchemy import orm
 
-    from nummus.models import Account, Asset, AssetCategory, AssetValuation, Transaction
+    from nummus.models.account import Account
+    from nummus.models.asset import (
+        Asset,
+        AssetCategory,
+        AssetValuation,
+    )
+    from nummus.models.transaction import Transaction
 
 
 def test_ctx_performance_empty(

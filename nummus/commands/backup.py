@@ -8,14 +8,14 @@ from typing import override, TYPE_CHECKING
 
 from colorama import Fore
 
-from nummus.commands.base import BaseCommand
+from nummus.commands.base import Command
 
 if TYPE_CHECKING:
     import argparse
     from pathlib import Path
 
 
-class Backup(BaseCommand):
+class Backup(Command):
     """Backup portfolio."""
 
     NAME = "backup"
@@ -49,7 +49,7 @@ class Backup(BaseCommand):
         return 0
 
 
-class Restore(BaseCommand):
+class Restore(Command):
     """Restore portfolio from backup."""
 
     NAME = "restore"

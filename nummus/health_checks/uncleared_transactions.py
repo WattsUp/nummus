@@ -6,9 +6,11 @@ import datetime
 import textwrap
 from typing import override, TYPE_CHECKING
 
-from nummus.health_checks.base import Base
-from nummus.models import Account, TransactionSplit, YIELD_PER
+from nummus.health_checks.base import HealthCheck
+from nummus.models.account import Account
+from nummus.models.base import YIELD_PER
 from nummus.models.currency import CURRENCY_FORMATS
+from nummus.models.transaction import TransactionSplit
 
 if TYPE_CHECKING:
     from decimal import Decimal
@@ -18,7 +20,7 @@ if TYPE_CHECKING:
     from nummus.models.currency import Currency
 
 
-class UnclearedTransactions(Base):
+class UnclearedTransactions(HealthCheck):
     """Checks for uncleared transactions."""
 
     _DESC = textwrap.dedent(

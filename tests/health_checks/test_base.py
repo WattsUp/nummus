@@ -4,9 +4,10 @@ from typing import override, TYPE_CHECKING
 
 import pytest
 
-from nummus.health_checks import CHECKS
-from nummus.health_checks.base import Base
-from nummus.models import HealthCheckIssue, query_count
+from nummus.health_checks.base import HealthCheck
+from nummus.health_checks.top import HEALTH_CHECKS
+from nummus.models.health_checks import HealthCheckIssue
+from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
     from tests.conftest import RandomStringGenerator
 
 
-class MockCheck(Base):
+class MockCheck(HealthCheck):
     _DESC = "Mock testing health check"
     _SEVERE = True
 
@@ -118,6 +119,6 @@ def test_ignore(
     assert not i.ignore
 
 
-@pytest.mark.parametrize("check", CHECKS)
-def test_descriptions(check: type[Base]) -> None:
+@pytest.mark.parametrize("check", HEALTH_CHECKS)
+def test_descriptions(check: type[HealthCheck]) -> None:
     assert check.description()[-1] == "."
