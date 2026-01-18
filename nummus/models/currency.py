@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from decimal import Decimal
 from typing import NamedTuple, override
 
@@ -83,8 +84,12 @@ class CurrencyFormat(NamedTuple):
 
         x = round(x * exp) / exp
 
-        v = f"{x:_.{max(0, p)}f}"
-        s += v.replace(".", self.sep_dec).replace("_", self.sep_1k)
+        v = f"{x:,.{max(0, p)}f}"
+        s += re.sub(
+            r"[,.]",
+            lambda m: self.sep_1k if m.group(0) == "," else self.sep_dec,
+            v,
+        )
 
         if self.symbol_is_suffix:
             s += self.symbol
