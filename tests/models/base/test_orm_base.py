@@ -140,25 +140,11 @@ def child(session: orm.Session, parent: Parent) -> Child:
         return Child.create(parent=parent)
 
 
-def test_detached() -> None:
-    parent = Parent()
-    assert parent.id_ is None
-    with pytest.raises(exc.NoIDError):
-        _ = parent.uri
-
-
 def test_init_properties(parent: Parent) -> None:
     assert parent.id_ is not None
     assert parent.uri is not None
     assert Parent.uri_to_id(parent.uri) == parent.id_
     assert hash(parent) == parent.id_
-
-
-def test_detached_child() -> None:
-    child = Child()
-    assert child.id_ is None
-    assert child.parent is None
-    assert child.parent_id is None
 
 
 def test_link_child(parent: Parent, child: Child) -> None:
@@ -306,3 +292,9 @@ def test_clean_emoji_name(rand_str: str) -> None:
 def test_clean_emoji_name_upper(rand_str: str) -> None:
     text = rand_str.lower()
     assert Base.clean_emoji_name(text.upper() + " 😀 ") == text
+
+
+def test_query_kwargs() -> None:
+    with pytest.raises(exc.NoKeywordArgumentsError):
+        # Intentional bad argument
+        Parent.query(kw=None)  # type: ignore[attr-defined]

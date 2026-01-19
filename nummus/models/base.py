@@ -8,18 +8,17 @@ from decimal import Decimal
 from typing import ClassVar, overload, override, Self, TYPE_CHECKING
 
 import sqlalchemy
-from sqlalchemy import CheckConstraint, orm, sql, types
+from sqlalchemy import CheckConstraint, orm, types
 
 from nummus import exceptions as exc
-from nummus import utils
+from nummus import sql, utils
 from nummus.models import base_uri
-from nummus.sql import query_to_dict
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Mapping
 
-# TODO (WattsUp): #0 move to sql.YIELD_PER
-YIELD_PER = 100
+    import sqlalchemy.sql.roles as sql_roles
+
 
 ORMBool = orm.Mapped[bool]
 ORMBoolOpt = orm.Mapped[bool | None]
@@ -30,11 +29,14 @@ ORMStrOpt = orm.Mapped[str | None]
 ORMReal = orm.Mapped[Decimal]
 ORMRealOpt = orm.Mapped[Decimal | None]
 
+# TODO (WattsUp): #0 remove
+YIELD_PER = 100
+
 
 class SessionMixIn:
     """Mix-in that provides a session reference to the type."""
 
-    _SESSION: ClassVar[orm.Session | None] = None
+    _session: ClassVar[orm.Session | None] = None
 
     @classmethod
     @contextlib.contextmanager
@@ -45,11 +47,11 @@ class SessionMixIn:
             SQL session
 
         """
-        cls._SESSION = s
+        cls._session = s
         try:
             yield
         finally:
-            cls._SESSION = None
+            cls._session = None
 
     @classmethod
     def session(cls) -> orm.Session:
@@ -62,14 +64,15 @@ class SessionMixIn:
             UnboundExecutionError: set_session has not been called yet
 
         """
-        if cls._SESSION is None:
+        if cls._session is None:
             raise exc.UnboundExecutionError
-        return cls._SESSION
+        return cls._session
 
 
 class QueryMixIn(SessionMixIn):
     """Mix-in that provides a query interface to the type."""
 
+    # TODO (WattsUp): #0 Enforce Base.create instead of s.add
     @classmethod
     def create(cls, **kwargs: object) -> Self:
         """Create a new instance.
@@ -87,6 +90,11 @@ class QueryMixIn(SessionMixIn):
         s.flush()
         return i
 
+    def delete(self) -> None:
+        """Delete a instance."""
+        self.session().delete(self)
+
+    # TODO (WattsUp): #0 Enforce query(col, col, col) instead of .with_entities
     @overload
     @classmethod
     def query(cls) -> orm.Query[Self]: ...
@@ -95,23 +103,42 @@ class QueryMixIn(SessionMixIn):
     @classmethod
     def query[T0](
         cls,
-        c0: orm.QueryableAttribute[T0],
+        c0: sql_roles.TypedColumnsClauseRole[T0],
     ) -> orm.query.RowReturningQuery[tuple[T0]]: ...
 
     @overload
     @classmethod
     def query[T0, T1](
         cls,
-        c0: orm.QueryableAttribute[T0],
-        c1: orm.QueryableAttribute[T1],
+        c0: sql_roles.TypedColumnsClauseRole[T0],
+        c1: sql_roles.TypedColumnsClauseRole[T1],
     ) -> orm.query.RowReturningQuery[tuple[T0, T1]]: ...
 
+    @overload
     @classmethod
-    def query(
+    def query[T0, T1, T2](
         cls,
-        *columns: orm.QueryableAttribute,
-        **kwargs: object,
-    ) -> orm.Query:
+        c0: sql_roles.TypedColumnsClauseRole[T0],
+        c1: sql_roles.TypedColumnsClauseRole[T1],
+        c2: sql_roles.TypedColumnsClauseRole[T2],
+    ) -> orm.query.RowReturningQuery[tuple[T0, T1, T2]]: ...
+
+    @overload
+    @classmethod
+    def query[T0, T1, T2, T3](
+        cls,
+        c0: sql_roles.TypedColumnsClauseRole[T0],
+        c1: sql_roles.TypedColumnsClauseRole[T1],
+        c2: sql_roles.TypedColumnsClauseRole[T2],
+        c3: sql_roles.TypedColumnsClauseRole[T3],
+    ) -> orm.query.RowReturningQuery[tuple[T0, T1, T2, T3]]: ...
+
+    @classmethod
+    def query[T](
+        cls,
+        *columns: sql_roles.TypedColumnsClauseRole[object],
+        **kwargs: T,
+    ) -> orm.Query[Self] | orm.Query[T]:
         """Create a new query.
 
         Returns:
@@ -123,9 +150,9 @@ class QueryMixIn(SessionMixIn):
         """
         if kwargs:
             raise exc.NoKeywordArgumentsError
-        query = cls.session().query(cls)
+        query: orm.Query[Self] = cls.session().query(cls)
         if columns:
-            query = query.with_entities(*columns)
+            return query.with_entities(*columns)
         return query
 
     @classmethod
@@ -239,15 +266,7 @@ class Base(orm.DeclarativeBase, QueryMixIn):
 
     @property
     def uri(self) -> str:
-        """Uniform Resource Identifier derived from id_ and __table_id__.
-
-        Raises:
-            NoIDError: If object does not have id_
-
-        """
-        if self.id_ is None:
-            msg = f"{self.__class__.__name__} does not have an id_, maybe flush"
-            raise exc.NoIDError(msg)
+        """Uniform Resource Identifier derived from id_ and __table_id__."""
         return self.id_to_uri(self.id_)
 
     @override
@@ -285,7 +304,7 @@ class Base(orm.DeclarativeBase, QueryMixIn):
             msg = f"{cls.__name__} does not have name column"
             raise KeyError(msg)
 
-        return query_to_dict(cls.query(cls.id_, attr))
+        return sql.to_dict(cls.query(cls.id_, attr))
 
     @classmethod
     def clean_strings(
@@ -398,7 +417,7 @@ class BaseEnum(enum.IntEnum):
         return self.name.replace("_", " ").title()
 
 
-class SQLEnum(types.TypeDecorator):
+class SQLEnum(types.TypeDecorator[BaseEnum]):
     """SQL type for enumeration, stores as integer."""
 
     impl = types.Integer
@@ -464,7 +483,7 @@ class SQLEnum(types.TypeDecorator):
         return self._enum_type(value)
 
 
-class Decimal6(types.TypeDecorator):
+class Decimal6(types.TypeDecorator[Decimal]):
     """SQL type for fixed point numbers, stores as micro-integer."""
 
     impl = types.BigInteger
@@ -556,7 +575,7 @@ def string_column_args(
         Tuple of constraints
 
     """
-    name_col = f"`{name}`" if name in sql.compiler.RESERVED_WORDS else name
+    name_col = sql.escape(name)
     checks = [
         (
             CheckConstraint(

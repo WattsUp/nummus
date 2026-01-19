@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import base64
 import sys
-from typing import TYPE_CHECKING
+from collections.abc import Sequence
+from typing import overload, TYPE_CHECKING
 
 import sqlalchemy
 import sqlalchemy.event
-from sqlalchemy import func
+from sqlalchemy import func, orm
 
 if TYPE_CHECKING:
     import sqlite3
+    from collections.abc import Iterable
     from pathlib import Path
-
-    from sqlalchemy import orm
 
     from nummus.encryption.base import EncryptionInterface
 
@@ -26,8 +26,8 @@ except ImportError:
 
 _ENGINE_ARGS: dict[str, object] = {}
 
-# Yield per instead of fetch all is faster
-YIELD_PER = 100
+Column = orm.InstrumentedAttribute[str] | orm.InstrumentedAttribute[str | None]
+ColumnClause = sqlalchemy.ColumnElement[bool]
 
 
 @sqlalchemy.event.listens_for(sqlalchemy.engine.Engine, "connect")
@@ -88,7 +88,7 @@ def escape(s: str) -> str:
     return f"`{s}`" if s in sqlalchemy.sql.compiler.RESERVED_WORDS else s
 
 
-def query_to_dict[K, V](query: orm.query.RowReturningQuery[tuple[K, V]]) -> dict[K, V]:
+def to_dict[K, V](query: orm.query.RowReturningQuery[tuple[K, V]]) -> dict[K, V]:
     """Fetch results from query and return a dict.
 
     Args:
@@ -98,12 +98,10 @@ def query_to_dict[K, V](query: orm.query.RowReturningQuery[tuple[K, V]]) -> dict
         dict{first column: second column}
 
     """
-    # pyright is happier with comprehension
-    # ruff is happier with dict()
-    return dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
+    return dict(yield_(query))
 
 
-def query_count(query: orm.Query) -> int:
+def count[T](query: orm.Query[T]) -> int:
     """Count the number of result a query will return.
 
     Args:
@@ -118,7 +116,7 @@ def query_count(query: orm.Query) -> int:
     """
     # From here:
     # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
-    col_one = sqlalchemy.literal_column("1")
+    col_one: sqlalchemy.ColumnClause[object] = sqlalchemy.literal_column("1")
     stmt = query.statement
     if not isinstance(stmt, sqlalchemy.Select):
         raise TypeError
@@ -128,3 +126,92 @@ def query_count(query: orm.Query) -> int:
     )
     counter = counter.order_by(None)
     return query.session.execute(counter).scalar() or 0
+
+
+def any_[T](query: orm.Query[T]) -> bool:
+    """Check if any rows exists in query.
+
+    Args:
+        query: Session query to execute
+
+    Returns:
+        True if any results
+
+    """
+    return count(query.limit(1)) != 0
+
+
+# TODO (WattsUp): #0 Replace instances of .scalar with this; better typing
+@overload
+def one[T](
+    query: orm.query.RowReturningQuery[tuple[T]],
+) -> T: ...
+
+
+# TODO (WattsUp): #0 Replace instances of .one with this; better typing
+@overload
+def one[T](query: orm.Query[T]) -> T: ...
+
+
+def one[T](query: orm.Query[T]) -> object:
+    """Check if any rows exists in query.
+
+    Args:
+        query: Session query to execute
+
+    Returns:
+        One result
+
+    """
+    ret: T | Sequence[T] = query.one()
+    if not isinstance(ret, Sequence):
+        return ret
+    return ret[0]  # type: ignore[attr-defined]
+
+
+@overload
+def scalar[T](
+    query: orm.query.RowReturningQuery[tuple[T]],
+) -> T | None: ...
+
+
+@overload
+def scalar[T](query: orm.Query[T]) -> T | None: ...
+
+
+def scalar[T](query: orm.Query[T]) -> object | None:
+    """Check if any rows exists in query.
+
+    Args:
+        query: Session query to execute
+
+    Returns:
+        One result
+
+    """
+    return query.scalar()
+
+
+# TODO (WattsUp): #0 Replace instances of .all with this; better typing
+@overload
+def yield_[T: tuple[object, ...]](
+    query: orm.query.RowReturningQuery[T],
+) -> Iterable[T]: ...
+
+
+@overload
+def yield_[T](query: orm.Query[T]) -> Iterable[T]: ...
+
+
+def yield_[T](query: orm.Query[T]) -> Iterable[object]:
+    """Yield a query.
+
+    Args:
+        query: Query to yield
+
+    Returns:
+        Rows
+
+    """
+    # Yield per instead of fetch all is faster
+    return query.yield_per(100)

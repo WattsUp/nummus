@@ -16,14 +16,11 @@ from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
 
 if TYPE_CHECKING:
-    from sqlalchemy import orm
-
     from nummus.models.account import Account
 
 
 def test_init_properties(
     month_ord: int,
-    session: orm.Session,
     categories: dict[str, int],
     rand_real: Decimal,
 ) -> None:
@@ -33,9 +30,7 @@ def test_init_properties(
         "category_id": categories["uncategorized"],
     }
 
-    b = BudgetAssignment(**d)
-    session.add(b)
-    session.commit()
+    b = BudgetAssignment.create(**d)
 
     assert b.month_ord == d["month_ord"]
     assert b.amount == d["amount"]
@@ -44,33 +39,27 @@ def test_init_properties(
 
 def test_duplicate_months(
     month_ord: int,
-    session: orm.Session,
     categories: dict[str, int],
     rand_real: Decimal,
 ) -> None:
-    b = BudgetAssignment(
+    BudgetAssignment.create(
         month_ord=month_ord,
         amount=rand_real,
         category_id=categories["uncategorized"],
     )
-    session.add(b)
-    b = BudgetAssignment(
-        month_ord=month_ord,
-        amount=rand_real,
-        category_id=categories["uncategorized"],
-    )
-    session.add(b)
     with pytest.raises(exc.IntegrityError):
-        session.commit()
+        BudgetAssignment.create(
+            month_ord=month_ord,
+            amount=rand_real,
+            category_id=categories["uncategorized"],
+        )
 
 
 def test_get_monthly_available_empty(
     month: datetime.date,
-    session: orm.Session,
     categories: dict[str, int],
 ) -> None:
     availables, assignable, future_assigned = BudgetAssignment.get_monthly_available(
-        session,
         month,
     )
     assert set(availables.keys()) == set(categories.values())
@@ -82,15 +71,11 @@ def test_get_monthly_available_empty(
 
 def test_get_monthly_available(
     month: datetime.date,
-    session: orm.Session,
     categories: dict[str, int],
     transactions_spending: list[Transaction],
     budget_assignments: list[BudgetAssignment],
 ) -> None:
-    _ = transactions_spending
-    _ = budget_assignments
     availables, assignable, future_assigned = BudgetAssignment.get_monthly_available(
-        session,
         month,
     )
     availables.pop(categories["other income"])
@@ -131,15 +116,11 @@ def test_get_monthly_available(
 
 def test_get_monthly_available_next_month(
     month: datetime.date,
-    session: orm.Session,
     categories: dict[str, int],
     transactions_spending: list[Transaction],
     budget_assignments: list[BudgetAssignment],
 ) -> None:
-    _ = transactions_spending
-    _ = budget_assignments
     availables, assignable, future_assigned = BudgetAssignment.get_monthly_available(
-        session,
         utils.date_add_months(month, 1),
     )
     availables.pop(categories["other income"])
@@ -173,7 +154,6 @@ def test_get_monthly_available_next_month(
 
 def test_get_emergency_fund_empty(
     today_ord: int,
-    session: orm.Session,
 ) -> None:
     start_ord = today_ord - 3
     end_ord = today_ord + 3
@@ -181,7 +161,6 @@ def test_get_emergency_fund_empty(
     n_lower = 20
     n_upper = 40
     result = BudgetAssignment.get_emergency_fund(
-        session,
         start_ord,
         end_ord,
         n_lower,
@@ -197,33 +176,28 @@ def test_get_emergency_fund_empty(
 def test_get_emergency_fund(
     today: datetime.date,
     today_ord: int,
-    session: orm.Session,
     account: Account,
     categories: dict[str, int],
     transactions_spending: list[Transaction],
     budget_assignments: list[BudgetAssignment],
     rand_str: str,
 ) -> None:
-    session.query(TransactionCategory).where(
+    TransactionCategory.query().where(
         TransactionCategory.name == "groceries",
     ).update({"essential_spending": True})
     # Add a transaction 30 days ago
-    txn = Transaction(
+    txn = Transaction.create(
         account_id=account.id_,
         date=today - datetime.timedelta(days=30),
         amount=-50,
         statement=rand_str,
     )
-    t_split = TransactionSplit(
+    TransactionSplit.create(
         parent=txn,
         amount=txn.amount,
         category_id=categories["groceries"],
     )
-    session.add_all((txn, t_split))
-    session.commit()
 
-    _ = transactions_spending
-    _ = budget_assignments
     start_ord = today_ord - 3
     end_ord = today_ord + 3
 
@@ -231,7 +205,6 @@ def test_get_emergency_fund(
     n_lower = 20
     n_upper = 40
     result = BudgetAssignment.get_emergency_fund(
-        session,
         start_ord,
         end_ord,
         n_lower,
@@ -272,17 +245,14 @@ def test_get_emergency_fund(
 
 def test_get_emergency_fund_balance(
     month_ord: int,
-    session: orm.Session,
     budget_assignments: list[BudgetAssignment],
 ) -> None:
-    _ = budget_assignments
     start_ord = month_ord - 3
     end_ord = month_ord + 3
 
     n_lower = 20
     n_upper = 40
     result = BudgetAssignment.get_emergency_fund(
-        session,
         start_ord,
         end_ord,
         n_lower,
@@ -297,15 +267,13 @@ def test_get_emergency_fund_balance(
 
 def test_move_from_income(
     month_ord: int,
-    session: orm.Session,
     categories: dict[str, int],
 ) -> None:
     src_cat_id = None
     dest_cat_id = categories["groceries"]
-    BudgetAssignment.move(session, month_ord, src_cat_id, dest_cat_id, Decimal(100))
-    session.commit()
+    BudgetAssignment.move(month_ord, src_cat_id, dest_cat_id, Decimal(100))
 
-    a = session.query(BudgetAssignment).one()
+    a = BudgetAssignment.query().one()
     assert a.category_id == dest_cat_id
     assert a.month_ord == month_ord
     assert a.amount == 100
@@ -324,7 +292,6 @@ def test_move_from_income(
 )
 def test_move_to_income_partial(
     month_ord: int,
-    session: orm.Session,
     categories: dict[str, int],
     budget_assignments: list[BudgetAssignment],
     src: str | None,
@@ -333,14 +300,12 @@ def test_move_to_income_partial(
     target_src: Decimal | None,
     target_dest: Decimal | None,
 ) -> None:
-    _ = budget_assignments
     src_cat_id = None if src is None else categories[src]
     dest_cat_id = None if dest is None else categories[dest]
-    BudgetAssignment.move(session, month_ord, src_cat_id, dest_cat_id, to_move)
-    session.commit()
+    BudgetAssignment.move(month_ord, src_cat_id, dest_cat_id, to_move)
 
     a = (
-        session.query(BudgetAssignment)
+        BudgetAssignment.query()
         .where(
             BudgetAssignment.category_id == src_cat_id,
             BudgetAssignment.month_ord == month_ord,
@@ -355,7 +320,7 @@ def test_move_to_income_partial(
         assert a.amount == target_src
 
     a = (
-        session.query(BudgetAssignment)
+        BudgetAssignment.query()
         .where(
             BudgetAssignment.category_id == dest_cat_id,
             BudgetAssignment.month_ord == month_ord,

@@ -22,7 +22,7 @@ from packaging.version import Version
 from sqlalchemy import func, orm
 
 from nummus import exceptions as exc
-from nummus import utils
+from nummus import sql, utils
 from nummus.encryption.top import Encryption, ENCRYPTION_AVAILABLE
 from nummus.importers.top import get_importer, get_importers
 from nummus.migrations.top import MIGRATORS
@@ -41,7 +41,6 @@ from nummus.models.transaction_category import TransactionCategory
 from nummus.models.utils import (
     one_or_none,
 )
-from nummus.sql import get_engine, query_to_dict
 from nummus.version import __version__
 
 if TYPE_CHECKING:
@@ -200,7 +199,7 @@ class Portfolio:
         else:
             test_value = enc.encrypt(Portfolio._ENCRYPTION_TEST_VALUE)
 
-        engine = get_engine(path_db, enc)
+        engine = sql.get_engine(path_db, enc)
         with orm.Session(engine) as s, Base.set_session(s):
             with s.begin():
                 Base.metadata_create_all()
@@ -213,20 +212,20 @@ class Portfolio:
                     *[m.min_version() for m in MIGRATORS],
                 )
 
-                Config.set_(s, ConfigKey.VERSION, str(v))
-                Config.set_(s, ConfigKey.ENCRYPTION_TEST, test_value)
-                Config.set_(s, ConfigKey.CIPHER, cipher_b64)
-                Config.set_(s, ConfigKey.SECRET_KEY, secrets.token_hex())
-                Config.set_(s, ConfigKey.BASE_CURRENCY, str(DEFAULT_CURRENCY.value))
+                Config.set_(ConfigKey.VERSION, str(v))
+                Config.set_(ConfigKey.ENCRYPTION_TEST, test_value)
+                Config.set_(ConfigKey.CIPHER, cipher_b64)
+                Config.set_(ConfigKey.SECRET_KEY, secrets.token_hex())
+                Config.set_(ConfigKey.BASE_CURRENCY, str(DEFAULT_CURRENCY.value))
 
                 if enc is not None and key is not None:
-                    Config.set_(s, ConfigKey.WEB_KEY, enc.encrypt(key))
+                    Config.set_(ConfigKey.WEB_KEY, enc.encrypt(key))
         path_db.chmod(0o600)  # Only owner can read/write
 
         p = Portfolio(path_db, key)
-        with p.begin_session() as s:
+        with p.begin_session():
             TransactionCategory.add_default()
-            Asset.add_indices(s)
+            Asset.add_indices()
         return p
 
     def _unlock(self) -> dict[ConfigKey, str]:
@@ -241,9 +240,9 @@ class Portfolio:
 
         """
         try:
-            with self.begin_session() as s:
-                query = s.query(Config).with_entities(Config.key, Config.value)
-                configs: dict[ConfigKey, str] = query_to_dict(query)
+            with self.begin_session():
+                query = Config.query(Config.key, Config.value)
+                configs: dict[ConfigKey, str] = sql.to_dict(query)
         except exc.DatabaseError as e:
             msg = f"Failed to open database {self._path_db}"
             raise exc.UnlockingError(msg) from e
@@ -279,7 +278,7 @@ class Portfolio:
             Engine
 
         """
-        return get_engine(self._path_db, self._enc)
+        return sql.get_engine(self._path_db, self._enc)
 
     @contextlib.contextmanager
     def begin_session(self) -> Iterator[orm.Session]:
@@ -350,8 +349,8 @@ class Portfolio:
 
         """
         if version_str is None:
-            with self.begin_session() as s:
-                v_db = Config.db_version(s)
+            with self.begin_session():
+                v_db = Config.db_version()
         else:
             v_db = Version(version_str)
         for m in MIGRATORS[::-1]:
@@ -504,7 +503,7 @@ class Portfolio:
         s: orm.Session,
         d: TxnDict,
         acct_id: int,
-        asset_id: int,
+        asset_id: int | None,
         categories: dict[str, int],
     ) -> None:
         category_name = (d["category"] or "uncategorized").lower()
@@ -647,11 +646,11 @@ class Portfolio:
             if m := one_or_none(query):
                 return cache_and_return(m)
 
-        properties: list[orm.QueryableAttribute] = {
+        properties: dict[type[Base], list[sql.Column]] = {
             Account: [Account.number, Account.institution, Account.name],
             Asset: [Asset.ticker, Asset.name],
-        }[model]
-        for prop in properties:
+        }
+        for prop in properties[model]:
             # Exact?
             query = s.query(model).where(prop == search)
             if m := one_or_none(query):
@@ -928,17 +927,19 @@ class Portfolio:
         today_ord = today.toordinal()
         updated: list[AssetUpdate] = []
 
-        with self.begin_session() as s:
+        with self.begin_session():
             # Get FOREXes, add if need be
-            currencies: set[Currency] = {r[0] for r in s.query(Account.currency).all()}
-            base_currency = Config.base_currency(s)
-            Asset.create_forex(s, base_currency, currencies)
+            currencies: set[Currency] = {
+                r[0] for r in Account.query(Account.currency).all()
+            }
+            base_currency = Config.base_currency()
+            Asset.create_forex(base_currency, currencies)
 
-            assets = s.query(Asset).where(Asset.ticker.isnot(None)).all()
+            assets = Asset.query().where(Asset.ticker.isnot(None)).all()
             ids = [asset.id_ for asset in assets]
 
             # Get currently held assets
-            asset_qty = Account.get_asset_qty_all(s, today_ord, today_ord)
+            asset_qty = Account.get_asset_qty_all(today_ord, today_ord)
             currently_held_assets: set[int] = set()
             for acct_assets in asset_qty.values():
                 for a_id in ids:
@@ -962,7 +963,7 @@ class Portfolio:
                     # start & end are None if there are no transactions for the Asset
 
             # Auto update if asset needs interpolation
-            for asset in s.query(Asset).all():
+            for asset in Asset.all():
                 asset.autodetect_interpolate()
 
         return updated
@@ -1034,8 +1035,8 @@ class Portfolio:
             conn_dst.commit()
 
         # Use new encryption key
-        with self.begin_session() as s:
-            value_encrypted = Config.fetch(s, ConfigKey.WEB_KEY)
+        with self.begin_session():
+            value_encrypted = Config.fetch(ConfigKey.WEB_KEY, no_raise=True)
             value = key if value_encrypted is None else self.decrypt_s(value_encrypted)
         dst.change_web_key(value)
 
@@ -1066,5 +1067,5 @@ class Portfolio:
             raise exc.InvalidKeyError(msg)
 
         key_encrypted = self.encrypt(key)
-        with self.begin_session() as s:
-            Config.set_(s, ConfigKey.WEB_KEY, key_encrypted)
+        with self.begin_session():
+            Config.set_(ConfigKey.WEB_KEY, key_encrypted)

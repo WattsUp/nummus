@@ -12,13 +12,10 @@ if TYPE_CHECKING:
     import datetime
     from decimal import Decimal
 
-    from sqlalchemy import orm
-
 
 def test_init_properties(
     today: datetime.date,
     today_ord: int,
-    session: orm.Session,
     rand_real: Decimal,
     categories: dict[str, int],
 ) -> None:
@@ -31,9 +28,7 @@ def test_init_properties(
         "repeat_every": 0,
     }
 
-    t = Target(**d)
-    session.add(t)
-    session.commit()
+    t = Target.create(**d)
 
     assert t.category_id == d["category_id"]
     assert t.amount == d["amount"]
@@ -69,7 +64,6 @@ def test_init_properties(
 )
 def test_check_constraints(
     today_ord: int,
-    session: orm.Session,
     rand_real: Decimal,
     categories: dict[str, int],
     period: TargetPeriod,
@@ -77,7 +71,7 @@ def test_check_constraints(
     kwargs: dict[str, object],
     success: bool,
 ) -> None:
-    d = {
+    d: dict[str, object] = {
         "category_id": categories["uncategorized"],
         "amount": rand_real,
         "type_": type_,
@@ -86,18 +80,15 @@ def test_check_constraints(
         "repeat_every": 0,
     }
     d.update(kwargs)
-    t = Target(**d)
-    session.add(t)
     if success:
-        session.commit()
+        Target.create(**d)
     else:
         with pytest.raises(exc.IntegrityError):
-            session.commit()
+            Target.create(**d)
 
 
 def test_duplicates(
     today_ord: int,
-    session: orm.Session,
     rand_real: Decimal,
     categories: dict[str, int],
 ) -> None:
@@ -110,16 +101,12 @@ def test_duplicates(
         "repeat_every": 0,
     }
 
-    t = Target(**d)
-    session.add(t)
-    t = Target(**d)
-    session.add(t)
+    Target.create(**d)
     with pytest.raises(exc.IntegrityError):
-        session.commit()
+        Target.create(**d)
 
 
 def test_date_none(
-    session: orm.Session,
     rand_real: Decimal,
     categories: dict[str, int],
 ) -> None:
@@ -132,7 +119,6 @@ def test_date_none(
         "repeat_every": 0,
     }
 
-    t = Target(**d)
-    session.add(t)
+    t = Target.create(**d)
 
     assert t.due_date is None

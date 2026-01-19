@@ -24,19 +24,14 @@ from nummus.models.utils import (
 from tests import conftest
 
 if TYPE_CHECKING:
-    from sqlalchemy import orm
-
     from nummus.models.account import Account
-    from nummus.models.asset import (
-        AssetSplit,
-    )
+    from nummus.models.asset import AssetSplit
     from nummus.models.transaction import Transaction
     from tests.conftest import RandomStringGenerator
 
 
 @pytest.fixture
 def valuations(
-    session: orm.Session,
     today_ord: int,
     asset: Asset,
 ) -> list[AssetValuation]:
@@ -47,15 +42,13 @@ def valuations(
         today_ord + 3: {"value": Decimal(10), "asset_id": a_id},
     }
 
-    query = session.query(AssetValuation)
-    update_rows(session, AssetValuation, query, "date_ord", updates)
-    session.commit()
+    query = AssetValuation.query()
+    update_rows(AssetValuation, query, "date_ord", updates)
     return query.all()
 
 
 @pytest.fixture
 def valuations_five(
-    session: orm.Session,
     today_ord: int,
     asset: Asset,
 ) -> list[AssetValuation]:
@@ -68,14 +61,12 @@ def valuations_five(
         today_ord + 7: {"value": Decimal(10), "asset_id": a_id},
     }
 
-    query = session.query(AssetValuation)
-    update_rows(session, AssetValuation, query, "date_ord", updates)
-    session.commit()
+    query = AssetValuation.query()
+    update_rows(AssetValuation, query, "date_ord", updates)
     return query.all()
 
 
 def test_init_properties(
-    session: orm.Session,
     rand_str_generator: RandomStringGenerator,
 ) -> None:
     d = {
@@ -86,9 +77,7 @@ def test_init_properties(
         "currency": DEFAULT_CURRENCY,
     }
 
-    a = Asset(**d)
-    session.add(a)
-    session.commit()
+    a = Asset.create(**d)
 
     assert a.name == d["name"]
     assert a.description == d["description"]
@@ -103,7 +92,6 @@ def test_short() -> None:
 
 def test_get_value_empty(
     today_ord: int,
-    session: orm.Session,
     asset: Asset,
 ) -> None:
     start_ord = today_ord - 3
@@ -111,7 +99,7 @@ def test_get_value_empty(
     result = asset.get_value(start_ord, end_ord)
     assert result == [Decimal(0)] * 7
 
-    result = Asset.get_value_all(session, start_ord, end_ord)
+    result = Asset.get_value_all(start_ord, end_ord)
     assert result == {}
 
 
@@ -236,7 +224,6 @@ def test_prune_valuations_none(
     ids=conftest.id_func,
 )
 def test_prune_valuations_first_txn(
-    session: orm.Session,
     asset: Asset,
     valuations_five: list[AssetValuation],
     transactions: list[Transaction],
@@ -246,9 +233,9 @@ def test_prune_valuations_first_txn(
     for i in to_delete:
         txn = transactions[i]
         for t_split in txn.splits:
-            session.query(LabelLink).where(LabelLink.t_split_id == t_split.id_).delete()
-            session.delete(t_split)
-        session.delete(txn)
+            LabelLink.query().where(LabelLink.t_split_id == t_split.id_).delete()
+            t_split.delete()
+        txn.delete()
     _ = valuations_five
     assert asset.prune_valuations() == target
 
@@ -259,18 +246,17 @@ def test_prune_valuations_index(asset: Asset, valuations: list[AssetValuation]) 
     assert asset.prune_valuations() == 0
 
 
-def test_update_valuations_none(session: orm.Session, asset: Asset) -> None:
+def test_update_valuations_none(asset: Asset) -> None:
     asset.ticker = None
-    session.commit()
     with pytest.raises(exc.NoAssetWebSourceError):
         asset.update_valuations(through_today=True)
 
 
-def test_update_valuations_empty(session: orm.Session, asset: Asset) -> None:
+def test_update_valuations_empty(asset: Asset) -> None:
     start, end = asset.update_valuations(through_today=True)
     assert start is None
     assert end is None
-    assert query_count(session.query(AssetValuation)) == 0
+    assert query_count(AssetValuation.query()) == 0
 
 
 @pytest.mark.parametrize(
@@ -283,7 +269,6 @@ def test_update_valuations_empty(session: orm.Session, asset: Asset) -> None:
 )
 def test_update_valuations(
     today: datetime.date,
-    session: orm.Session,
     transactions: list[Transaction],
     category: AssetCategory,
     asset: Asset,
@@ -304,7 +289,7 @@ def test_update_valuations(
     while start <= end:
         n += 0 if start.weekday() in {5, 6} else 1
         start += datetime.timedelta(days=1)
-    assert query_count(session.query(AssetValuation)) == n
+    assert query_count(AssetValuation.query()) == n
 
 
 def test_update_valuations_delisted(
@@ -317,9 +302,8 @@ def test_update_valuations_delisted(
         asset.update_valuations(through_today=True)
 
 
-def test_update_sectors_none(session: orm.Session, asset: Asset) -> None:
+def test_update_sectors_none(asset: Asset) -> None:
     asset.ticker = None
-    session.commit()
     with pytest.raises(exc.NoAssetWebSourceError):
         asset.update_sectors()
 
@@ -347,43 +331,39 @@ def test_update_sectors_none(session: orm.Session, asset: Asset) -> None:
     ],
 )
 def test_update_sectors(
-    session: orm.Session,
     asset: Asset,
     ticker: str,
     target: dict[USSector, Decimal],
 ) -> None:
     asset.ticker = ticker
     asset.update_sectors()
-    session.commit()
-    query = (
-        session.query(AssetSector)
-        .with_entities(AssetSector.sector, AssetSector.weight)
-        .where(AssetSector.asset_id == asset.id_)
+    query = AssetSector.query(AssetSector.sector, AssetSector.weight).where(
+        AssetSector.asset_id == asset.id_,
     )
     sectors: dict[USSector, Decimal] = query_to_dict(query)
     assert sectors == target
 
 
-def test_index_twrr_none(today_ord: int, session: orm.Session) -> None:
+def test_index_twrr_none(today_ord: int) -> None:
     with pytest.raises(exc.ProtectedObjectNotFoundError):
-        Asset.index_twrr(session, "Fake Index", today_ord, today_ord)
+        Asset.index_twrr("Fake Index", today_ord, today_ord)
 
 
-def test_index_twrr(today_ord: int, session: orm.Session, asset: Asset) -> None:
+def test_index_twrr(today_ord: int, asset: Asset) -> None:
     asset.category = AssetCategory.INDEX
-    result = Asset.index_twrr(session, asset.name, today_ord - 3, today_ord + 3)
+    result = Asset.index_twrr(asset.name, today_ord - 3, today_ord + 3)
     # utils.twrr and Asset.get_value already tested, just check they connect well
     assert result == [Decimal(0)] * 7
 
 
-def test_index_twrr_today(today_ord: int, session: orm.Session, asset: Asset) -> None:
+def test_index_twrr_today(today_ord: int, asset: Asset) -> None:
     asset.category = AssetCategory.INDEX
-    result = Asset.index_twrr(session, asset.name, today_ord, today_ord)
+    result = Asset.index_twrr(asset.name, today_ord, today_ord)
     assert result == [Decimal(0)]
 
 
-def test_add_indices(session: orm.Session) -> None:
-    for asset in session.query(Asset).all():
+def test_add_indices() -> None:
+    for asset in Asset.query().all():
         assert asset.name is not None
         assert asset.description is not None
         assert not asset.interpolate
@@ -415,31 +395,30 @@ def test_autodetect_interpolate_daily(
     assert not asset.interpolate
 
 
-def test_create_forex(session: orm.Session, asset: Asset) -> None:
+def test_create_forex(asset: Asset) -> None:
     asset.ticker = "EURUSD=X"
     asset.category = AssetCategory.FOREX
 
-    Asset.create_forex(session, Currency.USD, {*Currency})
+    Asset.create_forex(Currency.USD, {*Currency})
 
-    query = session.query(Asset).where(Asset.category == AssetCategory.FOREX)
+    query = Asset.query().where(Asset.category == AssetCategory.FOREX)
     # -1 since don't need USDUSD=x
     assert query_count(query) == len(Currency) - 1
 
 
-def test_create_forex_none(session: orm.Session) -> None:
-    Asset.create_forex(session, Currency.USD, set())
+def test_create_forex_none() -> None:
+    Asset.create_forex(Currency.USD, set())
 
-    query = session.query(Asset).where(Asset.category == AssetCategory.FOREX)
+    query = Asset.query().where(Asset.category == AssetCategory.FOREX)
     assert query_count(query) == 0
 
 
-def test_get_forex_empty(session: orm.Session, today_ord: int) -> None:
-    result = Asset.get_forex(session, today_ord, today_ord, DEFAULT_CURRENCY)
+def test_get_forex_empty(today_ord: int) -> None:
+    result = Asset.get_forex(today_ord, today_ord, DEFAULT_CURRENCY)
     assert result[DEFAULT_CURRENCY] == [Decimal(1)]
 
 
 def test_get_forex(
-    session: orm.Session,
     today_ord: int,
     asset: Asset,
     asset_valuation: AssetValuation,
@@ -449,7 +428,6 @@ def test_get_forex(
     asset.currency = Currency.USD
 
     result = Asset.get_forex(
-        session,
         today_ord,
         today_ord,
         Currency.USD,

@@ -9,36 +9,24 @@ import sqlalchemy
 from sqlalchemy import (
     CheckConstraint,
     ForeignKeyConstraint,
-    orm,
     UniqueConstraint,
 )
 
 from nummus import exceptions as exc
-from nummus.models.base import YIELD_PER
-from nummus.sql import query_count
+from nummus import sql
 
 if TYPE_CHECKING:
     from sqlalchemy import (
         Constraint,
+        orm,
     )
 
     from nummus.models.base import Base
 
-
-# TODO (WattsUp): #0 move to sql.query_to_dict
-def query_to_dict[K, V](query: orm.query.RowReturningQuery[tuple[K, V]]) -> dict[K, V]:
-    """Fetch results from query and return a dict.
-
-    Args:
-        query: Query that returns 2 columns
-
-    Returns:
-        dict{first column: second column}
-
-    """
-    # pyright is happier with comprehension
-    # ruff is happier with dict()
-    return dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
+# TODO (WattsUp): #0 remove
+query_to_dict = sql.to_dict
+query_count = sql.count
+obj_session = None
 
 
 def paginate[T: Base](
@@ -61,7 +49,7 @@ def paginate[T: Base](
     offset = max(0, offset)
 
     # Get amount number from filters
-    count = query_count(query)
+    count = sql.count(query)
 
     # Apply limiting, and offset
     query = query.limit(limit).offset(offset)
@@ -131,28 +119,9 @@ def get_constraints(
     return constraints
 
 
-def obj_session(m: Base) -> orm.Session:
-    """Get the SQL session for an object.
-
-    Args:
-        m: Model to get from
-
-    Returns:
-        Session
-
-    Raises:
-        UnboundExecutionError: if model is unbound
-
-    """
-    s = orm.object_session(m)
-    if s is None:
-        raise exc.UnboundExecutionError
-    return s
-
-
-def update_rows(
-    cls: type[Base],
-    query: orm.Query,
+def update_rows[T: Base](
+    cls: type[T],
+    query: orm.Query[T],
     id_key: str,
     updates: dict[object, dict[str, object]],
 ) -> None:
@@ -168,7 +137,7 @@ def update_rows(
     updates = updates.copy()
     leftovers: list[Base] = []
 
-    for m in query.yield_per(YIELD_PER):
+    for m in sql.yield_(query):
         update = updates.pop(getattr(m, id_key), None)
         if update is None:
             # No longer needed
@@ -195,9 +164,9 @@ def update_rows(
         s.delete(m)
 
 
-def update_rows_list(
-    cls: type[Base],
-    query: orm.Query,
+def update_rows_list[T: Base](
+    cls: type[T],
+    query: orm.Query[T],
     updates: list[dict[str, object]],
 ) -> list[int]:
     """Update many rows, reusing leftovers when possible.
@@ -216,7 +185,7 @@ def update_rows_list(
     updates = updates.copy()
     leftovers: list[Base] = []
 
-    for m in query.yield_per(YIELD_PER):
+    for m in sql.yield_(query):
         if len(updates) == 0:
             # No longer needed
             leftovers.append(m)

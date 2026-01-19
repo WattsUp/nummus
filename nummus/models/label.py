@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from sqlalchemy import ForeignKey, Index, orm, UniqueConstraint
 
+from nummus import sql
 from nummus.models.base import (
     Base,
     ORMInt,
     ORMStr,
     string_column_args,
 )
-from nummus.models.utils import query_to_dict, update_rows
+from nummus.models.utils import update_rows
 
 
 class LabelLink(Base):
@@ -34,12 +35,11 @@ class LabelLink(Base):
         Index("label_link_t_split_id", "t_split_id"),
     )
 
-    @staticmethod
-    def add_links(s: orm.Session, split_labels: dict[int, set[str]]) -> None:
+    @classmethod
+    def add_links(cls, split_labels: dict[int, set[str]]) -> None:
         """Add links between TransactionSplits and Labels.
 
         Args:
-            s: SQL session to use
             split_labels: dict {TransactionSplit: {label names to link}
 
         """
@@ -51,23 +51,16 @@ class LabelLink(Base):
         for labels in split_labels.values():
             label_names.update(labels)
 
-        query = (
-            s.query(Label)
-            .with_entities(Label.name, Label.id_)
-            .where(Label.name.in_(label_names))
-        )
-        mapping: dict[str, int] = query_to_dict(query)
+        query = Label.query(Label.name, Label.id_).where(Label.name.in_(label_names))
+        mapping: dict[str, int] = sql.to_dict(query)
 
-        to_add = [Label(name=name) for name in label_names if name not in mapping]
-        if to_add:
-            s.add_all(to_add)
-            s.flush()
-            mapping.update({label.name: label.id_ for label in to_add})
+        for name in label_names:
+            if name not in mapping:
+                mapping[name] = Label.create(name=name).id_
 
         for t_split_id, labels in split_labels.items():
-            query = s.query(LabelLink).where(LabelLink.t_split_id == t_split_id)
+            query = LabelLink.query().where(LabelLink.t_split_id == t_split_id)
             update_rows(
-                s,
                 LabelLink,
                 query,
                 "label_id",

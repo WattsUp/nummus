@@ -19,34 +19,29 @@ from nummus.models.transaction import Transaction, TransactionSplit
 if TYPE_CHECKING:
     import datetime
 
-    import sqlalchemy
-    from sqlalchemy import orm
-
+    from nummus import sql
     from tests.conftest import RandomStringGenerator
 
 
 @pytest.fixture
 def transactions(
-    session: orm.Session,
     today: datetime.date,
     account: Account,
     categories: dict[str, int],
     rand_str_generator: RandomStringGenerator,
 ) -> list[Transaction]:
     for _ in range(10):
-        txn = Transaction(
+        txn = Transaction.create(
             account_id=account.id_,
             date=today,
             amount=100,
             statement=rand_str_generator(),
         )
-        t_split = TransactionSplit(
+        TransactionSplit.create(
             amount=100,
             parent=txn,
             category_id=categories["uncategorized"],
         )
-        session.add_all((txn, t_split))
-    session.commit()
     return Transaction.all()
 
 
@@ -224,7 +219,7 @@ def test_update_rows_list_delete(
 )
 def test_one_or_none(
     asset: Asset,
-    where: list[sqlalchemy.ColumnClause],
+    where: list[sql.ColumnClause],
     expect_asset: bool,
 ) -> None:
     query = Asset.query().where(*where)

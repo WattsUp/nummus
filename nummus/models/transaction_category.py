@@ -7,6 +7,7 @@ from typing import NamedTuple, override
 from sqlalchemy import CheckConstraint, ForeignKey, orm, UniqueConstraint
 
 from nummus import exceptions as exc
+from nummus import sql
 from nummus.models.base import (
     Base,
     BaseEnum,
@@ -227,10 +228,9 @@ class TransactionCategory(Base):
             },
         }
 
-        s = TransactionCategory.session()
         for group, categories in groups.items():
             for name, spec in categories.items():
-                cat = TransactionCategory(
+                cat = TransactionCategory.create(
                     emoji_name=name,
                     group=group,
                     locked=spec.locked,
@@ -238,7 +238,6 @@ class TransactionCategory(Base):
                     asset_linked=spec.asset_linked,
                     essential_spending=spec.essential_spending,
                 )
-                s.add(cat)
                 d[cat.name] = cat
         return d
 
@@ -261,7 +260,7 @@ class TransactionCategory(Base):
             KeyError if model does not have name property
 
         """
-        query = cls.query().with_entities(cls.id_, cls.name).order_by(cls.name)
+        query = cls.query(cls.id_, cls.name).order_by(cls.name)
         if no_asset_linked:
             query = query.where(cls.asset_linked.is_(False))
         return query_to_dict(query)
@@ -284,7 +283,7 @@ class TransactionCategory(Base):
             KeyError if model does not have name property
 
         """
-        query = cls.query().with_entities(cls.id_, cls.emoji_name).order_by(cls.name)
+        query = cls.query(cls.id_, cls.emoji_name).order_by(cls.name)
         if no_asset_linked:
             query = query.where(cls.asset_linked.is_(False))
         return query_to_dict(query)
@@ -304,12 +303,7 @@ class TransactionCategory(Base):
 
         """
         try:
-            id_ = (
-                cls.session()
-                .query(TransactionCategory.id_)
-                .where(TransactionCategory.name == name)
-                .one()[0]
-            )
+            id_ = sql.one(cls.query(cls.id_).where(TransactionCategory.name == name))
         except exc.NoResultFound as e:
             msg = f"Category {name} not found"
             raise exc.ProtectedObjectNotFoundError(msg) from e

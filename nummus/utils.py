@@ -16,6 +16,7 @@ from decimal import Decimal
 from typing import NamedTuple, overload, TYPE_CHECKING
 
 import emoji as emoji_mod
+import pandas as pd
 from colorama import Fore
 from rapidfuzz import process
 from scipy import optimize
@@ -832,7 +833,7 @@ def pretty_table(table: list[list[str] | None]) -> list[str]:
                 excess[i] -= 1
                 margin += 1
 
-    formats = []
+    formats: list[str] = []
     for cell, n in zip(header_raw, col_widths, strict=True):
         align = cell[0]
         align = align if align in "<>^" else ""
@@ -1073,3 +1074,26 @@ def set_sub_keys[_, T, V](dicts: dict[_, dict[T, V]]) -> set[T]:
     for d in dicts.values():
         keys.update(d.keys())
     return keys
+
+
+def pd_series_to_dict(s: pd.Series[float]) -> dict[int, float]:
+    """Convert pandas series to dict.
+
+    Args:
+        s: pandas series
+
+    Returns:
+        dict{date ordinal: value}
+
+    Raises:
+        TypeError: if columns are not date, floatable
+
+    """
+    d: dict[int, float] = {}
+    for k, v in s.items():
+        if not isinstance(k, pd.Timestamp):
+            raise TypeError
+        if not isinstance(v, float):
+            raise TypeError
+        d[k.to_pydatetime().date().toordinal()] = float(v)
+    return d

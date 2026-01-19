@@ -78,6 +78,8 @@ dev = [
   "djlint>=1.36.4",
   "pyright>=1.1.402",
   "taplo",
+  "scipy-stubs",
+  "pandas-stubs",
 ]
 build = ["build"]
 build-docker = ["nummus-financial[build,encrypt]", "setuptools-scm>=8"]
@@ -148,9 +150,20 @@ force_alphabetical_sort_within_sections = true
 
 [tool.pyright]
 include = ["nummus", "tests", "tools"]
-exclude = ["**/__pycache__"]
+exclude = ["**/__pycache__", "typing"]
 venvPath = "."
 venv = ".venv"
+typeCheckingMode = "strict"
+
+reportUnknownParameterType = "warning"
+reportUnknownArgumentType = "warning"
+reportUnknownLambdaType = "warning"
+reportUnknownVariableType = "warning"
+reportUnknownMemberType = "warning"
+reportUnnecessaryTypeIgnoreComment = "warning"
+
+# Checked by ruff
+reportPrivateUsage = "none"
 
 [tool.pytest.ini_options]
 markers = ["encryption: tests that require encryption"]
@@ -158,6 +171,7 @@ addopts = ["--durations=10", "--import-mode=importlib"]
 
 [tool.ruff]
 target-version = "py312"
+exclude = ["typings"]
 
 [tool.ruff.lint]
 select = ["ALL"]

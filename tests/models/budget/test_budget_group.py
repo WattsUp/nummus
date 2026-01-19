@@ -8,55 +8,41 @@ from nummus import exceptions as exc
 from nummus.models.budget import BudgetGroup
 
 if TYPE_CHECKING:
-    from sqlalchemy import orm
-
     from tests.conftest import RandomStringGenerator
 
 
-def test_init_properties(session: orm.Session, rand_str: str) -> None:
+def test_init_properties(rand_str: str) -> None:
     d = {
         "name": rand_str,
         "position": 0,
     }
-    g = BudgetGroup(**d)
-    session.add(g)
-    session.commit()
+    g = BudgetGroup.create(**d)
 
     assert g.name == d["name"]
     assert g.position == d["position"]
 
 
 def test_duplicate_names(
-    session: orm.Session,
     rand_str: str,
 ) -> None:
-    g = BudgetGroup(name=rand_str, position=0)
-    session.add(g)
-    g = BudgetGroup(name=rand_str, position=1)
-    session.add(g)
+    BudgetGroup.create(name=rand_str, position=0)
     with pytest.raises(exc.IntegrityError):
-        session.commit()
+        BudgetGroup.create(name=rand_str, position=0)
 
 
 def test_duplicate_position(
-    session: orm.Session,
     rand_str_generator: RandomStringGenerator,
 ) -> None:
-    g = BudgetGroup(name=rand_str_generator(), position=0)
-    session.add(g)
-    g = BudgetGroup(name=rand_str_generator(), position=0)
-    session.add(g)
+    BudgetGroup.create(name=rand_str_generator(), position=0)
     with pytest.raises(exc.IntegrityError):
-        session.commit()
+        BudgetGroup.create(name=rand_str_generator(), position=0)
 
 
-def test_empty(session: orm.Session) -> None:
-    g = BudgetGroup(name="", position=0)
-    session.add(g)
+def test_empty() -> None:
     with pytest.raises(exc.IntegrityError):
-        session.commit()
+        BudgetGroup.create(name="", position=0)
 
 
 def test_short() -> None:
     with pytest.raises(exc.InvalidORMValueError):
-        BudgetGroup(name="a", position=0)
+        BudgetGroup.create(name="a", position=0)

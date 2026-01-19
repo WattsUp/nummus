@@ -7,11 +7,9 @@ import pytest
 
 from nummus import exceptions as exc
 from nummus.models.account import Account, AccountCategory
-from nummus.models.currency import DEFAULT_CURRENCY
+from nummus.models.currency import Currency, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
-    from sqlalchemy import orm
-
     from nummus.models.asset import Asset, AssetValuation
     from nummus.models.transaction import Transaction
     from tests.conftest import RandomStringGenerator
@@ -19,7 +17,6 @@ if TYPE_CHECKING:
 
 def test_init_properties(
     rand_str_generator: RandomStringGenerator,
-    session: orm.Session,
 ) -> None:
     d = {
         "name": rand_str_generator(),
@@ -29,10 +26,7 @@ def test_init_properties(
         "budgeted": False,
         "currency": DEFAULT_CURRENCY,
     }
-    acct = Account(**d)
-
-    session.add(acct)
-    session.commit()
+    acct = Account.create(**d)
 
     assert acct.name == d["name"]
     assert acct.institution == d["institution"]
@@ -47,14 +41,14 @@ def test_short(account: Account) -> None:
         account.name = "a"
 
 
-def test_ids(session: orm.Session, account: Account) -> None:
-    ids = Account.ids(session, AccountCategory.CASH)
+def test_ids(account: Account) -> None:
+    ids = Account.ids(AccountCategory.CASH)
     assert ids == {account.id_}
 
 
-def test_ids_none(session: orm.Session, account: Account) -> None:
+def test_ids_none(account: Account) -> None:
     _ = account
-    ids = Account.ids(session, AccountCategory.CREDIT)
+    ids = Account.ids(AccountCategory.CREDIT)
     assert ids == set()
 
 
@@ -70,7 +64,6 @@ def test_date_properties(
 
 def test_get_asset_qty_empty(
     today_ord: int,
-    session: orm.Session,
     account: Account,
 ) -> None:
     start_ord = today_ord - 3
@@ -80,13 +73,12 @@ def test_get_asset_qty_empty(
     # defaultdict is correct length
     assert result[0] == [Decimal()] * 7
 
-    result = Account.get_asset_qty_all(session, start_ord, end_ord)
+    result = Account.get_asset_qty_all(start_ord, end_ord)
     assert result == {}
 
 
 def test_get_asset_qty_none(
     today_ord: int,
-    session: orm.Session,
     account: Account,
     transactions: list[Transaction],
 ) -> None:
@@ -95,7 +87,7 @@ def test_get_asset_qty_none(
     start_ord = today_ord - 3
     end_ord = today_ord + 3
 
-    result = Account.get_asset_qty_all(session, start_ord, end_ord, set())
+    result = Account.get_asset_qty_all(start_ord, end_ord, set())
     # defaultdict is correct length
     assert result[0][0] == [Decimal()] * 7
 
@@ -137,7 +129,6 @@ def test_get_asset_qty_today(
 
 def test_get_value_empty(
     today_ord: int,
-    session: orm.Session,
     account: Account,
 ) -> None:
     start_ord = today_ord - 3
@@ -149,7 +140,7 @@ def test_get_value_empty(
     # defaultdict is correct length
     assert assets[0] == [Decimal()] * 7
 
-    values, profits, assets = Account.get_value_all(session, start_ord, end_ord)
+    values, profits, assets = Account.get_value_all(start_ord, end_ord)
     assert values == {}
     assert profits == {}
     assert assets == {}
@@ -157,7 +148,6 @@ def test_get_value_empty(
 
 def test_get_value_none(
     today_ord: int,
-    session: orm.Session,
     account: Account,
     transactions: list[Transaction],
 ) -> None:
@@ -166,7 +156,7 @@ def test_get_value_none(
     start_ord = today_ord - 3
     end_ord = today_ord + 3
 
-    values, profits, assets = Account.get_value_all(session, start_ord, end_ord, set())
+    values, profits, assets = Account.get_value_all(start_ord, end_ord, set())
     assert values == {}
     assert profits == {}
     assert assets == {}
@@ -224,6 +214,55 @@ def test_get_value(
     assert assets == target
 
 
+def test_get_value_forex(
+    today_ord: int,
+    account: Account,
+    asset: Asset,
+    asset_valuation: AssetValuation,
+    transactions: list[Transaction],
+) -> None:
+    start_ord = today_ord - 4
+    end_ord = today_ord + 3
+    f = 2
+    forex: dict[Currency, list[Decimal]] = {Currency.USD: [Decimal(f)] * 8}
+    values, profits, assets = account.get_value(start_ord, end_ord, forex=forex)
+    target = [
+        Decimal(),
+        Decimal(100) * f,
+        Decimal(90) * f,
+        Decimal(90) * f,
+        Decimal(110) * f,
+        Decimal(150) * f,
+        Decimal(150) * f,
+        Decimal(150) * f,
+    ]
+    assert values == target
+    target = [
+        Decimal(),
+        Decimal(),
+        Decimal(-10) * f,
+        Decimal(-10) * f,
+        Decimal(10) * f,
+        Decimal(50) * f,
+        Decimal(50) * f,
+        Decimal(50) * f,
+    ]
+    assert profits == target
+    target = {
+        asset.id_: [
+            Decimal(),
+            Decimal(),
+            Decimal(),
+            Decimal(),
+            Decimal(20) * f,
+            Decimal(10) * f,
+            Decimal(10) * f,
+            Decimal(10) * f,
+        ],
+    }
+    assert assets == target
+
+
 def test_get_value_today(
     today_ord: int,
     account: Account,
@@ -266,7 +305,6 @@ def test_get_value_fund_day(
 
 def test_get_cash_flow_empty(
     today_ord: int,
-    session: orm.Session,
     account: Account,
 ) -> None:
     start_ord = today_ord - 3
@@ -276,7 +314,7 @@ def test_get_cash_flow_empty(
     # defaultdict is correct length
     assert result[0] == [Decimal()] * 7
 
-    result = Account.get_cash_flow_all(session, start_ord, end_ord)
+    result = Account.get_cash_flow_all(start_ord, end_ord)
     assert result == {}
 
 
@@ -325,7 +363,6 @@ def test_get_cash_flow_today(
 
 def test_get_profit_by_asset_empty(
     today_ord: int,
-    session: orm.Session,
     account: Account,
 ) -> None:
     start_ord = today_ord - 3
@@ -334,7 +371,7 @@ def test_get_profit_by_asset_empty(
     assert result == {}
     assert result[0] == Decimal()
 
-    result = Account.get_profit_by_asset_all(session, start_ord, end_ord)
+    result = Account.get_profit_by_asset_all(start_ord, end_ord)
     assert result == {}
 
 

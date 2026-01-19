@@ -10,8 +10,6 @@ from nummus.models.asset import AssetSplit
 if TYPE_CHECKING:
     import datetime
 
-    from sqlalchemy import orm
-
     from nummus.models.asset import Asset
     from tests.conftest import RandomRealGenerator
 
@@ -19,7 +17,6 @@ if TYPE_CHECKING:
 def test_init_properties(
     today: datetime.date,
     today_ord: int,
-    session: orm.Session,
     asset: Asset,
     rand_real_generator: RandomRealGenerator,
 ) -> None:
@@ -29,9 +26,7 @@ def test_init_properties(
         "date_ord": today_ord,
     }
 
-    v = AssetSplit(**d)
-    session.add(v)
-    session.commit()
+    v = AssetSplit.create(**d)
 
     assert v.asset_id == d["asset_id"]
     assert v.multiplier == d["multiplier"]
@@ -41,39 +36,30 @@ def test_init_properties(
 
 def test_multiplier_negative(
     today_ord: int,
-    session: orm.Session,
     asset: Asset,
 ) -> None:
-    v = AssetSplit(asset_id=asset.id_, date_ord=today_ord, multiplier=-1)
-    session.add(v)
     with pytest.raises(exc.IntegrityError):
-        session.commit()
+        AssetSplit.create(asset_id=asset.id_, date_ord=today_ord, multiplier=-1)
 
 
-def test_multiplier_zero(today_ord: int, session: orm.Session, asset: Asset) -> None:
-    v = AssetSplit(asset_id=asset.id_, date_ord=today_ord, multiplier=0)
-    session.add(v)
+def test_multiplier_zero(today_ord: int, asset: Asset) -> None:
     with pytest.raises(exc.IntegrityError):
-        session.commit()
+        AssetSplit.create(asset_id=asset.id_, date_ord=today_ord, multiplier=0)
 
 
 def test_duplicate_dates(
     today_ord: int,
-    session: orm.Session,
     asset: Asset,
     rand_real_generator: RandomRealGenerator,
 ) -> None:
-    v = AssetSplit(
+    AssetSplit.create(
         asset_id=asset.id_,
         date_ord=today_ord,
         multiplier=rand_real_generator(1, 10),
     )
-    session.add(v)
-    v = AssetSplit(
-        asset_id=asset.id_,
-        date_ord=today_ord,
-        multiplier=rand_real_generator(1, 10),
-    )
-    session.add(v)
     with pytest.raises(exc.IntegrityError):
-        session.commit()
+        AssetSplit.create(
+            asset_id=asset.id_,
+            date_ord=today_ord,
+            multiplier=rand_real_generator(1, 10),
+        )

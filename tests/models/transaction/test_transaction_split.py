@@ -21,7 +21,6 @@ if TYPE_CHECKING:
 
 def test_init_properties(
     today: datetime.date,
-    session: orm.Session,
     account: Account,
     asset: Asset,
     categories: dict[str, int],
@@ -36,9 +35,7 @@ def test_init_properties(
         "payee": rand_str_generator(),
     }
 
-    txn = Transaction(**d)
-    session.add(txn)
-    session.commit()
+    txn = Transaction.create(**d)
 
     d = {
         "amount": d["amount"],
@@ -49,10 +46,8 @@ def test_init_properties(
         "memo": rand_str_generator(),
     }
 
-    t_split_0 = TransactionSplit(**d)
+    t_split_0 = TransactionSplit.create(**d)
 
-    session.add(t_split_0)
-    session.commit()
     assert t_split_0.parent == txn
     assert t_split_0.parent_id == txn.id_
     assert t_split_0.category_id == d["category_id"]
@@ -71,9 +66,8 @@ def test_init_properties(
 
 def test_zero_amount(session: orm.Session, transactions: list[Transaction]) -> None:
     t_split = transactions[1].splits[0]
-    t_split.amount = Decimal()
-    with pytest.raises(exc.IntegrityError):
-        session.commit()
+    with pytest.raises(exc.IntegrityError), session.begin_nested():
+        t_split.amount = Decimal()
 
 
 def test_short() -> None:
@@ -104,18 +98,15 @@ def test_unset_asset_quantity(
     transactions: list[Transaction],
 ) -> None:
     t_split = transactions[1].splits[0]
-    t_split._asset_qty_unadjusted = None
-    with pytest.raises(exc.IntegrityError):
-        session.commit()
+    with pytest.raises(exc.IntegrityError), session.begin_nested():
+        t_split._asset_qty_unadjusted = None
 
 
 def test_clear_asset_quantity(
-    session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
     t_split = transactions[1].splits[0]
     t_split.asset_quantity_unadjusted = None
-    session.commit()
     assert t_split.asset_quantity is None
 
 
@@ -159,9 +150,9 @@ def test_parent(transactions: list[Transaction]) -> None:
     assert t_split.parent == txn
 
 
-def test_search_none(session: orm.Session, transactions: list[Transaction]) -> None:
+def test_search_none(transactions: list[Transaction]) -> None:
     _ = transactions
-    query = session.query(TransactionSplit)
+    query = TransactionSplit.query()
     with pytest.raises(exc.EmptySearchError):
         TransactionSplit.search(query, "")
 
@@ -190,11 +181,10 @@ def test_search_none(session: orm.Session, transactions: list[Transaction]) -> N
     ids=conftest.id_func,
 )
 def test_search(
-    session: orm.Session,
     transactions: list[Transaction],
     search_str: str,
     target: list[int],
 ) -> None:
-    query = session.query(TransactionSplit)
+    query = TransactionSplit.query()
     result = TransactionSplit.search(query, search_str)
     assert result == [transactions[i].splits[0].id_ for i in target]

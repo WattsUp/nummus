@@ -11,8 +11,6 @@ if TYPE_CHECKING:
     import datetime
     from decimal import Decimal
 
-    from sqlalchemy import orm
-
     from nummus.models.asset import Asset
     from tests.conftest import RandomRealGenerator
 
@@ -20,7 +18,6 @@ if TYPE_CHECKING:
 def test_init_properties(
     today: datetime.date,
     today_ord: int,
-    session: orm.Session,
     asset: Asset,
     rand_real: Decimal,
 ) -> None:
@@ -30,9 +27,7 @@ def test_init_properties(
         "value": rand_real,
     }
 
-    v = AssetValuation(**d)
-    session.add(v)
-    session.commit()
+    v = AssetValuation.create(**d)
 
     assert v.asset_id == d["asset_id"]
     assert v.value == d["value"]
@@ -42,32 +37,25 @@ def test_init_properties(
 
 def test_multiplier_negative(
     today_ord: int,
-    session: orm.Session,
     asset: Asset,
 ) -> None:
-    v = AssetValuation(asset_id=asset.id_, date_ord=today_ord, value=-1)
-    session.add(v)
     with pytest.raises(exc.IntegrityError):
-        session.commit()
+        AssetValuation.create(asset_id=asset.id_, date_ord=today_ord, value=-1)
 
 
 def test_duplicate_dates(
     today_ord: int,
-    session: orm.Session,
     asset: Asset,
     rand_real_generator: RandomRealGenerator,
 ) -> None:
-    v = AssetValuation(
+    AssetValuation.create(
         asset_id=asset.id_,
         date_ord=today_ord,
         value=rand_real_generator(),
     )
-    session.add(v)
-    v = AssetValuation(
-        asset_id=asset.id_,
-        date_ord=today_ord,
-        value=rand_real_generator(),
-    )
-    session.add(v)
     with pytest.raises(exc.IntegrityError):
-        session.commit()
+        AssetValuation.create(
+            asset_id=asset.id_,
+            date_ord=today_ord,
+            value=rand_real_generator(),
+        )
