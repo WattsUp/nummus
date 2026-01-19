@@ -9,13 +9,13 @@ import sqlalchemy
 from sqlalchemy import (
     CheckConstraint,
     ForeignKeyConstraint,
-    func,
     orm,
     UniqueConstraint,
 )
 
 from nummus import exceptions as exc
 from nummus.models.base import YIELD_PER
+from nummus.sql import query_count
 
 if TYPE_CHECKING:
     from sqlalchemy import (
@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from nummus.models.base import Base
 
 
+# TODO (WattsUp): #0 move to sql.query_to_dict
 def query_to_dict[K, V](query: orm.query.RowReturningQuery[tuple[K, V]]) -> dict[K, V]:
     """Fetch results from query and return a dict.
 
@@ -40,38 +41,11 @@ def query_to_dict[K, V](query: orm.query.RowReturningQuery[tuple[K, V]]) -> dict
     return dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
 
 
-def query_count(query: orm.Query) -> int:
-    """Count the number of result a query will return.
-
-    Args:
-        query: Session query to execute
-
-    Returns:
-        Number of instances query will return upon execution
-
-    Raises:
-        TypeError: if query.statement is not a Select
-
-    """
-    # From here:
-    # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
-    col_one = sqlalchemy.literal_column("1")
-    stmt = query.statement
-    if not isinstance(stmt, sqlalchemy.Select):
-        raise TypeError
-    counter = stmt.with_only_columns(
-        func.count(col_one),
-        maintain_column_froms=True,
-    )
-    counter = counter.order_by(None)
-    return query.session.execute(counter).scalar() or 0
-
-
-def paginate(
-    query: orm.Query[Base],
+def paginate[T: Base](
+    query: orm.Query[T],
     limit: int,
     offset: int,
-) -> tuple[list[Base], int, int | None]:
+) -> tuple[list[T], int, int | None]:
     """Paginate query response for smaller results.
 
     Args:
@@ -102,14 +76,10 @@ def paginate(
     return results, count, next_offset
 
 
-def dump_table_configs(
-    s: orm.Session,
-    model: type[Base],
-) -> list[str]:
+def dump_table_configs(model: type[Base]) -> list[str]:
     """Get the table configs (columns and constraints) and print.
 
     Args:
-        s: SQL session to use
         model: Filter to specific table
 
     Returns:
@@ -123,26 +93,24 @@ def dump_table_configs(
             type='table'
             AND name='{model.__tablename__}'
         """.strip()  # noqa: S608
-    result = s.execute(sqlalchemy.text(stmt)).one()[0]
+    result = model.session().execute(sqlalchemy.text(stmt)).one()[0]
     result: str
     return [s.replace("\t", "    ") for s in result.splitlines()]
 
 
 def get_constraints(
-    s: orm.Session,
     model: type[Base],
 ) -> list[tuple[type[Constraint], str]]:
     """Get constraints of a table.
 
     Args:
-        s: SQL session to use
         model: Filter to specific table
 
     Returns:
         list[(Constraint type, construction text)]
 
     """
-    config = "\n".join(dump_table_configs(s, model))
+    config = "\n".join(dump_table_configs(model))
     constraints: list[tuple[type[Constraint], str]] = []
 
     re_unique = re.compile(r"UNIQUE \(([^\)]+)\)")
@@ -183,7 +151,6 @@ def obj_session(m: Base) -> orm.Session:
 
 
 def update_rows(
-    s: orm.Session,
     cls: type[Base],
     query: orm.Query,
     id_key: str,
@@ -192,7 +159,6 @@ def update_rows(
     """Update many rows, reusing leftovers when possible.
 
     Args:
-        s: SQL session to use
         cls: Type of model to update
         query: Query to fetch all applicable models
         id_key: Name of property used for identification
@@ -211,6 +177,8 @@ def update_rows(
             for k, v in update.items():
                 setattr(m, k, v)
 
+    s = cls.session()
+
     # Add any missing ones
     for id_, update in updates.items():
         if leftovers:
@@ -228,7 +196,6 @@ def update_rows(
 
 
 def update_rows_list(
-    s: orm.Session,
     cls: type[Base],
     query: orm.Query,
     updates: list[dict[str, object]],
@@ -236,7 +203,6 @@ def update_rows_list(
     """Update many rows, reusing leftovers when possible.
 
     Args:
-        s: SQL session to use
         cls: Type of model to update
         query: Query to fetch all applicable models
         updates: list[{parameter: value}]
@@ -259,6 +225,8 @@ def update_rows_list(
             for k, v in update.items():
                 setattr(m, k, v)
             ids.append(m.id_)
+
+    s = cls.session()
 
     to_add = [cls(**update) for update in updates]
     s.add_all(to_add)

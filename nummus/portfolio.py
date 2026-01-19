@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import datetime
 import hashlib
 import io
@@ -21,7 +22,7 @@ from packaging.version import Version
 from sqlalchemy import func, orm
 
 from nummus import exceptions as exc
-from nummus import sql, utils
+from nummus import utils
 from nummus.encryption.top import Encryption, ENCRYPTION_AVAILABLE
 from nummus.importers.top import get_importer, get_importers
 from nummus.migrations.top import MIGRATORS
@@ -39,12 +40,12 @@ from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
 from nummus.models.utils import (
     one_or_none,
-    query_to_dict,
 )
+from nummus.sql import get_engine, query_to_dict
 from nummus.version import __version__
 
 if TYPE_CHECKING:
-    import contextlib
+    from collections.abc import Iterator
 
     from nummus.importers.base import TxnDict
     from nummus.models.currency import Currency
@@ -199,10 +200,10 @@ class Portfolio:
         else:
             test_value = enc.encrypt(Portfolio._ENCRYPTION_TEST_VALUE)
 
-        engine = sql.get_engine(path_db, enc)
-        with orm.Session(engine) as s:
+        engine = get_engine(path_db, enc)
+        with orm.Session(engine) as s, Base.set_session(s):
             with s.begin():
-                Base.metadata_create_all(s)
+                Base.metadata_create_all()
 
             with s.begin():
                 # If developing a migration, current version will be less
@@ -224,7 +225,7 @@ class Portfolio:
 
         p = Portfolio(path_db, key)
         with p.begin_session() as s:
-            TransactionCategory.add_default(s)
+            TransactionCategory.add_default()
             Asset.add_indices(s)
         return p
 
@@ -278,16 +279,19 @@ class Portfolio:
             Engine
 
         """
-        return sql.get_engine(self._path_db, self._enc)
+        return get_engine(self._path_db, self._enc)
 
-    def begin_session(self) -> contextlib.AbstractContextManager[orm.Session]:
+    @contextlib.contextmanager
+    def begin_session(self) -> Iterator[orm.Session]:
         """Get SQL Session to the database.
 
-        Returns:
+        Yields:
             Open Session
 
         """
-        return self._session_maker.begin()
+        s = self._session_maker()
+        with s, s.begin(), Base.set_session(s):
+            yield s
 
     def encrypt(self, secret: bytes | str) -> str:
         """Encrypt a secret using the key.
@@ -388,7 +392,7 @@ class Portfolio:
             i = get_importer(path, path_debug, self._importers)
             today = datetime.datetime.now(datetime.UTC).date()
 
-            categories = TransactionCategory.map_name(s)
+            categories = TransactionCategory.map_name()
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
             # Cache a mapping from account/asset name to the ID

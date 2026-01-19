@@ -8,10 +8,13 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy
 import sqlalchemy.event
+from sqlalchemy import func
 
 if TYPE_CHECKING:
     import sqlite3
     from pathlib import Path
+
+    from sqlalchemy import orm
 
     from nummus.encryption.base import EncryptionInterface
 
@@ -22,6 +25,9 @@ except ImportError:
 
 
 _ENGINE_ARGS: dict[str, object] = {}
+
+# Yield per instead of fetch all is faster
+YIELD_PER = 100
 
 
 @sqlalchemy.event.listens_for(sqlalchemy.engine.Engine, "connect")
@@ -80,3 +86,45 @@ def escape(s: str) -> str:
 
     """
     return f"`{s}`" if s in sqlalchemy.sql.compiler.RESERVED_WORDS else s
+
+
+def query_to_dict[K, V](query: orm.query.RowReturningQuery[tuple[K, V]]) -> dict[K, V]:
+    """Fetch results from query and return a dict.
+
+    Args:
+        query: Query that returns 2 columns
+
+    Returns:
+        dict{first column: second column}
+
+    """
+    # pyright is happier with comprehension
+    # ruff is happier with dict()
+    return dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
+
+
+def query_count(query: orm.Query) -> int:
+    """Count the number of result a query will return.
+
+    Args:
+        query: Session query to execute
+
+    Returns:
+        Number of instances query will return upon execution
+
+    Raises:
+        TypeError: if query.statement is not a Select
+
+    """
+    # From here:
+    # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
+    col_one = sqlalchemy.literal_column("1")
+    stmt = query.statement
+    if not isinstance(stmt, sqlalchemy.Select):
+        raise TypeError
+    counter = stmt.with_only_columns(
+        func.count(col_one),
+        maintain_column_froms=True,
+    )
+    counter = counter.order_by(None)
+    return query.session.execute(counter).scalar() or 0

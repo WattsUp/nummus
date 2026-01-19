@@ -212,6 +212,7 @@ ignore = [
   "FBT001",  # Boolean positional arguments
   "T201",    # Allow printing for extra context
   "SLF001",  # Allow access to privates
+  "ARG001",  # Allow unused arguments for fixtures
 ]
 "tests/controllers/*.py" = [
   "N802", # Allow CAPS methods

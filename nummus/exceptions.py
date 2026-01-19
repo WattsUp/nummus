@@ -41,6 +41,7 @@ __all__ = [
     "NoAssetWebSourceError",
     "NoIDError",
     "NoImporterBufferError",
+    "NoKeywordArgumentsError",
     "NoResultFound",
     "NoURIError",
     "NonAssetTransactionError",
@@ -260,3 +261,7 @@ class InvalidAssetTransactionCategoryError(Exception):
 
 class InvalidKeyError(Exception):
     """Error when a key does not meet minimum requirements."""
+
+
+class NoKeywordArgumentsError(Exception):
+    """Error when function is given kwargs when not expected."""

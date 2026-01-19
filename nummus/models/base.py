@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import enum
 from decimal import Decimal
-from typing import ClassVar, override, TYPE_CHECKING
+from typing import ClassVar, overload, override, Self, TYPE_CHECKING
 
 import sqlalchemy
 from sqlalchemy import CheckConstraint, orm, sql, types
@@ -12,12 +13,12 @@ from sqlalchemy import CheckConstraint, orm, sql, types
 from nummus import exceptions as exc
 from nummus import utils
 from nummus.models import base_uri
+from nummus.sql import query_to_dict
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Generator, Iterable, Mapping
 
-
-# Yield per instead of fetch all is faster
+# TODO (WattsUp): #0 move to sql.YIELD_PER
 YIELD_PER = 100
 
 ORMBool = orm.Mapped[bool]
@@ -30,7 +31,115 @@ ORMReal = orm.Mapped[Decimal]
 ORMRealOpt = orm.Mapped[Decimal | None]
 
 
-class Base(orm.DeclarativeBase):
+class SessionMixIn:
+    """Mix-in that provides a session reference to the type."""
+
+    _SESSION: ClassVar[orm.Session | None] = None
+
+    @classmethod
+    @contextlib.contextmanager
+    def set_session(cls, s: orm.Session) -> Generator[None]:
+        """Set session used by active record.
+
+        Yields:
+            SQL session
+
+        """
+        cls._SESSION = s
+        try:
+            yield
+        finally:
+            cls._SESSION = None
+
+    @classmethod
+    def session(cls) -> orm.Session:
+        """Get scoped session.
+
+        Returns:
+            SQL session
+
+        Raises:
+            UnboundExecutionError: set_session has not been called yet
+
+        """
+        if cls._SESSION is None:
+            raise exc.UnboundExecutionError
+        return cls._SESSION
+
+
+class QueryMixIn(SessionMixIn):
+    """Mix-in that provides a query interface to the type."""
+
+    @classmethod
+    def create(cls, **kwargs: object) -> Self:
+        """Create a new instance.
+
+        Args:
+            kwargs: Passed to init
+
+        Returns:
+            New instance
+
+        """
+        i = cls(**kwargs)
+        s = cls.session()
+        s.add(i)
+        s.flush()
+        return i
+
+    @overload
+    @classmethod
+    def query(cls) -> orm.Query[Self]: ...
+
+    @overload
+    @classmethod
+    def query[T0](
+        cls,
+        c0: orm.QueryableAttribute[T0],
+    ) -> orm.query.RowReturningQuery[tuple[T0]]: ...
+
+    @overload
+    @classmethod
+    def query[T0, T1](
+        cls,
+        c0: orm.QueryableAttribute[T0],
+        c1: orm.QueryableAttribute[T1],
+    ) -> orm.query.RowReturningQuery[tuple[T0, T1]]: ...
+
+    @classmethod
+    def query(
+        cls,
+        *columns: orm.QueryableAttribute,
+        **kwargs: object,
+    ) -> orm.Query:
+        """Create a new query.
+
+        Returns:
+            Query of table
+
+        Raises:
+            NoKeywordArgumentsError: if kwargs are provided
+
+        """
+        if kwargs:
+            raise exc.NoKeywordArgumentsError
+        query = cls.session().query(cls)
+        if columns:
+            query = query.with_entities(*columns)
+        return query
+
+    @classmethod
+    def all(cls) -> list[Self]:
+        """Fetch all rows.
+
+        Returns:
+            List of each row object
+
+        """
+        return cls.query().all()
+
+
+class Base(orm.DeclarativeBase, QueryMixIn):
     """Base ORM model.
 
     Attributes:
@@ -42,6 +151,8 @@ class Base(orm.DeclarativeBase):
     _MODELS: ClassVar[set[type[Base]]] = set()
 
     __table_id__: int | None
+
+    id_: ORMInt = orm.mapped_column(primary_key=True, autoincrement=True)
 
     @override
     def __init_subclass__(cls, *, skip_register: bool = False, **kw: object) -> None:
@@ -61,15 +172,13 @@ class Base(orm.DeclarativeBase):
             i += 1
 
     @classmethod
-    def metadata_create_all(cls, s: orm.Session) -> None:
+    def metadata_create_all(cls) -> None:
         """Create all tables for nummus models.
 
         Creates tables then commits
 
-        Args:
-            s: Session to create tables for
-
         """
+        s = cls.session()
         cls.metadata.create_all(s.get_bind(), [m.sql_table() for m in cls._MODELS])
         s.commit()
 
@@ -87,8 +196,6 @@ class Base(orm.DeclarativeBase):
         if isinstance(cls.__table__, sqlalchemy.Table):
             return cls.__table__
         raise TypeError
-
-    id_: ORMInt = orm.mapped_column(primary_key=True, autoincrement=True)
 
     @classmethod
     def id_to_uri(cls, id_: int) -> str:
@@ -163,11 +270,8 @@ class Base(orm.DeclarativeBase):
         return not isinstance(other, Base) or self.uri != other.uri
 
     @classmethod
-    def map_name(cls, s: orm.Session) -> dict[int, str]:
+    def map_name(cls) -> dict[int, str]:
         """Get mapping between id and names.
-
-        Args:
-            s: SQL session to use
 
         Returns:
             Dictionary {id: name}
@@ -176,13 +280,12 @@ class Base(orm.DeclarativeBase):
             KeyError: if model does not have name property
 
         """
-        attr = getattr(cls, "name", None)
+        attr: orm.QueryableAttribute[str] | None = getattr(cls, "name", None)
         if not attr:
             msg = f"{cls.__name__} does not have name column"
             raise KeyError(msg)
 
-        query = s.query(cls).with_entities(cls.id_, attr)
-        return dict(query.all())
+        return query_to_dict(cls.query(cls.id_, attr))
 
     @classmethod
     def clean_strings(

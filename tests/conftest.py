@@ -26,6 +26,7 @@ from nummus.models.asset import (
     AssetValuation,
     USSector,
 )
+from nummus.models.base import Base
 from nummus.models.budget import (
     BudgetAssignment,
     BudgetGroup,
@@ -41,6 +42,8 @@ from nummus.portfolio import Portfolio
 from tests.mock_yfinance import MockTicker
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     import time_machine
 
 
@@ -212,14 +215,16 @@ def empty_portfolio_encrypted(
 
 
 @pytest.fixture
-def session(empty_portfolio: Portfolio) -> orm.Session:
+def session(empty_portfolio: Portfolio) -> Generator[orm.Session]:
     """Create SQL session.
 
-    Returns:
-        Session generator
+    Yields:
+        Session
 
     """
-    return orm.Session(sql.get_engine(empty_portfolio.path, None))
+    s = orm.Session(sql.get_engine(empty_portfolio.path, None))
+    with Base.set_session(s):
+        yield s
 
 
 @pytest.fixture(autouse=True)
@@ -375,7 +380,7 @@ def categories(session: orm.Session) -> dict[str, int]:
         dict{name: category id}
 
     """
-    return {name: id_ for id_, name in TransactionCategory.map_name(session).items()}
+    return {name: id_ for id_, name in TransactionCategory.map_name().items()}
 
 
 @pytest.fixture
@@ -389,7 +394,7 @@ def labels(session: orm.Session) -> dict[str, int]:
     labels = {"engineer", "fruit", "apartments 4 U"}
     session.add_all(Label(name=name) for name in labels)
     session.commit()
-    return {name: id_ for id_, name in Label.map_name(session).items()}
+    return {name: id_ for id_, name in Label.map_name().items()}
 
 
 @pytest.fixture
