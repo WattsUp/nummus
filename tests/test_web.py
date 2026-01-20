@@ -19,8 +19,8 @@ if TYPE_CHECKING:
 
 
 def test_create_app(empty_portfolio: Portfolio, flask_app: flask.Flask) -> None:
-    with empty_portfolio.begin_session() as s:
-        secret_key = Config.fetch(s, ConfigKey.SECRET_KEY)
+    with empty_portfolio.begin_session():
+        secret_key = Config.fetch(ConfigKey.SECRET_KEY)
     assert flask_app.secret_key == secret_key
     assert len(flask_app.before_request_funcs[None]) == 1
 
@@ -32,8 +32,8 @@ def test_no_secret_key(
     empty_portfolio: Portfolio,
 ) -> None:
     monkeypatch.setenv("NUMMUS_PORTFOLIO", str(empty_portfolio.path))
-    with empty_portfolio.begin_session() as s:
-        s.query(Config).where(Config.key == ConfigKey.SECRET_KEY).delete()
+    with empty_portfolio.begin_session():
+        Config.query().where(Config.key == ConfigKey.SECRET_KEY).delete()
 
     with pytest.raises(exc.ProtectedObjectNotFoundError):
         web.create_app()

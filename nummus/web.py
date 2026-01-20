@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import datetime
+import functools
 import os
+from decimal import Decimal
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -68,28 +70,30 @@ class FlaskExtension:
         self._init_metrics(app)
 
         # Inject common variables into templates
-        app.context_processor(
-            lambda: {
-                "url_args": {},
-            },
-        )
+        args: dict[str, dict[str, object]] = {
+            "url_args": {},
+        }
+        app.context_processor(lambda: args)
 
     @classmethod
-    def _open_portfolio(cls, config: flask.Config) -> Portfolio:
-        path = (
-            Path(
-                config.get("PORTFOLIO", "~/.nummus/portfolio.db"),
-            )
-            .expanduser()
-            .absolute()
-        )
+    def _open_portfolio(cls, config: dict[str, object]) -> Portfolio:
+        s = config.get("PORTFOLIO", "~/.nummus/portfolio.db")
+        if not isinstance(s, str):
+            raise TypeError
+        path = Path(s).expanduser().absolute()
 
         key = config.get("KEY")
         if key is None:
             path_key = config.get("KEY_PATH")
-            path_key = Path(path_key).expanduser().absolute() if path_key else None
+            path_key = (
+                Path(path_key).expanduser().absolute()
+                if isinstance(path_key, str)
+                else None
+            )
             if path_key and path_key.exists():
                 key = path_key.read_text("utf-8").strip()
+        elif not isinstance(key, str):
+            raise TypeError
 
         return Portfolio(path, key)
 
@@ -129,27 +133,25 @@ class FlaskExtension:
 
     @classmethod
     def _init_auth(cls, app: flask.Flask, p: Portfolio) -> None:
-        with p.begin_session() as s:
-            secret_key = Config.fetch(s, ConfigKey.SECRET_KEY)
+        with p.begin_session():
+            secret_key = Config.fetch(ConfigKey.SECRET_KEY)
 
         app.secret_key = secret_key
-        app.config.update(
-            SESSION_COOKIE_SECURE=True,
-            SESSION_COOKIE_HTTPONLY=True,
-            SESSION_COOKIE_SAMESITE="Lax",
-            REMEMBER_COOKIE_SECURE=True,
-            REMEMBER_COOKIE_HTTPONLY=True,
-            REMEMBER_COOKIE_SAMESITE="Lax",
-            REMEMBER_COOKIE_DURATION=datetime.timedelta(days=28),
-        )
+        config: dict[str, object] = app.config
+        config["SESSION_COOKIE_SECURE"] = True
+        config["SESSION_COOKIE_HTTPONLY"] = True
+        config["SESSION_COOKIE_SAMESITE"] = "Lax"
+        config["REMEMBER_COOKIE_SECURE"] = True
+        config["REMEMBER_COOKIE_HTTPONLY"] = True
+        config["REMEMBER_COOKIE_SAMESITE"] = "Lax"
+        config["REMEMBER_COOKIE_DURATION"] = datetime.timedelta(days=28)
         app.after_request(base.update_client_timezone)
         app.after_request(base.change_redirect_to_htmx)
 
         login_manager = flask_login.LoginManager()
         login_manager.init_app(app)
         login_manager.user_loader(auth.get_user)
-        # LoginManager.login_view not typed to str | None
-        login_manager.login_view = "auth.page_login"  # type: ignore[attr-defined]
+        login_manager.login_view = "auth.page_login"
 
         if p.is_encrypted:
             # Only can have authentiation with encrypted portfolio
@@ -159,24 +161,40 @@ class FlaskExtension:
     def _init_jinja_env(cls, env: jinja2.Environment) -> None:
         env.filters["seconds"] = utils.format_seconds
         env.filters["days"] = utils.format_days
-        env.filters["days_abv"] = lambda x: utils.format_days(
-            x,
-            ["days", "wks", "mos", "yrs"],
+        env.filters["days_abv"] = functools.partial(
+            utils.format_days,
+            labels=["days", "wks", "mos", "yrs"],
         )
         env.filters["comma"] = lambda x: f"{x:,.2f}"
         env.filters["qty"] = lambda x: f"{x:,.6f}"
-        env.filters["percent"] = lambda x: f"{x * 100:5.2f}%"
-        env.filters["pnl_color"] = lambda x: (
-            "" if x is None or x == 0 else ("text-primary" if x > 0 else "text-error")
-        )
-        env.filters["pnl_arrow"] = lambda x: (
-            ""
-            if x is None or x == 0
-            else ("arrow_upward" if x > 0 else "arrow_downward")
-        )
         env.filters["no_emojis"] = utils.strip_emojis
         env.filters["tojson"] = base.ctx_to_json
         env.filters["input_value"] = lambda x: str(x or "").rstrip("0").rstrip(".")
+
+        def percent(x: Decimal | float | object) -> str:
+            if not isinstance(x, Decimal | float):
+                raise TypeError
+            return f"{x * 100:5.2f}%"
+
+        env.filters["percent"] = percent
+
+        def pnl_color(x: Decimal | float | object) -> str:
+            if not x:
+                return ""
+            if not isinstance(x, Decimal | float):
+                raise TypeError
+            return "text-primary" if x > 0 else "text-error"
+
+        env.filters["pnl_color"] = pnl_color
+
+        def pnl_arrow(x: Decimal | float | object) -> str:
+            if not x:
+                return ""
+            if not isinstance(x, Decimal | float):
+                raise TypeError
+            return "arrow_upward" if x > 0 else "arrow_downward"
+
+        env.filters["pnl_arrow"] = pnl_arrow
 
     @classmethod
     def _init_metrics(cls, app: flask.Flask) -> None:
