@@ -23,11 +23,6 @@ if TYPE_CHECKING:
 
     from nummus.models.base import Base
 
-# TODO (WattsUp): #0 remove
-query_to_dict = sql.to_dict
-query_count = sql.count
-obj_session = None
-
 
 def paginate[T: Base](
     query: orm.Query[T],

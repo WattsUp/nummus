@@ -10,10 +10,11 @@ from typing import overload, TYPE_CHECKING
 import sqlalchemy
 import sqlalchemy.event
 from sqlalchemy import func, orm
+from sqlalchemy.sql import case
 
 if TYPE_CHECKING:
     import sqlite3
-    from collections.abc import Iterable
+    from collections.abc import Generator, Iterable
     from pathlib import Path
 
     from nummus.encryption.base import EncryptionInterface
@@ -26,8 +27,15 @@ except ImportError:
 
 _ENGINE_ARGS: dict[str, object] = {}
 
-Column = orm.InstrumentedAttribute[str] | orm.InstrumentedAttribute[str | None]
+Column = (
+    orm.InstrumentedAttribute[str]
+    | orm.InstrumentedAttribute[str | None]
+    | orm.InstrumentedAttribute[int]
+    | orm.InstrumentedAttribute[int | None]
+)
 ColumnClause = sqlalchemy.ColumnElement[bool]
+
+__all__ = ["case"]
 
 
 @sqlalchemy.event.listens_for(sqlalchemy.engine.Engine, "connect")
@@ -88,7 +96,44 @@ def escape(s: str) -> str:
     return f"`{s}`" if s in sqlalchemy.sql.compiler.RESERVED_WORDS else s
 
 
-def to_dict[K, V](query: orm.query.RowReturningQuery[tuple[K, V]]) -> dict[K, V]:
+@overload
+def to_dict_tuple[K, T0, T1](
+    query: orm.query.RowReturningQuery[tuple[K, T0, T1]],
+) -> dict[K, tuple[T0, T1]]: ...
+
+
+@overload
+def to_dict_tuple[K, T0, T1, T2](
+    query: orm.query.RowReturningQuery[tuple[K, T0, T1, T2]],
+) -> dict[K, tuple[T0, T1, T2]]: ...
+
+
+@overload
+def to_dict_tuple[K, T0, T1, T2, T3](
+    query: orm.query.RowReturningQuery[tuple[K, T0, T1, T2, T3]],
+) -> dict[K, tuple[T0, T1, T2, T3]]: ...
+
+
+def to_dict_tuple[T: tuple[object, ...]](  # type: ignore[attr-defined]
+    query: orm.query.RowReturningQuery[T],
+) -> dict[object, tuple[object, ...]]:
+    """Fetch results from query and return a dict.
+
+    Args:
+        query: Query that returns 2 columns
+
+    Returns:
+        dict{first column: second column}
+        or
+        dict{first column: tuple(other columns)}
+
+    """
+    return {r[0]: r[1:] for r in yield_(query)}
+
+
+def to_dict[K, V](
+    query: orm.query.RowReturningQuery[tuple[K, V]],
+) -> dict[K, V]:
     """Fetch results from query and return a dict.
 
     Args:
@@ -98,7 +143,7 @@ def to_dict[K, V](query: orm.query.RowReturningQuery[tuple[K, V]]) -> dict[K, V]
         dict{first column: second column}
 
     """
-    return dict(yield_(query))
+    return {r[0]: r[1] for r in yield_(query)}
 
 
 def count[T](query: orm.Query[T]) -> int:
@@ -143,11 +188,18 @@ def any_[T](query: orm.Query[T]) -> bool:
 
 # TODO (WattsUp): #0 Replace instances of .scalar with this; better typing
 @overload
-def one[T](
-    query: orm.query.RowReturningQuery[tuple[T]],
-) -> T: ...
+def one[T0](
+    query: orm.query.RowReturningQuery[tuple[T0]],
+) -> T0: ...
 
 
+@overload
+def one[T0, T1](
+    query: orm.query.RowReturningQuery[tuple[T0, T1]],
+) -> tuple[T0, T1]: ...
+
+
+# TODO (WattsUp): #0 Add unit tests with isinstance
 # TODO (WattsUp): #0 Replace instances of .one with this; better typing
 @overload
 def one[T](query: orm.Query[T]) -> T: ...
@@ -166,7 +218,9 @@ def one[T](query: orm.Query[T]) -> object:
     ret: T | Sequence[T] = query.one()
     if not isinstance(ret, Sequence):
         return ret
-    return ret[0]  # type: ignore[attr-defined]
+    if len(ret) == 1:  # type: ignore[attr-defined]
+        return ret[0]  # type: ignore[attr-defined]
+    return ret  # type: ignore[attr-defined]
 
 
 @overload
@@ -215,3 +269,18 @@ def yield_[T](query: orm.Query[T]) -> Iterable[object]:
     """
     # Yield per instead of fetch all is faster
     return query.yield_per(100)
+
+
+# TODO (WattsUp): #0 Replace instances of {r for r, in query} with this; better typing
+def col0[T](query: orm.query.RowReturningQuery[tuple[T]]) -> Generator[T]:
+    """Yield a query into a list.
+
+    Args:
+        query: Query to yield
+
+    Yields:
+        first column
+
+    """
+    for (r,) in yield_(query):
+        yield r

@@ -4,13 +4,13 @@ import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from nummus import sql
 from nummus.controllers import base, performance
 from nummus.models.account import AccountCategory
 from nummus.models.asset import (
     Asset,
     AssetCategory,
 )
-from nummus.models.base import YIELD_PER
 from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 
 if TYPE_CHECKING:
@@ -25,10 +25,9 @@ if TYPE_CHECKING:
 def test_ctx_chart_empty(
     today: datetime.date,
     account: Account,
-    session: orm.Session,
 ) -> None:
     _ = account
-    ctx = performance.ctx_chart(session, today, "max", "S&P 500", set())
+    ctx = performance.ctx_chart(today, "max", "S&P 500", set())
 
     chart: performance.ChartData = {
         "labels": [today.isoformat()],
@@ -55,10 +54,10 @@ def test_ctx_chart_empty(
         "currency_format": CURRENCY_FORMATS[DEFAULT_CURRENCY],
     }
 
-    query = session.query(Asset.name).order_by(Asset.name)
-    indices: list[str] = [r[0] for r in query.yield_per(YIELD_PER)]
+    query = Asset.query(Asset.name).order_by(Asset.name)
+    indices: list[str] = list(sql.col0(query))
 
-    desc = session.query(Asset.description).where(Asset.name == "S&P 500").one()[0]
+    desc = sql.one(Asset.query(Asset.description).where(Asset.name == "S&P 500"))
 
     target: performance.Context = {
         "start": today,
@@ -79,11 +78,11 @@ def test_ctx_chart_this_year(
     session: orm.Session,
     account: Account,
 ) -> None:
-    account.category = AccountCategory.INVESTMENT
-    account.closed = True
-    session.commit()
+    with session.begin_nested():
+        account.category = AccountCategory.INVESTMENT
+        account.closed = True
 
-    ctx = performance.ctx_chart(session, today, "ytd", "S&P 500", set())
+    ctx = performance.ctx_chart(today, "ytd", "S&P 500", set())
 
     assert ctx["start"] == today.replace(month=1, day=1)
     assert ctx["end"] == today
@@ -97,14 +96,12 @@ def test_ctx_chart(
     transactions: list[Transaction],
     session: orm.Session,
 ) -> None:
-    account.category = AccountCategory.INVESTMENT
-    session.commit()
-    _ = asset_valuation
-    _ = transactions
+    with session.begin_nested():
+        account.category = AccountCategory.INVESTMENT
 
     start = today - datetime.timedelta(days=3)
     end = today + datetime.timedelta(days=3)
-    ctx = performance.ctx_chart(session, end, "max", "S&P 500", set())
+    ctx = performance.ctx_chart(end, "max", "S&P 500", set())
 
     chart: performance.ChartData = {
         "labels": base.date_labels(start.toordinal(), end.toordinal())[0],
@@ -152,13 +149,13 @@ def test_ctx_chart(
     }
 
     query = (
-        session.query(Asset.name)
+        Asset.query(Asset.name)
         .where(Asset.category == AssetCategory.INDEX)
         .order_by(Asset.name)
     )
-    indices: list[str] = [r[0] for r in query.yield_per(YIELD_PER)]
+    indices: list[str] = list(sql.col0(query))
 
-    desc = session.query(Asset.description).where(Asset.name == "S&P 500").one()[0]
+    desc = sql.one(Asset.query(Asset.description).where(Asset.name == "S&P 500"))
 
     target: performance.Context = {
         "start": start,
@@ -181,14 +178,12 @@ def test_ctx_chart_exclude(
     transactions: list[Transaction],
     session: orm.Session,
 ) -> None:
-    account.category = AccountCategory.INVESTMENT
-    session.commit()
-    _ = asset_valuation
-    _ = transactions
+    with session.begin_nested():
+        account.category = AccountCategory.INVESTMENT
 
     start = today - datetime.timedelta(days=3)
     end = today + datetime.timedelta(days=3)
-    ctx = performance.ctx_chart(session, end, "max", "S&P 500", {account.id_})
+    ctx = performance.ctx_chart(end, "max", "S&P 500", {account.id_})
 
     chart: performance.ChartData = {
         "labels": base.date_labels(start.toordinal(), end.toordinal())[0],
@@ -218,13 +213,14 @@ def test_ctx_chart_exclude(
     }
 
     query = (
-        session.query(Asset.name)
+        Asset.query(Asset.name)
         .where(Asset.category == AssetCategory.INDEX)
         .order_by(Asset.name)
     )
-    indices: list[str] = [r[0] for r in query.yield_per(YIELD_PER)]
 
-    desc = session.query(Asset.description).where(Asset.name == "S&P 500").one()[0]
+    indices: list[str] = list(sql.col0(query))
+
+    desc = sql.one(Asset.query(Asset.description).where(Asset.name == "S&P 500"))
 
     target: performance.Context = {
         "start": start,

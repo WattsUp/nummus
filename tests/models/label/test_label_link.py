@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from nummus import sql
 from nummus.models.label import Label, LabelLink
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     from nummus.models.transaction import Transaction
@@ -32,11 +32,8 @@ def test_add_links_delete(
 
     LabelLink.add_links(new_labels)
 
-    n = query_count(LabelLink.query())
-    assert n == 0
-
-    n = query_count(Label.query())
-    assert n == len(labels)
+    assert not sql.any_(LabelLink.query())
+    assert sql.count(Label.query()) == len(labels)
 
 
 def test_add_links(
@@ -50,11 +47,8 @@ def test_add_links(
 
     LabelLink.add_links(new_labels)
 
-    n = query_count(LabelLink.query())
-    assert n == len(transactions) * 2
-
-    n = query_count(Label.query())
-    assert n == len(labels) + 1
+    assert sql.count(LabelLink.query()) == len(transactions) * 2
+    assert sql.count(Label.query()) == len(labels) + 1
 
     label = Label.query().where(Label.id_.not_in(labels.values())).one()
     assert label.name == rand_str

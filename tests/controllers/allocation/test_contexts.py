@@ -9,8 +9,6 @@ from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 if TYPE_CHECKING:
     import datetime
 
-    from sqlalchemy import orm
-
     from nummus.models.asset import (
         Asset,
         AssetSector,
@@ -19,8 +17,8 @@ if TYPE_CHECKING:
     from nummus.models.transaction import Transaction
 
 
-def test_ctx_empty(today: datetime.date, session: orm.Session) -> None:
-    ctx = allocation.ctx_allocation(session, today)
+def test_ctx_empty(today: datetime.date) -> None:
+    ctx = allocation.ctx_allocation(today)
 
     target: allocation.AllocationContext = {
         "chart": {
@@ -37,17 +35,12 @@ def test_ctx_empty(today: datetime.date, session: orm.Session) -> None:
 
 def test_ctx(
     today: datetime.date,
-    session: orm.Session,
     asset: Asset,
     transactions: list[Transaction],
     asset_valuation: AssetValuation,
     asset_sectors: tuple[AssetSector, AssetSector],
 ) -> None:
-    _ = transactions
-    _ = asset_valuation
-    _ = asset_sectors
-
-    ctx = allocation.ctx_allocation(session, today)
+    ctx = allocation.ctx_allocation(today)
 
     target: allocation.AllocationContext = {
         "chart": {

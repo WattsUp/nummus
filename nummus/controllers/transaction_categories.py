@@ -2,23 +2,16 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import flask
 
 from nummus import exceptions as exc
-from nummus import utils, web
+from nummus import sql, utils, web
 from nummus.controllers import base
-from nummus.models.base import YIELD_PER
 from nummus.models.transaction import TransactionSplit
 from nummus.models.transaction_category import (
     TransactionCategory,
     TransactionCategoryGroup,
 )
-from nummus.models.utils import query_count
-
-if TYPE_CHECKING:
-    from sqlalchemy import orm
 
 
 def page() -> flask.Response:
@@ -30,11 +23,11 @@ def page() -> flask.Response:
     """
     p = web.portfolio
 
-    with p.begin_session() as s:
+    with p.begin_session():
         return base.page(
             "transaction-categories/page.jinja",
             "Transaction categories",
-            groups=ctx_categories(s),
+            groups=ctx_categories(),
         )
 
 
@@ -65,8 +58,8 @@ def new() -> str | flask.Response:
 
     try:
         p = web.portfolio
-        with p.begin_session() as s:
-            cat = TransactionCategory(
+        with p.begin_session():
+            TransactionCategory.create(
                 emoji_name=name,
                 group=group,
                 locked=False,
@@ -74,7 +67,6 @@ def new() -> str | flask.Response:
                 asset_linked=False,
                 essential_spending=essential_spending,
             )
-            s.add(cat)
     except (exc.IntegrityError, exc.InvalidORMValueError) as e:
         return base.error(e)
 
@@ -99,7 +91,7 @@ def category(uri: str) -> str | flask.Response:
     """
     p = web.portfolio
     with p.begin_session() as s:
-        cat = base.find(s, TransactionCategory, uri)
+        cat = base.find(TransactionCategory, uri)
 
         if flask.request.method == "GET":
             ctx: dict[str, object] = {
@@ -122,12 +114,12 @@ def category(uri: str) -> str | flask.Response:
                 msg = f"Locked category {cat.name} cannot be modified"
                 raise exc.http.Forbidden(msg)
             # Move all transactions to uncategorized
-            uncategorized_id, _ = TransactionCategory.uncategorized(s)
+            uncategorized_id, _ = TransactionCategory.uncategorized()
 
-            s.query(TransactionSplit).where(
+            TransactionSplit.query().where(
                 TransactionSplit.category_id == cat.id_,
             ).update({"category_id": uncategorized_id})
-            s.delete(cat)
+            cat.delete()
 
             return base.dialog_swap(
                 event="category",
@@ -177,10 +169,10 @@ def validation() -> str:
             return "Required"
         if len(name) < utils.MIN_STR_LEN:
             return f"{utils.MIN_STR_LEN} characters required"
-        with p.begin_session() as s:
+        with p.begin_session():
             # Only get original name if locked
             locked_name = (
-                s.query(TransactionCategory.name)
+                TransactionCategory.query(TransactionCategory.name)
                 .where(
                     TransactionCategory.id_ == category_id,
                     TransactionCategory.locked,
@@ -189,26 +181,19 @@ def validation() -> str:
             )
             if locked_name and locked_name != name:
                 return "May only add/remove emojis"
-            n = query_count(
-                s.query(TransactionCategory).where(
-                    TransactionCategory.name == name,
-                    TransactionCategory.id_ != category_id,
-                ),
+            query = TransactionCategory.query().where(
+                TransactionCategory.name == name,
+                TransactionCategory.id_ != category_id,
             )
-            if n != 0:
+            if sql.any_(query):
                 return "Must be unique"
         return ""
 
     raise NotImplementedError
 
 
-def ctx_categories(
-    s: orm.Session,
-) -> dict[TransactionCategoryGroup, list[base.NamePair]]:
+def ctx_categories() -> dict[TransactionCategoryGroup, list[base.NamePair]]:
     """Get the context required to build the categories table.
-
-    Args:
-        s: SQL session to use
 
     Returns:
         List of HTML context
@@ -220,8 +205,8 @@ def ctx_categories(
         TransactionCategoryGroup.TRANSFER: [],
         TransactionCategoryGroup.OTHER: [],
     }
-    query = s.query(TransactionCategory).order_by(TransactionCategory.name)
-    for cat in query.yield_per(YIELD_PER):
+    query = TransactionCategory.query().order_by(TransactionCategory.name)
+    for cat in sql.yield_(query):
         cat_d = base.NamePair(cat.uri, cat.emoji_name)
         if cat.group != TransactionCategoryGroup.OTHER or cat.name == "uncategorized":
             groups[cat.group].append(cat_d)

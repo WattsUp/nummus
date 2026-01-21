@@ -29,14 +29,11 @@ ORMStrOpt = orm.Mapped[str | None]
 ORMReal = orm.Mapped[Decimal]
 ORMRealOpt = orm.Mapped[Decimal | None]
 
-# TODO (WattsUp): #0 remove
-YIELD_PER = 100
-
 
 class SessionMixIn:
     """Mix-in that provides a session reference to the type."""
 
-    _session: ClassVar[orm.Session | None] = None
+    _sessions: ClassVar[list[orm.Session]] = []
 
     @classmethod
     @contextlib.contextmanager
@@ -47,11 +44,11 @@ class SessionMixIn:
             SQL session
 
         """
-        cls._session = s
+        cls._sessions.append(s)
         try:
             yield
         finally:
-            cls._session = None
+            cls._sessions.pop()
 
     @classmethod
     def session(cls) -> orm.Session:
@@ -64,9 +61,9 @@ class SessionMixIn:
             UnboundExecutionError: set_session has not been called yet
 
         """
-        if cls._session is None:
+        if not cls._sessions:
             raise exc.UnboundExecutionError
-        return cls._session
+        return cls._sessions[-1]
 
 
 class QueryMixIn(SessionMixIn):
@@ -91,8 +88,12 @@ class QueryMixIn(SessionMixIn):
         return i
 
     def delete(self) -> None:
-        """Delete a instance."""
+        """Delete an instance."""
         self.session().delete(self)
+
+    def refresh(self) -> None:
+        """Refresh an instance."""
+        self.session().refresh(self)
 
     # TODO (WattsUp): #0 Enforce query(col, col, col) instead of .with_entities
     @overload
@@ -132,6 +133,17 @@ class QueryMixIn(SessionMixIn):
         c2: sql_roles.TypedColumnsClauseRole[T2],
         c3: sql_roles.TypedColumnsClauseRole[T3],
     ) -> orm.query.RowReturningQuery[tuple[T0, T1, T2, T3]]: ...
+
+    @overload
+    @classmethod
+    def query[T0, T1, T2, T3, T4](
+        cls,
+        c0: sql_roles.TypedColumnsClauseRole[T0],
+        c1: sql_roles.TypedColumnsClauseRole[T1],
+        c2: sql_roles.TypedColumnsClauseRole[T2],
+        c3: sql_roles.TypedColumnsClauseRole[T3],
+        c4: sql_roles.TypedColumnsClauseRole[T4],
+    ) -> orm.query.RowReturningQuery[tuple[T0, T1, T2, T3, T4]]: ...
 
     @classmethod
     def query[T](

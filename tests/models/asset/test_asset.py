@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus import exceptions as exc
+from nummus import sql
 from nummus.models.asset import (
     Asset,
     AssetCategory,
@@ -16,11 +17,7 @@ from nummus.models.asset import (
 )
 from nummus.models.currency import Currency, DEFAULT_CURRENCY
 from nummus.models.label import LabelLink
-from nummus.models.utils import (
-    query_count,
-    query_to_dict,
-    update_rows,
-)
+from nummus.models.utils import update_rows
 from tests import conftest
 
 if TYPE_CHECKING:
@@ -256,7 +253,7 @@ def test_update_valuations_empty(asset: Asset) -> None:
     start, end = asset.update_valuations(through_today=True)
     assert start is None
     assert end is None
-    assert query_count(AssetValuation.query()) == 0
+    assert not sql.any_(AssetValuation.query())
 
 
 @pytest.mark.parametrize(
@@ -289,7 +286,7 @@ def test_update_valuations(
     while start <= end:
         n += 0 if start.weekday() in {5, 6} else 1
         start += datetime.timedelta(days=1)
-    assert query_count(AssetValuation.query()) == n
+    assert sql.count(AssetValuation.query()) == n
 
 
 def test_update_valuations_delisted(
@@ -340,7 +337,7 @@ def test_update_sectors(
     query = AssetSector.query(AssetSector.sector, AssetSector.weight).where(
         AssetSector.asset_id == asset.id_,
     )
-    sectors: dict[USSector, Decimal] = query_to_dict(query)
+    sectors: dict[USSector, Decimal] = sql.to_dict(query)
     assert sectors == target
 
 
@@ -403,14 +400,14 @@ def test_create_forex(asset: Asset) -> None:
 
     query = Asset.query().where(Asset.category == AssetCategory.FOREX)
     # -1 since don't need USDUSD=x
-    assert query_count(query) == len(Currency) - 1
+    assert sql.count(query) == len(Currency) - 1
 
 
 def test_create_forex_none() -> None:
     Asset.create_forex(Currency.USD, set())
 
     query = Asset.query().where(Asset.category == AssetCategory.FOREX)
-    assert query_count(query) == 0
+    assert not sql.any_(query)
 
 
 def test_get_forex_empty(today_ord: int) -> None:

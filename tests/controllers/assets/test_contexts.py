@@ -12,8 +12,6 @@ from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 if TYPE_CHECKING:
     import datetime
 
-    from sqlalchemy import orm
-
     from nummus.models.account import Account
     from nummus.models.asset import (
         Asset,
@@ -25,11 +23,10 @@ if TYPE_CHECKING:
 
 def test_ctx_performance_empty(
     today: datetime.date,
-    session: orm.Session,
     asset: Asset,
 ) -> None:
     start = utils.date_add_months(today, -12)
-    ctx = assets.ctx_performance(session, asset, today, "1yr")
+    ctx = assets.ctx_performance(asset, today, "1yr")
     labels, mode = base.date_labels(start.toordinal(), today.toordinal())
     target: assets.PerformanceContext = {
         "mode": mode,
@@ -46,11 +43,10 @@ def test_ctx_performance_empty(
 
 def test_ctx_performance(
     today: datetime.date,
-    session: orm.Session,
     asset: Asset,
     asset_valuation: AssetValuation,
 ) -> None:
-    ctx = assets.ctx_performance(session, asset, today, "max")
+    ctx = assets.ctx_performance(asset, today, "max")
     labels, mode = base.date_labels(asset_valuation.date_ord, today.toordinal())
     target: assets.PerformanceContext = {
         "mode": mode,
@@ -68,10 +64,9 @@ def test_ctx_performance(
 def test_ctx_table_empty(
     today: datetime.date,
     month: datetime.date,
-    session: orm.Session,
     asset: Asset,
 ) -> None:
-    ctx = assets.ctx_table(session, asset, today, None, None, None, None)
+    ctx = assets.ctx_table(asset, today, None, None, None, None)
 
     last_months = [utils.date_add_months(month, i) for i in range(0, -3, -1)]
     options_period = [
@@ -111,7 +106,6 @@ def test_ctx_table_empty(
 )
 def test_ctx_table(
     today: datetime.date,
-    session: orm.Session,
     asset: Asset,
     asset_valuation: AssetValuation,
     period: str | None,
@@ -121,7 +115,7 @@ def test_ctx_table(
     any_filters: bool,
     has_valuation: bool,
 ) -> None:
-    ctx = assets.ctx_table(session, asset, today, period, start, end, page)
+    ctx = assets.ctx_table(asset, today, period, start, end, page)
 
     if page is None:
         assert ctx["first_page"]
@@ -151,10 +145,9 @@ def test_ctx_table(
 
 def test_ctx_asset_empty(
     today: datetime.date,
-    session: orm.Session,
     asset: Asset,
 ) -> None:
-    ctx = assets.ctx_asset(session, asset, today, None, None, None, None, None)
+    ctx = assets.ctx_asset(asset, today, None, None, None, None, None)
     assert ctx["uri"] == asset.uri
     assert ctx["name"] == asset.name
     assert ctx["category"] == asset.category
@@ -166,14 +159,13 @@ def test_ctx_asset_empty(
 
 def test_ctx_asset(
     today: datetime.date,
-    session: orm.Session,
     account: Account,
     asset: Asset,
     asset_valuation: AssetValuation,
     transactions: list[Transaction],
 ) -> None:
     _ = transactions
-    ctx = assets.ctx_asset(session, asset, today, None, None, None, None, None)
+    ctx = assets.ctx_asset(asset, today, None, None, None, None, None)
     assert ctx["uri"] == asset.uri
     assert ctx["name"] == asset.name
     assert ctx["category"] == asset.category
@@ -185,17 +177,16 @@ def test_ctx_asset(
     ]
 
 
-def test_ctx_rows_empty(today: datetime.date, session: orm.Session) -> None:
-    ctx = assets.ctx_rows(session, today, include_unheld=True)
+def test_ctx_rows_empty(today: datetime.date) -> None:
+    ctx = assets.ctx_rows(today, include_unheld=True)
     assert ctx == {}
 
 
 def test_ctx_rows_unheld(
     today: datetime.date,
-    session: orm.Session,
     asset: Asset,
 ) -> None:
-    ctx = assets.ctx_rows(session, today, include_unheld=True)
+    ctx = assets.ctx_rows(today, include_unheld=True)
     target: dict[AssetCategory, list[assets.RowContext]] = {
         asset.category: [
             {
@@ -214,13 +205,12 @@ def test_ctx_rows_unheld(
 
 def test_ctx_rows(
     today: datetime.date,
-    session: orm.Session,
     asset: Asset,
     asset_valuation: AssetValuation,
     transactions: list[Transaction],
 ) -> None:
     _ = transactions
-    ctx = assets.ctx_rows(session, today, include_unheld=False)
+    ctx = assets.ctx_rows(today, include_unheld=False)
     target: dict[AssetCategory, list[assets.RowContext]] = {
         asset.category: [
             {

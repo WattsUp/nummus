@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, TypedDict
 import flask
 from sqlalchemy import func
 
-from nummus import utils, web
+from nummus import sql, utils, web
 from nummus.controllers import base
 from nummus.models.account import Account
 from nummus.models.asset import Asset
@@ -21,7 +21,6 @@ from nummus.models.currency import (
 from nummus.models.transaction import TransactionSplit
 
 if TYPE_CHECKING:
-    from sqlalchemy import orm
 
     from nummus.controllers.base import Routes
     from nummus.models.currency import Currency, CurrencyFormat
@@ -63,9 +62,8 @@ def page() -> flask.Response:
     """
     args = flask.request.args
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         ctx = ctx_chart(
-            s,
             base.today_client(),
             args.get("period", base.DEFAULT_PERIOD),
         )
@@ -86,8 +84,8 @@ def chart() -> flask.Response:
     args = flask.request.args
     period = args.get("period", base.DEFAULT_PERIOD)
     p = web.portfolio
-    with p.begin_session() as s:
-        ctx = ctx_chart(s, base.today_client(), period)
+    with p.begin_session():
+        ctx = ctx_chart(base.today_client(), period)
     html = flask.render_template(
         "net-worth/chart-data.jinja",
         ctx=ctx,
@@ -113,9 +111,8 @@ def dashboard() -> str:
 
     """
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         ctx = ctx_chart(
-            s,
             base.today_client(),
             base.DEFAULT_PERIOD,
         )
@@ -126,14 +123,12 @@ def dashboard() -> str:
 
 
 def ctx_chart(
-    s: orm.Session,
     today: datetime.date,
     period: str,
 ) -> Context:
     """Get the context to build the net worth chart.
 
     Args:
-        s: SQL session to use
         today: Today's date
         period: Selected chart period
 
@@ -144,7 +139,7 @@ def ctx_chart(
     start, end = base.parse_period(period, today)
 
     if start is None:
-        query = s.query(func.min(TransactionSplit.date_ord)).where(
+        query = TransactionSplit.query(func.min(TransactionSplit.date_ord)).where(
             TransactionSplit.asset_id.is_(None),
         )
         start_ord = query.scalar()
@@ -152,14 +147,14 @@ def ctx_chart(
     start_ord = start.toordinal()
     end_ord = end.toordinal()
 
-    query = s.query(Account)
     account_currencies: dict[int, Currency] = {
-        acct.id_: acct.currency for acct in query.all() if acct.do_include(start_ord)
+        acct.id_: acct.currency
+        for acct in sql.yield_(Account.query())
+        if acct.do_include(start_ord)
     }
 
-    base_currency = Config.base_currency(s)
+    base_currency = Config.base_currency()
     forex = Asset.get_forex(
-        s,
         start_ord,
         end_ord,
         base_currency,
@@ -167,7 +162,6 @@ def ctx_chart(
     )
 
     acct_values, _, _ = Account.get_value_all(
-        s,
         start_ord,
         end_ord,
         ids=account_currencies.keys(),
@@ -182,7 +176,7 @@ def ctx_chart(
     ] or [Decimal()] * (end_ord - start_ord + 1)
     data_tuple = base.chart_data(start_ord, end_ord, (total, *acct_values.values()))
 
-    mapping = Account.map_name(s)
+    mapping = Account.map_name()
 
     ctx_accounts: list[AccountContext] = [
         {

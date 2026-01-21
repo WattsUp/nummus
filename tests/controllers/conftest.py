@@ -254,7 +254,7 @@ class TreeNode(NamedTuple):
 
 
 ResultType = dict[str, object] | str | bytes
-Queries = dict[str, str] | dict[str, str | bool | list[str | bool]]
+Queries = dict[str, str] | dict[str, str | bool | list[str] | list[str | bool]]
 
 
 class HTMLValidator:

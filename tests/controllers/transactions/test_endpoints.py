@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 import flask
 import pytest
 
+from nummus import sql
 from nummus.controllers import base
 from nummus.models.account import Account
-from nummus.models.base import YIELD_PER
 from nummus.models.label import Label, LabelLink
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
@@ -151,7 +151,6 @@ def test_new_put_bad_date(
 
 def test_new(
     today: datetime.date,
-    session: orm.Session,
     web_client: WebClient,
     account: Account,
     categories: dict[str, int],
@@ -173,7 +172,7 @@ def test_new(
     assert "Transaction created" in result
     assert "account" in headers["HX-Trigger"]
 
-    txn = session.query(Transaction).one()
+    txn = Transaction.query().one()
     assert txn.account_id == account.id_
     assert txn.date == today
     assert txn.amount == round(rand_real, 2)
@@ -186,13 +185,12 @@ def test_new(
     assert t_split.category_id == categories["other income"]
     assert t_split.memo is None
 
-    labels = Label.map_name(session)
+    labels = Label.map_name()
     assert not labels
 
 
 def test_new_split(
     today: datetime.date,
-    session: orm.Session,
     web_client: WebClient,
     account: Account,
     categories: dict[str, int],
@@ -221,7 +219,7 @@ def test_new_split(
     assert "Transaction created" in result
     assert "account" in headers["HX-Trigger"]
 
-    txn = session.query(Transaction).one()
+    txn = Transaction.query().one()
     assert txn.account_id == account.id_
     assert txn.date == today
     assert txn.amount == round(rand_real, 2)
@@ -230,23 +228,27 @@ def test_new_split(
     splits = txn.splits
     assert len(splits) == 2
 
-    labels = Label.map_name(session)
+    labels = Label.map_name()
     assert len(labels) == 2
 
     t_split = splits[0]
     assert t_split.amount == Decimal(10)
     assert t_split.category_id == categories["other income"]
     assert t_split.memo is None
-    query = session.query(LabelLink.label_id).where(LabelLink.t_split_id == t_split.id_)
-    split_labels = {labels[label_id] for label_id, in query.yield_per(YIELD_PER)}
+    query = LabelLink.query(LabelLink.label_id).where(
+        LabelLink.t_split_id == t_split.id_,
+    )
+    split_labels = {labels[label_id] for label_id in sql.col0(query)}
     assert split_labels == {"Engineer", "Salary"}
 
     t_split = splits[1]
     assert t_split.amount == round(rand_real - 10, 2)
     assert t_split.category_id == categories["groceries"]
     assert t_split.memo == "bananas"
-    query = session.query(LabelLink.label_id).where(LabelLink.t_split_id == t_split.id_)
-    split_labels = {labels[label_id] for label_id, in query.yield_per(YIELD_PER)}
+    query = LabelLink.query(LabelLink.label_id).where(
+        LabelLink.t_split_id == t_split.id_,
+    )
+    split_labels = {labels[label_id] for label_id in sql.col0(query)}
     assert not split_labels
 
 
@@ -345,8 +347,8 @@ def test_transaction_get_uncleared(
     transactions: list[Transaction],
 ) -> None:
     txn = transactions[0]
-    txn.cleared = False
-    session.commit()
+    with session.begin_nested():
+        txn.cleared = False
 
     result, _ = web_client.GET(("transactions.transaction", {"uri": txn.uri}))
     assert "Edit transaction" in result
@@ -375,8 +377,8 @@ def test_transaction_clear(
     transactions: list[Transaction],
 ) -> None:
     txn = transactions[0]
-    txn.cleared = False
-    session.commit()
+    with session.begin_nested():
+        txn.cleared = False
 
     result, headers = web_client.PATCH(("transactions.transaction", {"uri": txn.uri}))
     assert "snackbar.show" in result
@@ -386,12 +388,10 @@ def test_transaction_clear(
     session.refresh(txn)
     assert txn.cleared
 
-    t = (
-        session.query(TransactionSplit)
-        .where(TransactionSplit.parent_id == txn.id_)
-        .one()
+    t_split = (
+        TransactionSplit.query().where(TransactionSplit.parent_id == txn.id_).one()
     )
-    assert t.cleared
+    assert t_split.cleared
 
 
 def test_transaction_delete_uncleared(
@@ -400,23 +400,23 @@ def test_transaction_delete_uncleared(
     transactions: list[Transaction],
 ) -> None:
     txn = transactions[0]
-    txn.cleared = False
-    session.commit()
+    with session.begin_nested():
+        txn.cleared = False
 
     result, headers = web_client.DELETE(("transactions.transaction", {"uri": txn.uri}))
     assert "snackbar.show" in result
     assert f"Transaction on {txn.date} deleted" in result
     assert "account" in headers["HX-Trigger"]
 
-    t = session.query(Transaction).where(Transaction.id_ == txn.id_).one_or_none()
+    t = Transaction.query().where(Transaction.id_ == txn.id_).one_or_none()
     assert t is None
 
-    t = (
-        session.query(TransactionSplit)
+    t_split = (
+        TransactionSplit.query()
         .where(TransactionSplit.parent_id == txn.id_)
         .one_or_none()
     )
-    assert t is None
+    assert t_split is None
 
 
 def test_transaction_delete(

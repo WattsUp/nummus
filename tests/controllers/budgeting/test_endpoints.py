@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 import werkzeug.datastructures
 
+from nummus import sql
 from nummus.controllers import base, budgeting
 from nummus.models.budget import (
     BudgetAssignment,
@@ -16,7 +17,6 @@ from nummus.models.budget import (
     TargetType,
 )
 from nummus.models.transaction_category import TransactionCategory
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     import flask
@@ -53,7 +53,6 @@ def test_validation(
 
 def test_assign_new(
     month: datetime.date,
-    session: orm.Session,
     web_client: WebClient,
     categories: dict[str, int],
     rand_real: Decimal,
@@ -68,7 +67,7 @@ def test_assign_new(
 
     assert "Ungrouped" in result
 
-    a = session.query(BudgetAssignment).one()
+    a = BudgetAssignment.query().one()
     assert a.category_id == t_cat_id
     assert a.month_ord == month.toordinal()
     assert a.amount == round(rand_real, 2)
@@ -76,7 +75,6 @@ def test_assign_new(
 
 def test_assign_edit(
     month: datetime.date,
-    session: orm.Session,
     web_client: WebClient,
     budget_assignments: list[BudgetAssignment],
 ) -> None:
@@ -90,14 +88,13 @@ def test_assign_edit(
 
     assert "Ungrouped" in result
 
-    session.refresh(a)
+    a.refresh()
     assert a.month_ord == month.toordinal()
     assert a.amount == Decimal(10)
 
 
 def test_assign_remove(
     month: datetime.date,
-    session: orm.Session,
     web_client: WebClient,
     budget_assignments: list[BudgetAssignment],
 ) -> None:
@@ -111,11 +108,7 @@ def test_assign_remove(
 
     assert "Ungrouped" in result
 
-    a = (
-        session.query(BudgetAssignment)
-        .where(BudgetAssignment.id_ == a.id_)
-        .one_or_none()
-    )
+    a = BudgetAssignment.query().where(BudgetAssignment.id_ == a.id_).one_or_none()
     assert a is None
 
 
@@ -199,7 +192,6 @@ def test_move_get_overspending(
 
 def test_move_overspending(
     month: datetime.date,
-    session: orm.Session,
     web_client: WebClient,
     transactions_spending: list[Transaction],
     budget_assignments: list[BudgetAssignment],
@@ -218,14 +210,13 @@ def test_move_overspending(
     assert "$30.00 reallocated" in result
     assert "budget" in headers["HX-Trigger"]
 
-    session.refresh(a)
+    a.refresh()
     assert a.month_ord == month.toordinal()
     assert a.amount == Decimal(20)
 
 
 def test_move_to_income(
     month: datetime.date,
-    session: orm.Session,
     web_client: WebClient,
     transactions_spending: list[Transaction],
     budget_assignments: list[BudgetAssignment],
@@ -242,7 +233,7 @@ def test_move_to_income(
     assert "$10.00 reallocated" in result
     assert "budget" in headers["HX-Trigger"]
 
-    session.refresh(a)
+    a.refresh()
     assert a.month_ord == month.toordinal()
     assert a.amount == Decimal(40)
 
@@ -263,7 +254,6 @@ def test_move_error(
 
 
 def test_reorder_empty(
-    session: orm.Session,
     web_client: WebClient,
     budget_group: BudgetGroup,
 ) -> None:
@@ -278,37 +268,29 @@ def test_reorder_empty(
     )
     assert not result
 
-    query = session.query(BudgetGroup)
-    assert query_count(query) == 0
-    query = session.query(TransactionCategory).where(
+    assert not sql.any_(BudgetGroup.query())
+    query = TransactionCategory.query().where(
         TransactionCategory.budget_group_id.is_not(None),
     )
-    assert query_count(query) == 0
-    query = session.query(TransactionCategory).where(
+    assert not sql.any_(query)
+    query = TransactionCategory.query().where(
         TransactionCategory.budget_position.is_not(None),
     )
-    assert query_count(query) == 0
+    assert not sql.any_(query)
 
 
 def test_reorder(
-    session: orm.Session,
     web_client: WebClient,
     budget_group: BudgetGroup,
 ) -> None:
     t_cat_0 = (
-        session.query(TransactionCategory)
-        .where(TransactionCategory.name == "groceries")
-        .one()
+        TransactionCategory.query().where(TransactionCategory.name == "groceries").one()
     )
     t_cat_1 = (
-        session.query(TransactionCategory)
-        .where(TransactionCategory.name == "rent")
-        .one()
+        TransactionCategory.query().where(TransactionCategory.name == "rent").one()
     )
     t_cat_2 = (
-        session.query(TransactionCategory)
-        .where(TransactionCategory.name == "transfers")
-        .one()
+        TransactionCategory.query().where(TransactionCategory.name == "transfers").one()
     )
 
     result, _ = web_client.PUT(
@@ -321,15 +303,15 @@ def test_reorder(
     )
     assert not result
 
-    session.refresh(t_cat_0)
+    t_cat_0.refresh()
     assert t_cat_0.budget_group_id == budget_group.id_
     assert t_cat_0.budget_position == 0
 
-    session.refresh(t_cat_1)
+    t_cat_1.refresh()
     assert t_cat_1.budget_group_id == budget_group.id_
     assert t_cat_1.budget_position == 1
 
-    session.refresh(t_cat_2)
+    t_cat_2.refresh()
     assert t_cat_2.budget_group_id is None
     assert t_cat_2.budget_position is None
 
@@ -500,10 +482,10 @@ def test_target_get_once(
     web_client: WebClient,
     budget_target: Target,
 ) -> None:
-    budget_target.type_ = TargetType.BALANCE
-    budget_target.period = TargetPeriod.ONCE
-    budget_target.due_date_ord = today_ord
-    session.commit()
+    with session.begin_nested():
+        budget_target.type_ = TargetType.BALANCE
+        budget_target.period = TargetPeriod.ONCE
+        budget_target.due_date_ord = today_ord
 
     result, _ = web_client.GET(("budgeting.target", {"uri": budget_target.uri}))
     assert "Edit target" in result
@@ -511,7 +493,6 @@ def test_target_get_once(
 
 def test_target_new(
     today_ord: int,
-    session: orm.Session,
     web_client: WebClient,
     categories: dict[str, int],
 ) -> None:
@@ -527,7 +508,7 @@ def test_target_new(
     assert "Groceries target created" in result
     assert "budget" in headers["HX-Trigger"]
 
-    tar = session.query(Target).one()
+    tar = Target.query().one()
     assert tar.category_id == t_cat_id
     assert tar.amount == Decimal(10)
     assert tar.type_ == TargetType.ACCUMULATE
@@ -554,7 +535,6 @@ def test_target_new_error(
 
 
 def test_target_put(
-    session: orm.Session,
     web_client: WebClient,
     budget_target: Target,
 ) -> None:
@@ -566,12 +546,11 @@ def test_target_put(
     assert "All changes saved" in result
     assert "budget" in headers["HX-Trigger"]
 
-    session.refresh(budget_target)
+    budget_target.refresh()
     assert budget_target.amount == Decimal(10)
 
 
 def test_target_delete(
-    session: orm.Session,
     web_client: WebClient,
     budget_target: Target,
 ) -> None:
@@ -582,7 +561,7 @@ def test_target_delete(
     assert "Emergency Fund target deleted" in result
     assert "budget" in headers["HX-Trigger"]
 
-    tar = session.query(Target).one_or_none()
+    tar = Target.query().one_or_none()
     assert tar is None
 
 

@@ -9,10 +9,9 @@ from typing import NamedTuple, TYPE_CHECKING, TypedDict
 import flask
 from sqlalchemy import func
 
-from nummus import utils, web
+from nummus import sql, utils, web
 from nummus.controllers import base
 from nummus.models.account import Account
-from nummus.models.base import YIELD_PER
 from nummus.models.config import Config
 from nummus.models.currency import (
     Currency,
@@ -24,12 +23,10 @@ from nummus.models.transaction_category import (
     TransactionCategory,
     TransactionCategoryGroup,
 )
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     from decimal import Decimal
 
-    import sqlalchemy
     from sqlalchemy import orm
 
     from nummus.models.currency import Currency, CurrencyFormat
@@ -55,7 +52,7 @@ class Context(OptionsContext):
     start: str | None
     end: str | None
     by_account: list[tuple[str, Decimal]]
-    by_payee: list[tuple[str, Decimal]]
+    by_payee: list[tuple[str | None, Decimal]]
     by_category: list[tuple[str, Decimal]]
     by_label: list[tuple[str | None, Decimal]]
     currency_format: CurrencyFormat
@@ -65,7 +62,7 @@ class DataQuery(NamedTuple):
     """Type definition for result of data_query()."""
 
     query: orm.Query[TransactionSplit]
-    clauses: dict[str, sqlalchemy.ColumnElement]
+    clauses: dict[str, sql.ColumnClause]
     any_filters: bool
 
     @property
@@ -83,10 +80,9 @@ def page() -> flask.Response:
     """
     args = flask.request.args
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         today = base.today_client()
         ctx, title = ctx_chart(
-            s,
             today,
             args.get("account"),
             args.get("category"),
@@ -114,10 +110,9 @@ def chart() -> flask.Response:
     """
     args = flask.request.args
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         today = base.today_client()
         ctx, title = ctx_chart(
-            s,
             today,
             args.get("account"),
             args.get("category"),
@@ -155,10 +150,9 @@ def dashboard() -> str:
 
     """
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         today = base.today_client()
         ctx, _ = ctx_chart(
-            s,
             today,
             None,
             None,
@@ -177,7 +171,6 @@ def dashboard() -> str:
 
 
 def data_query(
-    s: orm.Session,
     selected_currency: Currency,
     selected_account: str | None = None,
     selected_period: str | None = None,
@@ -191,7 +184,6 @@ def data_query(
     """Create transactions data query.
 
     Args:
-        s: SQL session to use
         selected_currency: Currency to filter by
         selected_account: URI of account from args
         selected_period: Name of period from args
@@ -214,18 +206,18 @@ def data_query(
         ),
         TransactionCategoryGroup.TRANSFER,
     }
-    query = s.query(TransactionCategory.id_).where(
+    query = TransactionCategory.query(TransactionCategory.id_).where(
         (TransactionCategory.name == "securities traded")
         | TransactionCategory.group.in_(skip_groups),
     )
-    skip_ids = {r[0] for r in query.yield_per(YIELD_PER)}
-    query = s.query(Account.id_).where(Account.currency != selected_currency)
-    skip_acct_ids = {r[0] for r in query.yield_per(YIELD_PER)}
-    query = s.query(TransactionSplit).where(
+    skip_ids = set(sql.col0(query))
+    query = Account.query(Account.id_).where(Account.currency != selected_currency)
+    skip_acct_ids = set(sql.col0(query))
+    query = TransactionSplit.query().where(
         TransactionSplit.category_id.not_in(skip_ids),
         TransactionSplit.account_id.not_in(skip_acct_ids),
     )
-    clauses: dict[str, sqlalchemy.ColumnElement] = {}
+    clauses: dict[str, sql.ColumnClause] = {}
 
     any_filters = False
 
@@ -268,7 +260,7 @@ def data_query(
             .where(LabelLink.label_id == label_id)
             .distinct()
         )
-        t_split_ids: set[int] = {r[0] for r in label_query.yield_per(YIELD_PER)}
+        t_split_ids: set[int] = {r[0] for r in sql.yield_(label_query)}
         clauses["label"] = TransactionSplit.id_.in_(t_split_ids)
 
     return DataQuery(query, clauses, any_filters)
@@ -322,7 +314,7 @@ def ctx_options(
     options_account = sorted(
         [
             base.NamePair(Account.id_to_uri(acct_id), accounts[acct_id])
-            for acct_id, in query_options.yield_per(YIELD_PER)
+            for acct_id, in sql.yield_(query_options)
         ],
         key=operator.itemgetter(0),
     )
@@ -338,7 +330,7 @@ def ctx_options(
         .distinct()
     )
     options_uris = {
-        TransactionCategory.id_to_uri(r[0]) for r in query_options.yield_per(YIELD_PER)
+        TransactionCategory.id_to_uri(r[0]) for r in sql.yield_(query_options)
     }
     if selected_category:
         options_uris.add(selected_category)
@@ -363,7 +355,7 @@ def ctx_options(
     options_label = sorted(
         [
             base.NamePair(Label.id_to_uri(label_id), labels[label_id])
-            for label_id, in query_options.yield_per(YIELD_PER)
+            for label_id, in sql.yield_(query_options)
         ],
         key=operator.itemgetter(1),
     )
@@ -380,7 +372,6 @@ def ctx_options(
 
 
 def ctx_chart(
-    s: orm.Session,
     today: datetime.date,
     selected_account: str | None,
     selected_category: str | None,
@@ -394,7 +385,6 @@ def ctx_chart(
     """Get the context to build the chart data.
 
     Args:
-        s: SQL session to use
         today: Today's date
         selected_account: Selected account for filtering
         selected_category: Selected category for filtering
@@ -409,13 +399,12 @@ def ctx_chart(
         tuple(Context, title)
 
     """
-    accounts = Account.map_name(s)
-    base_currency = Config.base_currency(s)
-    categories_emoji = TransactionCategory.map_name_emoji(s)
-    labels = Label.map_name(s)
+    accounts = Account.map_name()
+    base_currency = Config.base_currency()
+    categories_emoji = TransactionCategory.map_name_emoji()
+    labels = Label.map_name()
 
     dat_query = data_query(
-        s,
         base_currency,
         selected_account,
         selected_period,
@@ -429,7 +418,7 @@ def ctx_chart(
         dat_query,
         today,
         accounts,
-        base.tranaction_category_groups(s),
+        base.tranaction_category_groups(),
         labels,
         selected_account,
         selected_category,
@@ -437,14 +426,14 @@ def ctx_chart(
     )
 
     final_query = dat_query.final_query
-    n_matches = query_count(final_query)
+    n_matches = sql.count(final_query)
     if not n_matches:
         # If no matches, reset period to all
         selected_period = None
         dat_query.clauses.pop("start", None)
         dat_query.clauses.pop("end", None)
         final_query = dat_query.final_query
-        n_matches = query_count(final_query)
+        n_matches = sql.count(final_query)
 
     query = final_query.with_entities(
         TransactionSplit.account_id,
@@ -452,7 +441,7 @@ def ctx_chart(
     ).group_by(TransactionSplit.account_id)
     by_account: list[tuple[str, Decimal]] = [
         (accounts[account_id], amount if is_income else -amount)
-        for account_id, amount in query.yield_per(YIELD_PER)
+        for account_id, amount in sql.yield_(query)
         if amount
     ]
     by_account = sorted(by_account, key=operator.itemgetter(1), reverse=True)
@@ -461,9 +450,9 @@ def ctx_chart(
         TransactionSplit.payee,
         func.sum(TransactionSplit.amount),
     ).group_by(TransactionSplit.payee)
-    by_payee: list[tuple[str, Decimal]] = [
+    by_payee: list[tuple[str | None, Decimal]] = [
         (payee, amount if is_income else -amount)
-        for payee, amount in query.yield_per(YIELD_PER)
+        for payee, amount in sql.yield_(query)
         if amount
     ]
     by_payee = sorted(by_payee, key=operator.itemgetter(1), reverse=True)
@@ -474,7 +463,7 @@ def ctx_chart(
     ).group_by(TransactionSplit.category_id)
     by_category: list[tuple[str, Decimal]] = [
         (categories_emoji[cat_id], amount if is_income else -amount)
-        for cat_id, amount in query.yield_per(YIELD_PER)
+        for cat_id, amount in sql.yield_(query)
         if amount
     ]
     by_category = sorted(by_category, key=operator.itemgetter(1), reverse=True)
@@ -490,11 +479,11 @@ def ctx_chart(
     selected_label_id = selected_label and Label.uri_to_id(selected_label)
     by_label: list[tuple[str | None, Decimal, bool]] = [
         (
-            label_id and labels[label_id],
+            labels.get(label_id),
             amount if is_income else -amount,
-            label_id and label_id == selected_label_id,
+            label_id == selected_label_id if label_id else False,
         )
-        for label_id, amount in query.yield_per(YIELD_PER)
+        for label_id, amount in sql.yield_(query)
         if amount
     ]
     by_label = sorted(by_label, key=operator.itemgetter(1), reverse=True)

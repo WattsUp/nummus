@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import pytest
 from sqlalchemy import CheckConstraint, ForeignKeyConstraint, UniqueConstraint
 
+from nummus import sql
 from nummus.models import utils
 from nummus.models.account import Account
 from nummus.models.asset import (
@@ -19,7 +20,6 @@ from nummus.models.transaction import Transaction, TransactionSplit
 if TYPE_CHECKING:
     import datetime
 
-    from nummus import sql
     from tests.conftest import RandomStringGenerator
 
 
@@ -116,7 +116,7 @@ def test_update_rows_new(
     today_ord: int,
     valuations: list[AssetValuation],
 ) -> None:
-    assert utils.query_count(AssetValuation.query()) == len(valuations)
+    assert sql.count(AssetValuation.query()) == len(valuations)
 
     v = AssetValuation.query().where(AssetValuation.date_ord == today_ord).one()
     assert v.value == Decimal(100)
@@ -136,7 +136,7 @@ def test_update_rows_edit(
         today_ord: {"value": Decimal(50), "asset_id": asset.id_},
     }
     utils.update_rows(AssetValuation, query, "date_ord", updates)
-    assert utils.query_count(query) == len(valuations)
+    assert sql.count(query) == len(valuations)
 
     v = query.where(AssetValuation.date_ord == today_ord).one()
     assert v.value == Decimal(50)
@@ -148,7 +148,7 @@ def test_update_rows_edit(
 def test_update_rows_delete(valuations: list[AssetValuation]) -> None:
     query = AssetValuation.query()
     utils.update_rows(AssetValuation, query, "date_ord", {})
-    assert utils.query_count(query) == 0
+    assert not sql.any_(query)
 
 
 def test_update_rows_list_edit(

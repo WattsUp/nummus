@@ -28,10 +28,8 @@ def test_page(
     asset_valuation: AssetValuation,
     transactions: list[Transaction],
 ) -> None:
-    account.category = AccountCategory.INVESTMENT
-    session.commit()
-    _ = asset_valuation
-    _ = transactions
+    with session.begin_nested():
+        account.category = AccountCategory.INVESTMENT
 
     result, _ = web_client.GET(
         ("performance.page", {"index": "Dow Jones Industrial Average"}),
@@ -49,10 +47,8 @@ def test_chart(
     asset_valuation: AssetValuation,
     transactions: list[Transaction],
 ) -> None:
-    account.category = AccountCategory.INVESTMENT
-    session.commit()
-    _ = asset_valuation
-    _ = transactions
+    with session.begin_nested():
+        account.category = AccountCategory.INVESTMENT
 
     result, headers = web_client.GET("performance.chart")
     assert headers["HX-Push-URL"] == web_client.url_for(
@@ -70,10 +66,8 @@ def test_dashboard(
     asset_valuation: AssetValuation,
     transactions: list[Transaction],
 ) -> None:
-    account.category = AccountCategory.INVESTMENT
-    session.commit()
-    _ = asset_valuation
-    _ = transactions
+    with session.begin_nested():
+        account.category = AccountCategory.INVESTMENT
 
     result, _ = web_client.GET("performance.dashboard")
     assert "Investing performance" in result

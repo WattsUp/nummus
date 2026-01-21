@@ -19,10 +19,9 @@ if TYPE_CHECKING:
 def test_ctx_chart_empty(
     today: datetime.date,
     account: Account,
-    session: orm.Session,
 ) -> None:
     _ = account
-    ctx = net_worth.ctx_chart(session, today, "max")
+    ctx = net_worth.ctx_chart(today, "max")
 
     chart: base.ChartData = {
         "labels": [today.isoformat()],
@@ -51,9 +50,8 @@ def test_ctx_chart_empty(
 
 def test_ctx_chart_this_year(
     today: datetime.date,
-    session: orm.Session,
 ) -> None:
-    ctx = net_worth.ctx_chart(session, today, "ytd")
+    ctx = net_worth.ctx_chart(today, "ytd")
 
     assert ctx["start"] == today.replace(month=1, day=1)
     assert ctx["end"] == today
@@ -69,28 +67,25 @@ def test_ctx_chart(
     session: orm.Session,
     categories: dict[str, int],
 ) -> None:
-    _ = asset_valuation
-    _ = transactions
-    # Make account_investments negative
-    txn = Transaction(
-        account_id=account_investments.id_,
-        date=today,
-        amount=-100,
-        statement=rand_str_generator(),
-        payee="Monkey Bank",
-        cleared=True,
-    )
-    t_split = TransactionSplit(
-        parent=txn,
-        amount=txn.amount,
-        category_id=categories["groceries"],
-    )
-    session.add_all((txn, t_split))
-    session.commit()
+    with session.begin_nested():
+        # Make account_investments negative
+        txn = Transaction.create(
+            account_id=account_investments.id_,
+            date=today,
+            amount=-100,
+            statement=rand_str_generator(),
+            payee="Monkey Bank",
+            cleared=True,
+        )
+        TransactionSplit.create(
+            parent=txn,
+            amount=txn.amount,
+            category_id=categories["groceries"],
+        )
 
     start = today - datetime.timedelta(days=3)
     end = today + datetime.timedelta(days=3)
-    ctx = net_worth.ctx_chart(session, end, "max")
+    ctx = net_worth.ctx_chart(end, "max")
 
     chart: base.ChartData = {
         "labels": base.date_labels(start.toordinal(), end.toordinal())[0],

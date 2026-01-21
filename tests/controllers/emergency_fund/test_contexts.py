@@ -19,12 +19,12 @@ if TYPE_CHECKING:
     from nummus.models.budget import BudgetAssignment
 
 
-def test_empty(today: datetime.date, session: orm.Session) -> None:
+def test_empty(today: datetime.date) -> None:
     start = today - datetime.timedelta(days=utils.DAYS_IN_QUARTER * 2)
     dates = utils.range_date(start.toordinal(), today.toordinal())
     n = len(dates)
 
-    ctx = emergency_fund.ctx_page(session, today)
+    ctx = emergency_fund.ctx_page(today)
 
     target: emergency_fund.EFundContext = {
         "chart": {
@@ -56,26 +56,23 @@ def test_ctx_underfunded(
     budget_assignments: list[BudgetAssignment],
     rand_str: str,
 ) -> None:
-    _ = transactions_spending
-    _ = budget_assignments
-    session.query(TransactionCategory).where(
-        TransactionCategory.name == "groceries",
-    ).update({"essential_spending": True})
-    txn = Transaction(
-        account_id=account.id_,
-        date=today - datetime.timedelta(days=100),
-        amount=-1000,
-        statement=rand_str,
-    )
-    t_split = TransactionSplit(
-        parent=txn,
-        amount=txn.amount,
-        category_id=categories["groceries"],
-    )
-    session.add_all((txn, t_split))
-    session.commit()
+    with session.begin_nested():
+        TransactionCategory.query().where(
+            TransactionCategory.name == "groceries",
+        ).update({"essential_spending": True})
+        txn = Transaction.create(
+            account_id=account.id_,
+            date=today - datetime.timedelta(days=100),
+            amount=-1000,
+            statement=rand_str,
+        )
+        TransactionSplit.create(
+            parent=txn,
+            amount=txn.amount,
+            category_id=categories["groceries"],
+        )
 
-    ctx = emergency_fund.ctx_page(session, today)
+    ctx = emergency_fund.ctx_page(today)
 
     assert ctx["current"] == Decimal(100)
     assert ctx["days"] == pytest.approx(Decimal(34), abs=Decimal(1))
@@ -98,26 +95,23 @@ def test_ctx_overfunded(
     budget_assignments: list[BudgetAssignment],
     rand_str: str,
 ) -> None:
-    _ = transactions_spending
-    _ = budget_assignments
-    session.query(TransactionCategory).where(
-        TransactionCategory.name == "groceries",
-    ).update({"essential_spending": True})
-    txn = Transaction(
-        account_id=account.id_,
-        date=today - datetime.timedelta(days=100),
-        amount=-50,
-        statement=rand_str,
-    )
-    t_split = TransactionSplit(
-        parent=txn,
-        amount=txn.amount,
-        category_id=categories["groceries"],
-    )
-    session.add_all((txn, t_split))
-    session.commit()
+    with session.begin_nested():
+        TransactionCategory.query().where(
+            TransactionCategory.name == "groceries",
+        ).update({"essential_spending": True})
+        txn = Transaction.create(
+            account_id=account.id_,
+            date=today - datetime.timedelta(days=100),
+            amount=-50,
+            statement=rand_str,
+        )
+        TransactionSplit.create(
+            parent=txn,
+            amount=txn.amount,
+            category_id=categories["groceries"],
+        )
 
-    ctx = emergency_fund.ctx_page(session, today)
+    ctx = emergency_fund.ctx_page(today)
 
     assert ctx["current"] == Decimal(100)
     assert ctx["days"] == pytest.approx(Decimal(347), abs=Decimal(1))
@@ -140,26 +134,23 @@ def test_ctx(
     budget_assignments: list[BudgetAssignment],
     rand_str: str,
 ) -> None:
-    _ = transactions_spending
-    _ = budget_assignments
-    session.query(TransactionCategory).where(
-        TransactionCategory.name == "groceries",
-    ).update({"essential_spending": True})
-    txn = Transaction(
-        account_id=account.id_,
-        date=today - datetime.timedelta(days=100),
-        amount=-200,
-        statement=rand_str,
-    )
-    t_split = TransactionSplit(
-        parent=txn,
-        amount=txn.amount,
-        category_id=categories["groceries"],
-    )
-    session.add_all((txn, t_split))
-    session.commit()
+    with session.begin_nested():
+        TransactionCategory.query().where(
+            TransactionCategory.name == "groceries",
+        ).update({"essential_spending": True})
+        txn = Transaction.create(
+            account_id=account.id_,
+            date=today - datetime.timedelta(days=100),
+            amount=-200,
+            statement=rand_str,
+        )
+        TransactionSplit.create(
+            parent=txn,
+            amount=txn.amount,
+            category_id=categories["groceries"],
+        )
 
-    ctx = emergency_fund.ctx_page(session, today)
+    ctx = emergency_fund.ctx_page(today)
 
     assert ctx["current"] == Decimal(100)
     assert ctx["days"] == pytest.approx(Decimal(119), abs=Decimal(1))

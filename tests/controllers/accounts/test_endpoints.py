@@ -95,8 +95,8 @@ def test_page_performance(
     transactions: list[Transaction],
 ) -> None:
     _ = transactions
-    account.category = AccountCategory.INVESTMENT
-    session.commit()
+    with session.begin_nested():
+        account.category = AccountCategory.INVESTMENT
 
     result, _ = web_client.GET(("accounts.page", {"uri": account.uri}))
     assert "Transactions" in result

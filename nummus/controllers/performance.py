@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, TypedDict
 import flask
 from sqlalchemy import func
 
-from nummus import utils, web
+from nummus import sql, utils, web
 from nummus.controllers import base
 from nummus.models.account import Account, AccountCategory
 from nummus.models.asset import (
@@ -24,9 +24,9 @@ from nummus.models.currency import (
     CURRENCY_FORMATS,
 )
 from nummus.models.transaction import TransactionSplit
+from nummus.sql import yield_
 
 if TYPE_CHECKING:
-    from sqlalchemy import orm
 
     from nummus.models.currency import Currency, CurrencyFormat
 
@@ -92,9 +92,8 @@ def page() -> flask.Response:
     """
     args = flask.request.args
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         ctx = ctx_chart(
-            s,
             base.today_client(),
             args.get("period", base.DEFAULT_PERIOD),
             args.get("index", _DEFAULT_INDEX),
@@ -119,9 +118,8 @@ def chart() -> flask.Response:
     index = args.get("index", _DEFAULT_INDEX)
     excluded_accounts = args.getlist("exclude")
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         ctx = ctx_chart(
-            s,
             base.today_client(),
             period,
             index,
@@ -154,8 +152,8 @@ def dashboard() -> str:
 
     """
     p = web.portfolio
-    with p.begin_session() as s:
-        acct_ids = Account.ids(s, AccountCategory.INVESTMENT)
+    with p.begin_session():
+        acct_ids = Account.ids(AccountCategory.INVESTMENT)
         end = base.today_client()
         start = end - datetime.timedelta(days=90)
         start_ord = start.toordinal()
@@ -164,16 +162,15 @@ def dashboard() -> str:
 
         indices: dict[str, Decimal] = {}
         query = (
-            s.query(Asset.name)
+            Asset.query(Asset.name)
             .where(Asset.category == AssetCategory.INDEX)
             .order_by(Asset.name)
         )
-        for (name,) in query.all():
-            twrr = Asset.index_twrr(s, name, start_ord, end_ord)
+        for (name,) in yield_(query):
+            twrr = Asset.index_twrr(name, start_ord, end_ord)
             indices[name] = twrr[-1]
 
         acct_values, acct_profits, _ = Account.get_value_all(
-            s,
             start_ord,
             end_ord,
             ids=acct_ids,
@@ -191,7 +188,7 @@ def dashboard() -> str:
             "pnl": total_profit[-1],
             "twrr": twrr[-1],
             "indices": indices,
-            "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
+            "currency_format": CURRENCY_FORMATS[Config.base_currency()],
         }
     return flask.render_template(
         "performance/dashboard.jinja",
@@ -200,7 +197,6 @@ def dashboard() -> str:
 
 
 def ctx_chart(
-    s: orm.Session,
     today: datetime.date,
     period: str,
     index: str,
@@ -209,7 +205,6 @@ def ctx_chart(
     """Get the context to build the performance chart.
 
     Args:
-        s: SQL session to use
         today: Today's date
         period: Selected chart period
         index: Selected index to compare against
@@ -223,34 +218,34 @@ def ctx_chart(
 
     ctx_accounts: list[AccountContext] = []
 
-    acct_ids = Account.ids(s, AccountCategory.INVESTMENT)
+    acct_ids = Account.ids(AccountCategory.INVESTMENT)
     if start is None:
-        query = s.query(func.min(TransactionSplit.date_ord)).where(
+        query = TransactionSplit.query(func.min(TransactionSplit.date_ord)).where(
             TransactionSplit.asset_id.is_(None),
             TransactionSplit.account_id.in_(acct_ids),
         )
-        start_ord = query.scalar()
+        start_ord = sql.scalar(query)
         start = datetime.date.fromordinal(start_ord) if start_ord else end
     start_ord = start.toordinal()
     end_ord = end.toordinal()
     n = end_ord - start_ord + 1
 
     query = (
-        s.query(Asset.name)
+        Asset.query(Asset.name)
         .where(Asset.category == AssetCategory.INDEX)
         .order_by(Asset.name)
     )
-    indices: list[str] = [name for (name,) in query.all()]
-    index_description: str | None = (
-        s.query(Asset.description).where(Asset.name == index).scalar()
+    indices: list[str] = list(sql.col0(query))
+    index_description: str | None = sql.scalar(
+        Asset.query(Asset.description).where(Asset.name == index),
     )
 
-    query = s.query(Account).where(Account.id_.in_(acct_ids))
+    query = Account.query().where(Account.id_.in_(acct_ids))
     mapping: dict[int, str] = {}
     currencies: dict[int, Currency] = {}
     acct_ids.clear()
     account_options: list[base.NamePairState] = []
-    for acct in query.all():
+    for acct in sql.yield_(query):
         if acct.do_include(start_ord):
             excluded = acct.id_ in excluded_accounts
             account_options.append(
@@ -261,9 +256,8 @@ def ctx_chart(
                 currencies[acct.id_] = acct.currency
                 acct_ids.add(acct.id_)
 
-    base_currency = Config.base_currency(s)
+    base_currency = Config.base_currency()
     forex = Asset.get_forex(
-        s,
         start_ord,
         end_ord,
         base_currency,
@@ -271,7 +265,6 @@ def ctx_chart(
     )
 
     acct_values, acct_profits, _ = Account.get_value_all(
-        s,
         start_ord,
         end_ord,
         ids=acct_ids,
@@ -287,7 +280,7 @@ def ctx_chart(
     twrr = utils.twrr(total, total_profit)
     mwrr = utils.mwrr(total, total_profit)
 
-    index_twrr = Asset.index_twrr(s, index, start_ord, end_ord)
+    index_twrr = Asset.index_twrr(index, start_ord, end_ord)
 
     sum_cash_flow = Decimal(0)
 

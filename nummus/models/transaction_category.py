@@ -17,7 +17,6 @@ from nummus.models.base import (
     SQLEnum,
     string_column_args,
 )
-from nummus.models.utils import query_to_dict
 
 
 class TransactionCategoryGroup(BaseEnum):
@@ -263,7 +262,7 @@ class TransactionCategory(Base):
         query = cls.query(cls.id_, cls.name).order_by(cls.name)
         if no_asset_linked:
             query = query.where(cls.asset_linked.is_(False))
-        return query_to_dict(query)
+        return sql.to_dict(query)
 
     @classmethod
     def map_name_emoji(
@@ -286,7 +285,7 @@ class TransactionCategory(Base):
         query = cls.query(cls.id_, cls.emoji_name).order_by(cls.name)
         if no_asset_linked:
             query = query.where(cls.asset_linked.is_(False))
-        return query_to_dict(query)
+        return sql.to_dict(query)
 
     @classmethod
     def _get_protected_id(cls, name: str) -> tuple[int, str]:
