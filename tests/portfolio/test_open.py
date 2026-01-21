@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus import exceptions as exc
+from nummus import sql
 from nummus.encryption.top import ENCRYPTION_AVAILABLE
 from nummus.models.asset import Asset
 from nummus.models.config import Config, ConfigKey
 from nummus.models.transaction_category import TransactionCategory
-from nummus.models.utils import query_count
 from nummus.portfolio import Portfolio
 
 if TYPE_CHECKING:
@@ -56,10 +56,10 @@ def test_unencrypted(tmp_path: Path) -> None:
     assert not p.is_encrypted
     assert not Portfolio.is_encrypted_path(path)
 
-    with p.begin_session() as s:
-        assert query_count(s.query(Config)) == 5
-        assert query_count(s.query(TransactionCategory)) > 0
-        assert query_count(s.query(Asset)) > 0
+    with p.begin_session():
+        assert sql.count(Config.query()) == 5
+        assert sql.any_(TransactionCategory.query())
+        assert sql.any_(Asset.query())
 
     with pytest.raises(exc.NotEncryptedError):
         p.encrypt("")
@@ -100,8 +100,8 @@ def test_no_encryption_test(
 
 
 def test_bad_encryption_test(empty_portfolio: Portfolio) -> None:
-    with empty_portfolio.begin_session() as s:
-        Config.set_(s, ConfigKey.ENCRYPTION_TEST, "fake")
+    with empty_portfolio.begin_session():
+        Config.set_(ConfigKey.ENCRYPTION_TEST, "fake")
 
     with pytest.raises(exc.UnlockingError):
         Portfolio(empty_portfolio.path, None)
@@ -124,10 +124,10 @@ def test_encrypted(tmp_path: Path, rand_str: str) -> None:
     assert p.is_encrypted
     assert Portfolio.is_encrypted_path(path)
 
-    with p.begin_session() as s:
-        assert query_count(s.query(Config)) == 6
-        assert query_count(s.query(TransactionCategory)) > 0
-        assert query_count(s.query(Asset)) > 0
+    with p.begin_session():
+        assert sql.count(Config.query()) == 6
+        assert sql.any_(TransactionCategory.query())
+        assert sql.any_(Asset.query())
 
 
 @pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="No encryption available")
@@ -149,8 +149,8 @@ def test_encrypted_bad_enc_test(
     empty_portfolio_encrypted: tuple[Portfolio, str],
 ) -> None:
     p, key = empty_portfolio_encrypted
-    with p.begin_session() as s:
-        Config.set_(s, ConfigKey.ENCRYPTION_TEST, "fake")
+    with p.begin_session():
+        Config.set_(ConfigKey.ENCRYPTION_TEST, "fake")
 
     with pytest.raises(exc.UnlockingError):
         Portfolio(p.path, key)

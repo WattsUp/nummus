@@ -7,18 +7,16 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus import exceptions as exc
+from nummus import sql
 from nummus.models.account import Account
 from nummus.models.asset import Asset
 from nummus.models.transaction import Transaction, TransactionSplit
-from nummus.models.utils import query_count
 from nummus.portfolio import Portfolio
 from tests.importers.test_raw_csv import TRANSACTIONS_REQUIRED
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
-
-    from nummus.models.base import Base
 
 
 def test_import_file(
@@ -29,33 +27,30 @@ def test_import_file(
     asset: Asset,
     categories: dict[str, int],
 ) -> None:
-    _ = account_investments
-    _ = asset
     path = data_path / "transactions_required.csv"
     path_debug = empty_portfolio.path.with_suffix(".importer-debug")
 
     # Create first txn to be cleared
-    with empty_portfolio.begin_session() as s:
+    with empty_portfolio.begin_session():
         d = TRANSACTIONS_REQUIRED[0]
-        txn = Transaction(
+        txn = Transaction.create(
             account_id=account.id_,
             date=d["date"],
             amount=d["amount"],
             statement="Manually imported",
         )
-        t_split = TransactionSplit(
+        TransactionSplit.create(
             parent=txn,
             amount=txn.amount,
             category_id=categories["uncategorized"],
         )
-        s.add_all((txn, t_split))
 
     empty_portfolio.import_file(path, path_debug)
 
     assert not path_debug.exists()
 
-    with empty_portfolio.begin_session() as s:
-        assert query_count(s.query(Transaction)) == len(TRANSACTIONS_REQUIRED)
+    with empty_portfolio.begin_session():
+        assert sql.count(Transaction.query()) == len(TRANSACTIONS_REQUIRED)
 
 
 def test_import_file_duplicate(
@@ -65,9 +60,6 @@ def test_import_file_duplicate(
     account_investments: Account,
     asset: Asset,
 ) -> None:
-    _ = account
-    _ = account_investments
-    _ = asset
     path = data_path / "transactions_required.csv"
     path_debug = empty_portfolio.path.with_suffix(".importer-debug")
 
@@ -86,9 +78,6 @@ def test_import_file_force(
     account_investments: Account,
     asset: Asset,
 ) -> None:
-    _ = account
-    _ = account_investments
-    _ = asset
     path = data_path / "transactions_required.csv"
     path_debug = empty_portfolio.path.with_suffix(".importer-debug")
 
@@ -97,8 +86,8 @@ def test_import_file_force(
 
     assert not path_debug.exists()
 
-    with empty_portfolio.begin_session() as s:
-        assert query_count(s.query(Transaction)) == len(TRANSACTIONS_REQUIRED) * 2
+    with empty_portfolio.begin_session():
+        assert sql.count(Transaction.query()) == len(TRANSACTIONS_REQUIRED) * 2
 
 
 @pytest.mark.parametrize(
@@ -162,11 +151,11 @@ def test_import_file_investments(
 
     assert not path_debug.exists()
 
-    with empty_portfolio.begin_session() as s:
-        assert query_count(s.query(Transaction)) == 4
+    with empty_portfolio.begin_session():
+        assert sql.count(Transaction.query()) == 4
 
         txn = (
-            s.query(Transaction)
+            Transaction.query()
             .where(Transaction.date_ord == datetime.date(2023, 1, 3).toordinal())
             .one()
         )
@@ -192,26 +181,38 @@ def test_import_file_bad_category(
         assert t_split.category_id == categories["uncategorized"]
 
 
+def noop[T](x: T) -> T:
+    return x
+
+
+def lower(s: str) -> str:
+    return s.lower()
+
+
+def upper(s: str) -> str:
+    return s.upper()
+
+
 @pytest.mark.parametrize(
     ("type_", "prop", "value_adjuster"),
     [
-        (Account, "uri", lambda s: s),
-        (Account, "number", lambda s: s),
+        (Account, "uri", noop),
+        (Account, "number", noop),
         (Account, "number", operator.itemgetter(slice(-4, None))),
-        (Account, "institution", lambda s: s),
-        (Account, "name", lambda s: s),
-        (Account, "name", lambda s: s.lower()),
-        (Account, "name", lambda s: s.upper()),
-        (Asset, "uri", lambda s: s),
-        (Asset, "ticker", lambda s: s),
-        (Asset, "name", lambda s: s),
+        (Account, "institution", noop),
+        (Account, "name", noop),
+        (Account, "name", lower),
+        (Account, "name", upper),
+        (Asset, "uri", noop),
+        (Asset, "ticker", noop),
+        (Asset, "name", noop),
     ],
 )
 def test_find(
     empty_portfolio: Portfolio,
     account: Account,
     asset: Asset,
-    type_: type[Base],
+    type_: type[Account | Asset],
     prop: str,
     value_adjuster: Callable[[str], str],
 ) -> None:
@@ -222,8 +223,8 @@ def test_find(
     query = value_adjuster(getattr(obj, prop))
 
     cache: dict[str, tuple[int, str | None]] = {}
-    with empty_portfolio.begin_session() as s:
-        a_id, a_name = Portfolio.find(s, type_, query, cache)
+    with empty_portfolio.begin_session():
+        a_id, a_name = Portfolio.find(type_, query, cache)
     assert a_id == obj.id_
     assert a_name == obj.name
 
@@ -237,7 +238,7 @@ def test_find_missing(
     query = Account.id_to_uri(account.id_ + 1)
 
     cache: dict[str, tuple[int, str | None]] = {}
-    with empty_portfolio.begin_session() as s, pytest.raises(exc.NoResultFound):
-        Portfolio.find(s, Account, query, cache)
+    with empty_portfolio.begin_session(), pytest.raises(exc.NoResultFound):
+        Portfolio.find(Account, query, cache)
 
     assert not cache

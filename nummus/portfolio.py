@@ -28,7 +28,7 @@ from nummus.importers.top import get_importer, get_importers
 from nummus.migrations.top import MIGRATORS
 from nummus.models.account import Account
 from nummus.models.asset import Asset
-from nummus.models.base import Base, YIELD_PER
+from nummus.models.base import Base
 from nummus.models.base_uri import Cipher, load_cipher
 from nummus.models.config import Config, ConfigKey
 from nummus.models.currency import (
@@ -378,11 +378,13 @@ class Portfolio:
         sha = hashlib.sha256()
         sha.update(path.read_bytes())
         h = sha.hexdigest()
-        with self.begin_session() as s:
+        with self.begin_session():
             if force:
-                s.query(ImportedFile).where(ImportedFile.hash_ == h).delete()
-            existing_date_ord: int | None = (
-                s.query(ImportedFile.date_ord).where(ImportedFile.hash_ == h).scalar()
+                ImportedFile.query().where(ImportedFile.hash_ == h).delete()
+            existing_date_ord: int | None = sql.scalar(
+                ImportedFile.query(ImportedFile.date_ord).where(
+                    ImportedFile.hash_ == h,
+                ),
             )
             if existing_date_ord is not None:
                 date = datetime.date.fromordinal(existing_date_ord)
@@ -409,22 +411,22 @@ class Portfolio:
 
                 # Create a single split for each transaction
                 acct_raw = d["account"]
-                acct_id, _ = self.find(s, Account, acct_raw, acct_mapping)
+                acct_id, _ = self.find(Account, acct_raw, acct_mapping)
 
                 asset_raw = d["asset"]
                 asset_id: int | None = None
                 if asset_raw:
-                    asset_id, asset_name = self.find(s, Asset, asset_raw, asset_mapping)
+                    asset_id, asset_name = self.find(Asset, asset_raw, asset_mapping)
                     if not d["statement"]:
                         d["statement"] = f"Asset Transaction {asset_name}"
 
-                self._import_transaction(s, d, acct_id, asset_id, categories)
+                self._import_transaction(d, acct_id, asset_id, categories)
 
             # Add file hash to prevent importing again
-            s.add(ImportedFile(hash_=h))
+            ImportedFile.create(hash_=h)
 
             # Update splits on each touched
-            query = s.query(Asset).where(
+            query = Asset.query().where(
                 Asset.id_.in_(a_id for a_id, _ in asset_mapping.values()),
             )
             for asset in query.all():
@@ -435,42 +437,36 @@ class Portfolio:
 
     def _import_transaction(
         self,
-        s: orm.Session,
         d: TxnDict,
         acct_id: int,
         asset_id: int | None,
         categories: dict[str, int],
     ) -> None:
         if asset_id is not None:
-            self._import_asset_transaction(s, d, acct_id, asset_id, categories)
+            self._import_asset_transaction(d, acct_id, asset_id, categories)
             return
 
         # See if anything matches
         date_ord = d["date"].toordinal()
-        matches = list(
-            s.query(Transaction)
-            .with_entities(Transaction.id_, Transaction.date_ord)
-            .where(
-                Transaction.account_id == acct_id,
-                Transaction.amount == d["amount"],
-                Transaction.date_ord >= date_ord - 5,
-                Transaction.date_ord <= date_ord + 5,
-                Transaction.cleared.is_(False),
-            )
-            .all(),
+        query = Transaction.query(Transaction.id_, Transaction.date_ord).where(
+            Transaction.account_id == acct_id,
+            Transaction.amount == d["amount"],
+            Transaction.date_ord >= date_ord - 5,
+            Transaction.date_ord <= date_ord + 5,
+            Transaction.cleared.is_(False),
         )
-        matches = sorted(matches, key=lambda x: abs(x[1] - date_ord))
+        matches = sorted(sql.yield_(query), key=lambda x: abs(x[1] - date_ord))
         # If only one match on closest day, link transaction
         if len(matches) == 1 or (len(matches) > 1 and matches[0][1] != matches[1][1]):
             match_id = matches[0][0]
             statement_clean = Transaction.clean_strings("statement", d["statement"])
-            s.query(Transaction).where(Transaction.id_ == match_id).update(
+            Transaction.query().where(Transaction.id_ == match_id).update(
                 {
                     "cleared": True,
                     "statement": statement_clean,
                 },
             )
-            s.query(TransactionSplit).where(
+            TransactionSplit.query().where(
                 TransactionSplit.parent_id == match_id,
             ).update({"cleared": True})
             return
@@ -481,7 +477,7 @@ class Portfolio:
         except KeyError:
             category_id = categories["uncategorized"]
 
-        txn = Transaction(
+        txn = Transaction.create(
             account_id=acct_id,
             amount=d["amount"],
             date=d["date"],
@@ -489,18 +485,16 @@ class Portfolio:
             payee=d["payee"],
             cleared=True,
         )
-        t_split = TransactionSplit(
+        TransactionSplit.create(
+            parent=txn,
             amount=d["amount"],
             memo=d["memo"],
             category_id=category_id,
         )
-        t_split.parent = txn
-        s.add_all((txn, t_split))
 
     @classmethod
     def _import_asset_transaction(
         cls,
-        s: orm.Session,
         d: TxnDict,
         acct_id: int,
         asset_id: int | None,
@@ -516,7 +510,7 @@ class Portfolio:
                 raise exc.MissingAssetError(msg)
             qty = abs(qty)
 
-            txn = Transaction(
+            txn = Transaction.create(
                 account_id=acct_id,
                 amount=0,
                 date=d["date"],
@@ -524,7 +518,7 @@ class Portfolio:
                 payee=d["payee"],
                 cleared=True,
             )
-            t_split_0 = TransactionSplit(
+            TransactionSplit.create(
                 parent=txn,
                 amount=amount,
                 memo=d["memo"],
@@ -532,7 +526,7 @@ class Portfolio:
                 asset_id=asset_id,
                 asset_quantity_unadjusted=-qty,
             )
-            t_split_1 = TransactionSplit(
+            TransactionSplit.create(
                 parent=txn,
                 amount=-amount,
                 memo=d["memo"],
@@ -540,7 +534,6 @@ class Portfolio:
                 asset_id=asset_id,
                 asset_quantity_unadjusted=0,
             )
-            s.add_all((txn, t_split_0, t_split_1))
             return
         if category_name == "dividends received":
             # Associate dividends with asset
@@ -551,7 +544,7 @@ class Portfolio:
                 raise exc.MissingAssetError(msg)
             qty = abs(qty)
 
-            txn = Transaction(
+            txn = Transaction.create(
                 account_id=acct_id,
                 amount=0,
                 date=d["date"],
@@ -559,7 +552,7 @@ class Portfolio:
                 payee=d["payee"],
                 cleared=True,
             )
-            t_split_0 = TransactionSplit(
+            TransactionSplit.create(
                 parent=txn,
                 amount=amount,
                 memo=d["memo"],
@@ -567,21 +560,19 @@ class Portfolio:
                 asset_id=asset_id,
                 asset_quantity_unadjusted=0,
             )
-            t_split_1 = TransactionSplit(
-                parent=txn,
-                amount=-amount,
-                memo=d["memo"],
-                category_id=categories["securities traded"],
-                asset_id=asset_id,
-                asset_quantity_unadjusted=qty,
-            )
-            s.add_all((txn, t_split_0))
             if qty != 0:
                 # Zero quantity means cash dividends, not reinvested
-                s.add(t_split_1)
+                TransactionSplit.create(
+                    parent=txn,
+                    amount=-amount,
+                    memo=d["memo"],
+                    category_id=categories["securities traded"],
+                    asset_id=asset_id,
+                    asset_quantity_unadjusted=qty,
+                )
             return
         if category_name == "securities traded":
-            txn = Transaction(
+            txn = Transaction.create(
                 account_id=acct_id,
                 amount=d["amount"],
                 date=d["date"],
@@ -589,24 +580,23 @@ class Portfolio:
                 payee=d["payee"],
                 cleared=True,
             )
-            t_split = TransactionSplit(
+            TransactionSplit(
+                parent=txn,
                 amount=d["amount"],
                 memo=d["memo"],
                 category_id=categories[category_name],
                 asset_id=asset_id,
                 asset_quantity_unadjusted=d["asset_quantity"],
             )
-            t_split.parent = txn
-            s.add_all((txn, t_split))
             return
 
         msg = f"'{category_name}' is not a valid category for asset transaction"
         raise exc.InvalidAssetTransactionCategoryError(msg)
 
+    # TODO (WattsUp): #0 Move to each class
     @classmethod
     def find(
         cls,
-        s: orm.Session,
         model: type[Base],
         search: str,
         cache: dict[str, tuple[int, str | None]],
@@ -614,7 +604,6 @@ class Portfolio:
         """Find a matching object by  uri, or field value.
 
         Args:
-            s: Session to use
             model: Type of model to search for
             search: Search query
             cache: Cache results to speed up look ups
@@ -642,7 +631,7 @@ class Portfolio:
         except (exc.InvalidURIError, exc.WrongURITypeError):
             pass
         else:
-            query = s.query(model).where(model.id_ == id_)
+            query = model.query().where(model.id_ == id_)
             if m := one_or_none(query):
                 return cache_and_return(m)
 
@@ -652,17 +641,17 @@ class Portfolio:
         }
         for prop in properties[model]:
             # Exact?
-            query = s.query(model).where(prop == search)
+            query = model.query().where(prop == search)
             if m := one_or_none(query):
                 return cache_and_return(m)
 
             # Exact lower case?
-            query = s.query(model).where(prop.ilike(search))
+            query = model.query().where(prop.ilike(search))
             if m := one_or_none(query):
                 return cache_and_return(m)
 
             # For account number, see if there is one ending in the search
-            query = s.query(model).where(prop.ilike(f"%{search}"))
+            query = model.query().where(prop.ilike(f"%{search}"))
             if prop is Account.number and (m := one_or_none(query)):
                 return cache_and_return(m)
 
@@ -768,7 +757,7 @@ class Portfolio:
 
         # Prune unused AssetValuations
         with self.begin_session() as s:
-            for asset in s.query(Asset).yield_per(YIELD_PER):
+            for asset in Asset.all():
                 asset.prune_valuations()
                 asset.autodetect_interpolate()
 

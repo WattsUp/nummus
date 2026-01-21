@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from nummus.portfolio import Portfolio
 
 
-def test_empty(capsys: pytest.CaptureFixture, empty_portfolio: Portfolio) -> None:
+def test_empty(capsys: pytest.CaptureFixture[str], empty_portfolio: Portfolio) -> None:
     assert empty_portfolio.update_assets(no_bars=True) == []
 
     captured = capsys.readouterr()
@@ -38,11 +38,9 @@ def test_update_assets(
     asset_etf: Asset,
     transactions: list[Transaction],
 ) -> None:
-    _ = asset_etf
-    asset.interpolate = True
-    session.query(Asset).where(Asset.category == AssetCategory.INDEX).delete()
-    session.commit()
-    _ = transactions
+    with session.begin_nested():
+        asset.interpolate = True
+        Asset.query().where(Asset.category == AssetCategory.INDEX).delete()
     target: list[AssetUpdate] = [
         AssetUpdate(
             asset.name,
@@ -65,10 +63,9 @@ def test_error(
     asset: Asset,
     transactions: list[Transaction],
 ) -> None:
-    asset.ticker = "FAKE"
-    session.query(Asset).where(Asset.category == AssetCategory.INDEX).delete()
-    session.commit()
-    _ = transactions
+    with session.begin_nested():
+        asset.ticker = "FAKE"
+        Asset.query().where(Asset.category == AssetCategory.INDEX).delete()
     target: list[AssetUpdate] = [
         AssetUpdate(
             asset.name,
