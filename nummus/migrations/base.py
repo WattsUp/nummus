@@ -12,13 +12,11 @@ from packaging.version import Version
 from sqlalchemy.schema import CreateTable
 
 from nummus import sql
+from nummus.models.base import Base
 from nummus.models.utils import dump_table_configs, get_constraints
 
 if TYPE_CHECKING:
-    from sqlalchemy import orm
-
     from nummus import portfolio
-    from nummus.models.base import Base
 
 
 class Migrator(ABC):
@@ -55,20 +53,19 @@ class Migrator(ABC):
 
     def add_column(
         self,
-        s: orm.Session,
         model: type[Base],
-        column: orm.QueryableAttribute,
+        column: sql.Column,
         initial_value: object | None = None,
     ) -> None:
         """Add a column to a table.
 
         Args:
-            s: SQL session to use
             model: Table to modify
             column: Column to add
             initial_value: Value to set all rows to
 
         """
+        s = model.session()
         engine = s.get_bind().engine
 
         col_name = sql.escape(column.name)
@@ -77,13 +74,12 @@ class Migrator(ABC):
         s.execute(sqlalchemy.text(stmt))
 
         if initial_value is not None:
-            s.query(model).update({column: initial_value})
+            model.query().update({column: initial_value})
 
         self.pending_schema_updates.add(model)
 
     def rename_column(
         self,
-        s: orm.Session,
         model: type[Base],
         old_name: str,
         new_name: str,
@@ -91,7 +87,6 @@ class Migrator(ABC):
         """Rename a column in a table.
 
         Args:
-            s: SQL session to use
             model: Table to modify
             old_name: Current name of column
             new_name: New name of column
@@ -100,7 +95,7 @@ class Migrator(ABC):
         old_name = sql.escape(old_name)
         new_name = sql.escape(new_name)
         stmt = f'ALTER TABLE "{model.__tablename__}" RENAME {old_name} TO {new_name}'
-        s.execute(sqlalchemy.text(stmt))
+        model.session().execute(sqlalchemy.text(stmt))
 
         # RENAME modifies column references but not constraint names
         # Need to update schema to update those
@@ -108,32 +103,29 @@ class Migrator(ABC):
 
     def drop_column(
         self,
-        s: orm.Session,
         model: type[Base],
         col_name: str,
     ) -> None:
         """Rename a column in a table.
 
         Args:
-            s: SQL session to use
             model: Table to modify
             col_name: Name of column to drop
 
         """
-        constraints = get_constraints(s, model)
+        constraints = get_constraints(model)
         if any(col_name in sql_text for _, sql_text in constraints):
-            self.recreate_table(s, model, drop={col_name})
+            self.recreate_table(model, drop={col_name})
         else:
             # Able to drop directly
             col_name = sql.escape(col_name)
             stmt = f'ALTER TABLE "{model.__tablename__}" DROP {col_name}'
-            s.execute(sqlalchemy.text(stmt))
+            model.session().execute(sqlalchemy.text(stmt))
 
         # DROP does not need updated schema
 
     def recreate_table(
         self,
-        s: orm.Session,
         model: type[Base],
         *,
         drop: set[str] | None = None,
@@ -142,13 +134,13 @@ class Migrator(ABC):
         """Rebuild table, optionally dropping columns.
 
         Args:
-            s: SQL session to use
             model: Table to modify
             drop: Set of column names to drop
             create_stmt: Statement to execute to create new table,
                 None will modify existing config
 
         """
+        s = model.session()
         drop = drop or set()
         # In SQLite we can do the hacky way or recreate the table
         # Opt for recreate
@@ -159,7 +151,7 @@ class Migrator(ABC):
             new_config = create_stmt.splitlines()
         else:
             # Edit table config, dropping any columns
-            old_config = dump_table_configs(s, model)
+            old_config = dump_table_configs(model)
             new_config: list[str] = []
             re_column = re.compile(r" +([a-z_]+) [A-Z ]+")
             re_constraint = re.compile(r' +[A-Z ]+(?:"[^\"]+" [A-Z ]+)?\(([^\)]+)\)')
@@ -191,7 +183,7 @@ class Migrator(ABC):
         s.execute(sqlalchemy.text(stmt))
 
         # Drop old table
-        self.drop_table(s, name)
+        self.drop_table(name)
 
         # Rename new into old
         stmt = f'ALTER TABLE "migration_temp" RENAME TO "{name}"'
@@ -204,16 +196,15 @@ class Migrator(ABC):
         self.pending_schema_updates.add(model)
 
     @staticmethod
-    def drop_table(s: orm.Session, table_name: str) -> None:
+    def drop_table(table_name: str) -> None:
         """Drop a table.
 
         Args:
-            s: SQL session to use
             table_name: Name of table to drop
 
         """
         stmt = f'DROP TABLE "{table_name}"'
-        s.execute(sqlalchemy.text(stmt))
+        Base.session().execute(sqlalchemy.text(stmt))
 
 
 class SchemaMigrator(Migrator):
@@ -235,5 +226,5 @@ class SchemaMigrator(Migrator):
             with p.begin_session() as s:
                 table: sqlalchemy.Table = model.sql_table()
                 create_stmt = CreateTable(table).compile(s.get_bind()).string.strip()
-                self.recreate_table(s, model, create_stmt=create_stmt)
+                self.recreate_table(model, create_stmt=create_stmt)
         return []

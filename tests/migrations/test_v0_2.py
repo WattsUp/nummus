@@ -28,14 +28,14 @@ def test_migrate(tmp_path: Path, data_path: Path) -> None:
     ]
     assert result == target
 
-    with p.begin_session() as s:
-        result = "\n".join(dump_table_configs(s, Transaction))
+    with p.begin_session():
+        result = "\n".join(dump_table_configs(Transaction))
         assert "linked" not in result
         assert "locked" not in result
         assert "cleared" in result
         assert "payee" in result
 
-        result = "\n".join(dump_table_configs(s, TransactionSplit))
+        result = "\n".join(dump_table_configs(TransactionSplit))
         assert "linked" not in result
         assert "locked" not in result
         assert "cleared" in result

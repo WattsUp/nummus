@@ -30,7 +30,7 @@ class MigratorV0_15(Migrator):
         with p.begin_session() as s:
             # Already have Label from updated v0.13 migrator, skip this one
             try:
-                dump_table_configs(s, Label)
+                dump_table_configs(Label)
             except exc.NoResultFound:
                 pass
             else:
@@ -46,16 +46,15 @@ class MigratorV0_15(Migrator):
             # Hand crafted SQL statement can't use query_to_dict
             tags: dict[int, str] = dict(s.execute(sqlalchemy.text(stmt)).all())  # type: ignore[attr-defined]
 
-            labels = [Label(id_=tag_id, name=name) for tag_id, name in tags.items()]
-            s.add_all(labels)
-            s.flush()
+            for tag_id, name in tags.items():
+                Label.create(id_=tag_id, name=name)
 
             stmt = "SELECT tag_id, t_split_id FROM tag_link"
             for tag_id, t_split_id in s.execute(sqlalchemy.text(stmt)):
-                s.add(LabelLink(label_id=tag_id, t_split_id=t_split_id))
+                LabelLink.create(label_id=tag_id, t_split_id=t_split_id)
 
-        with p.begin_session() as s:
-            self.drop_table(s, "tag_link")
-            self.drop_table(s, "tag")
+        with p.begin_session():
+            self.drop_table("tag_link")
+            self.drop_table("tag")
 
         return comments

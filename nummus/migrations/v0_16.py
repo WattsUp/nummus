@@ -27,12 +27,13 @@ class MigratorV0_16(Migrator):
             f"Portfolio currency set to {DEFAULT_CURRENCY.pretty}, use web to edit",
         ]
 
-        with p.begin_session() as s:
-            s.add(
-                Config(key=ConfigKey.BASE_CURRENCY, value=str(DEFAULT_CURRENCY.value)),
+        with p.begin_session():
+            Config.create(
+                key=ConfigKey.BASE_CURRENCY,
+                value=str(DEFAULT_CURRENCY.value),
             )
 
-            self.add_column(s, Account, Account.currency, DEFAULT_CURRENCY)
-            self.add_column(s, Asset, Asset.currency, DEFAULT_CURRENCY)
+            self.add_column(Account, Account.currency, DEFAULT_CURRENCY)
+            self.add_column(Asset, Asset.currency, DEFAULT_CURRENCY)
 
         return comments
