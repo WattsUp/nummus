@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 def test_not_required(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
 ) -> None:
 
@@ -33,7 +33,7 @@ def test_not_required(
 
 
 def test_v0_1_migration(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
     data_path: Path,
 ) -> None:

@@ -125,7 +125,7 @@ def test_exclude_empty(
 
 
 def test_empty_print(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
 ) -> None:
 
@@ -142,7 +142,7 @@ def test_empty_print(
 
 
 def test_non_empty_print(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     utc: datetime.datetime,
     empty_portfolio: Portfolio,
     transactions: list[Transaction],

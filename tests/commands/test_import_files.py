@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from nummus.portfolio import Portfolio
 
 
-def test_empty(capsys: pytest.CaptureFixture, empty_portfolio: Portfolio) -> None:
+def test_empty(capsys: pytest.CaptureFixture[str], empty_portfolio: Portfolio) -> None:
     path_debug = empty_portfolio.path.with_suffix(".importer_debug")
 
     c = Import(empty_portfolio.path, None, [], force=False)
@@ -32,7 +32,7 @@ def test_empty(capsys: pytest.CaptureFixture, empty_portfolio: Portfolio) -> Non
 
 
 def test_non_existant(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
     tmp_path: Path,
 ) -> None:
@@ -55,7 +55,7 @@ def test_non_existant(
 
 
 def test_data_dir(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
     account: Account,
     account_investments: Account,
@@ -87,7 +87,7 @@ def test_data_dir(
 
 
 def test_unknown_importer(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
     account: Account,
     account_investments: Account,
@@ -120,7 +120,7 @@ def test_unknown_importer(
 
 
 def test_duplicate(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     today: datetime.date,
     empty_portfolio: Portfolio,
     account: Account,
@@ -155,7 +155,7 @@ def test_duplicate(
 
 @pytest.mark.xfail
 def test_data_dir_no_account(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
     data_path: Path,
 ) -> None:

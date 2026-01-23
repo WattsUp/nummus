@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 
     from sqlalchemy import orm
 
-    from nummus.models.currency import Currency
     from nummus.models.transaction import TransactionSplit
 
 
@@ -131,24 +130,19 @@ def write_csv(
     # Defer for faster time to main
     import tqdm
 
+    from nummus import sql
     from nummus.models.account import Account
-    from nummus.models.base import YIELD_PER
     from nummus.models.currency import CURRENCY_FORMATS
     from nummus.models.transaction import TransactionCategory, TransactionSplit
-    from nummus.models.utils import query_count
 
-    s = transactions_query.session
-
-    query = s.query(Account).with_entities(
+    query = Account.query(
         Account.id_,
         Account.name,
         Account.currency,
     )
-    accounts: dict[int, tuple[str, Currency]] = {
-        r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
-    }
+    accounts = sql.to_dict_tuple(query)
 
-    categories = TransactionCategory.map_name_emoji(s)
+    categories = TransactionCategory.map_name_emoji()
 
     query = transactions_query.with_entities(
         TransactionSplit.date_ord,
@@ -158,7 +152,7 @@ def write_csv(
         TransactionSplit.category_id,
         TransactionSplit.amount,
     ).order_by(TransactionSplit.date_ord)
-    n = query_count(query)
+    n = sql.count(query)
 
     header = [
         "Date",
@@ -177,7 +171,7 @@ def write_csv(
         t_cat_id,
         amount,
     ) in tqdm.tqdm(
-        query.yield_per(YIELD_PER),
+        sql.yield_(query),
         total=n,
         desc="Exporting",
         disable=no_bars,
@@ -189,8 +183,8 @@ def write_csv(
             [
                 datetime.date.fromordinal(date).isoformat(),
                 acct_name,
-                payee,
-                memo,
+                payee or "",
+                memo or "",
                 categories[t_cat_id],
                 cf(amount),
             ],

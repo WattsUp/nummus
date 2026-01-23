@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 def test_export_empty(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
     tmp_path: Path,
 ) -> None:
@@ -43,7 +43,7 @@ def test_export_empty(
 
 
 def test_export(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
     account: Account,
     transactions: list[Transaction],

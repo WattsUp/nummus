@@ -228,7 +228,7 @@ def session(empty_portfolio: Portfolio) -> Generator[orm.Session]:
         yield s
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope="session")
 def uri_cipher() -> None:
     """Generate a URI cipher."""
     base_uri._cipher = base_uri.Cipher.generate()

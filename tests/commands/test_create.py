@@ -28,7 +28,7 @@ class MockPortfolio(Portfolio):
 
 
 def test_create_existing(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
 ) -> None:
     path = tmp_path / "new.db"
@@ -44,7 +44,7 @@ def test_create_existing(
 
 
 def test_create_unencrypted_forced(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -63,7 +63,7 @@ def test_create_unencrypted_forced(
 
 
 def test_create_unencrypted(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -81,7 +81,7 @@ def test_create_unencrypted(
 
 
 def test_create_encrypted(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     rand_str: str,
@@ -108,7 +108,7 @@ def test_create_encrypted(
 
 
 def test_create_encrypted_pass_file(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     rand_str: str,
@@ -130,7 +130,7 @@ def test_create_encrypted_pass_file(
 
 
 def test_create_encrypted_cancelled(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:

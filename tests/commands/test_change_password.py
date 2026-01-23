@@ -26,7 +26,7 @@ class MockPortfolio(Portfolio):
 
 
 def test_no_change_unencrypted(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
     tmp_path: Path,
 ) -> None:
@@ -49,7 +49,7 @@ def test_no_change_unencrypted(
     ],
 )
 def test_change(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
     empty_portfolio: Portfolio,
     tmp_path: Path,

@@ -113,13 +113,15 @@ class Health(Command):
 
         p = self._p
 
-        with p.begin_session() as s:
+        with p.begin_session():
             if self._clear_ignores:
-                s.query(HealthCheckIssue).delete()
+                HealthCheckIssue.query().delete()
             elif self._ignores:
                 # Set ignore for all specified issues
+                print(self._ignores)
+                print(HealthCheckIssue.uri_to_id(self._ignores[0]))
                 ids = {HealthCheckIssue.uri_to_id(uri) for uri in self._ignores}
-                s.query(HealthCheckIssue).where(HealthCheckIssue.id_.in_(ids)).update(
+                HealthCheckIssue.query().where(HealthCheckIssue.id_.in_(ids)).update(
                     {HealthCheckIssue.ignore: True},
                 )
 
@@ -141,8 +143,8 @@ class Health(Command):
 
         # Update LAST_HEALTH_CHECK_TS
         utc_now = datetime.datetime.now(datetime.UTC)
-        with p.begin_session() as s:
-            Config.set_(s, ConfigKey.LAST_HEALTH_CHECK_TS, utc_now.isoformat())
+        with p.begin_session():
+            Config.set_(ConfigKey.LAST_HEALTH_CHECK_TS, utc_now.isoformat())
         if any_severe_issues:
             return -2
         if any_issues:
@@ -164,8 +166,8 @@ class Health(Command):
             no_ignores=self._no_ignores,
             no_description_typos=self._no_description_typos,
         )
-        with self._p.begin_session() as s:
-            c.test(s)
+        with self._p.begin_session():
+            c.test()
         n_issues = len(c.issues)
         if n_issues == 0:
             print(f"{Fore.GREEN}Check '{c.name()}' has no issues")

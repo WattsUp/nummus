@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from nummus.portfolio import Portfolio
 
 
-def test_clean(capsys: pytest.CaptureFixture, empty_portfolio: Portfolio) -> None:
+def test_clean(capsys: pytest.CaptureFixture[str], empty_portfolio: Portfolio) -> None:
     c = Clean(empty_portfolio.path, None)
     assert c.run() == 0
 

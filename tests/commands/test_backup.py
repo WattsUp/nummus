@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from nummus.portfolio import Portfolio
 
 
-def test_backup(capsys: pytest.CaptureFixture, empty_portfolio: Portfolio) -> None:
+def test_backup(capsys: pytest.CaptureFixture[str], empty_portfolio: Portfolio) -> None:
     c = Backup(empty_portfolio.path, None)
     assert c.run() == 0
 
@@ -30,7 +30,10 @@ def test_backup(capsys: pytest.CaptureFixture, empty_portfolio: Portfolio) -> No
     assert not captured.err
 
 
-def test_restore(capsys: pytest.CaptureFixture, empty_portfolio: Portfolio) -> None:
+def test_restore(
+    capsys: pytest.CaptureFixture[str],
+    empty_portfolio: Portfolio,
+) -> None:
     empty_portfolio.backup()
     c = Restore(empty_portfolio.path, None, tar_ver=None, list_ver=False)
     assert c.run() == 0
@@ -45,7 +48,7 @@ def test_restore(capsys: pytest.CaptureFixture, empty_portfolio: Portfolio) -> N
 
 
 def test_restore_missing(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
 ) -> None:
     c = Restore(empty_portfolio.path, None, tar_ver=None, list_ver=False)
@@ -58,7 +61,7 @@ def test_restore_missing(
 
 
 def test_restore_list_empty(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
 ) -> None:
     c = Restore(empty_portfolio.path, None, tar_ver=None, list_ver=True)
@@ -71,7 +74,7 @@ def test_restore_list_empty(
 
 
 def test_restore_list(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
     utc_frozen: datetime.datetime,
 ) -> None:

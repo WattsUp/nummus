@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 def test_empty(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
 ) -> None:
 
