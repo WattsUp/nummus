@@ -215,7 +215,7 @@ def empty_portfolio_encrypted(
     return p, key
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def session(empty_portfolio: Portfolio) -> Generator[orm.Session]:
     """Create SQL session.
 
@@ -314,18 +314,16 @@ def account(session: orm.Session, rand_str_generator: RandomStringGenerator) -> 
         Checking Account, not closed, budgeted
 
     """
-    acct = Account(
-        name="Monkey bank checking",
-        institution="Monkey bank",
-        category=AccountCategory.CASH,
-        closed=False,
-        budgeted=True,
-        currency=DEFAULT_CURRENCY,
-        number=rand_str_generator(),
-    )
-    session.add(acct)
-    session.commit()
-    return acct
+    with session.begin_nested():
+        return Account.create(
+            name="Monkey bank checking",
+            institution="Monkey bank",
+            category=AccountCategory.CASH,
+            closed=False,
+            budgeted=True,
+            currency=DEFAULT_CURRENCY,
+            number=rand_str_generator(),
+        )
 
 
 @pytest.fixture
@@ -336,19 +334,17 @@ def account_savings(session: orm.Session) -> Account:
         Savings Account, not closed, not budgeted
 
     """
-    acct = Account(
-        # capital case for HTML header check
-        name="Monkey bank savings",
-        institution="Monkey bank",
-        category=AccountCategory.CASH,
-        closed=False,
-        budgeted=False,
-        currency=DEFAULT_CURRENCY,
-        number="1234",
-    )
-    session.add(acct)
-    session.commit()
-    return acct
+    with session.begin_nested():
+        return Account.create(
+            # capital case for HTML header check
+            name="Monkey bank savings",
+            institution="Monkey bank",
+            category=AccountCategory.CASH,
+            closed=False,
+            budgeted=False,
+            currency=DEFAULT_CURRENCY,
+            number="1234",
+        )
 
 
 @pytest.fixture
@@ -359,15 +355,16 @@ def account_investments(session: orm.Session) -> Account:
         Investments Account, not closed, not budgeted
 
     """
-    return Account.create(
-        name="Monkey bank investments",
-        institution="Monkey bank",
-        category=AccountCategory.INVESTMENT,
-        closed=False,
-        budgeted=False,
-        currency=DEFAULT_CURRENCY,
-        number="1235",
-    )
+    with session.begin_nested():
+        return Account.create(
+            name="Monkey bank investments",
+            institution="Monkey bank",
+            category=AccountCategory.INVESTMENT,
+            closed=False,
+            budgeted=False,
+            currency=DEFAULT_CURRENCY,
+            number="1235",
+        )
 
 
 @pytest.fixture
@@ -389,10 +386,11 @@ def labels(session: orm.Session) -> dict[str, int]:
         dict{name: label id}
 
     """
-    labels = {"engineer", "fruit", "apartments 4 U"}
-    for name in labels:
-        Label.create(name=name)
-    return {name: id_ for id_, name in Label.map_name().items()}
+    with session.begin_nested():
+        labels = {"engineer", "fruit", "apartments 4 U"}
+        for name in labels:
+            Label.create(name=name)
+        return {name: id_ for id_, name in Label.map_name().items()}
 
 
 @pytest.fixture
@@ -403,13 +401,14 @@ def asset(session: orm.Session) -> Asset:
         Banana Incorporated, STOCKS
 
     """
-    return Asset.create(
-        name="Banana incorporated",
-        category=AssetCategory.STOCKS,
-        ticker="BANANA",
-        description="Banana Incorporated makes bananas",
-        currency=DEFAULT_CURRENCY,
-    )
+    with session.begin_nested():
+        return Asset.create(
+            name="Banana incorporated",
+            category=AssetCategory.STOCKS,
+            ticker="BANANA",
+            description="Banana Incorporated makes bananas",
+            currency=DEFAULT_CURRENCY,
+        )
 
 
 @pytest.fixture
@@ -420,13 +419,14 @@ def asset_etf(session: orm.Session) -> Asset:
         Banana ETF, STOCKS
 
     """
-    return Asset.create(
-        name="Banana ETF",
-        category=AssetCategory.STOCKS,
-        ticker="BANANA_ETF",
-        description="Banana ETF",
-        currency=DEFAULT_CURRENCY,
-    )
+    with session.begin_nested():
+        return Asset.create(
+            name="Banana ETF",
+            category=AssetCategory.STOCKS,
+            ticker="BANANA_ETF",
+            description="Banana ETF",
+            currency=DEFAULT_CURRENCY,
+        )
 
 
 @pytest.fixture
@@ -441,7 +441,8 @@ def asset_valuation(
         AssetValuation on today of $10
 
     """
-    return AssetValuation.create(asset_id=asset.id_, date_ord=today_ord, value=2)
+    with session.begin_nested():
+        return AssetValuation.create(asset_id=asset.id_, date_ord=today_ord, value=2)
 
 
 @pytest.fixture
@@ -456,7 +457,8 @@ def asset_split(
         AssetSplit on today of 10:1
 
     """
-    return AssetSplit.create(asset_id=asset.id_, date_ord=today_ord, multiplier=10)
+    with session.begin_nested():
+        return AssetSplit.create(asset_id=asset.id_, date_ord=today_ord, multiplier=10)
 
 
 @pytest.fixture
@@ -470,17 +472,18 @@ def asset_sectors(
         20% BASIC_MATERIALS, 80% TECHNOLOGY
 
     """
-    s0 = AssetSector.create(
-        asset_id=asset.id_,
-        sector=USSector.BASIC_MATERIALS,
-        weight=Decimal("0.2"),
-    )
-    s1 = AssetSector.create(
-        asset_id=asset.id_,
-        sector=USSector.TECHNOLOGY,
-        weight=Decimal("0.8"),
-    )
-    return s0, s1
+    with session.begin_nested():
+        s0 = AssetSector.create(
+            asset_id=asset.id_,
+            sector=USSector.BASIC_MATERIALS,
+            weight=Decimal("0.2"),
+        )
+        s1 = AssetSector.create(
+            asset_id=asset.id_,
+            sector=USSector.TECHNOLOGY,
+            weight=Decimal("0.8"),
+        )
+        return s0, s1
 
 
 @pytest.fixture
@@ -494,7 +497,8 @@ def budget_group(
         BudgetGroup with position 0
 
     """
-    return BudgetGroup.create(name=rand_str_generator(), position=0)
+    with session.begin_nested():
+        return BudgetGroup.create(name=rand_str_generator(), position=0)
 
 
 @pytest.fixture
@@ -507,77 +511,78 @@ def transactions(
     categories: dict[str, int],
     labels: dict[str, int],
 ) -> list[Transaction]:
-    # Fund account on 3 days before today
-    txn = Transaction.create(
-        account_id=account.id_,
-        date=today - datetime.timedelta(days=3),
-        amount=100,
-        statement=rand_str_generator(),
-        payee="Monkey Bank",
-        cleared=True,
-    )
-    t_split_0 = TransactionSplit.create(
-        parent=txn,
-        amount=txn.amount,
-        category_id=categories["other income"],
-    )
+    with session.begin_nested():
+        # Fund account on 3 days before today
+        txn = Transaction.create(
+            account_id=account.id_,
+            date=today - datetime.timedelta(days=3),
+            amount=100,
+            statement=rand_str_generator(),
+            payee="Monkey Bank",
+            cleared=True,
+        )
+        t_split_0 = TransactionSplit.create(
+            parent=txn,
+            amount=txn.amount,
+            category_id=categories["other income"],
+        )
 
-    # Buy asset on 2 days before today
-    txn = Transaction.create(
-        account_id=account.id_,
-        date=today - datetime.timedelta(days=2),
-        amount=-10,
-        statement=rand_str_generator(),
-        payee="Monkey Bank",
-        cleared=True,
-    )
-    t_split_1 = TransactionSplit.create(
-        parent=txn,
-        amount=txn.amount,
-        asset_id=asset.id_,
-        asset_quantity_unadjusted=10,
-        category_id=categories["securities traded"],
-    )
+        # Buy asset on 2 days before today
+        txn = Transaction.create(
+            account_id=account.id_,
+            date=today - datetime.timedelta(days=2),
+            amount=-10,
+            statement=rand_str_generator(),
+            payee="Monkey Bank",
+            cleared=True,
+        )
+        t_split_1 = TransactionSplit.create(
+            parent=txn,
+            amount=txn.amount,
+            asset_id=asset.id_,
+            asset_quantity_unadjusted=10,
+            category_id=categories["securities traded"],
+        )
 
-    # Sell asset tomorrow
-    txn = Transaction.create(
-        account_id=account.id_,
-        date=today + datetime.timedelta(days=1),
-        amount=50,
-        statement=rand_str_generator(),
-        payee="Monkey Bank",
-        cleared=True,
-    )
-    TransactionSplit.create(
-        parent=txn,
-        amount=txn.amount,
-        asset_id=asset.id_,
-        asset_quantity_unadjusted=-5,
-        category_id=categories["securities traded"],
-        memo="for rent",
-    )
+        # Sell asset tomorrow
+        txn = Transaction.create(
+            account_id=account.id_,
+            date=today + datetime.timedelta(days=1),
+            amount=50,
+            statement=rand_str_generator(),
+            payee="Monkey Bank",
+            cleared=True,
+        )
+        TransactionSplit.create(
+            parent=txn,
+            amount=txn.amount,
+            asset_id=asset.id_,
+            asset_quantity_unadjusted=-5,
+            category_id=categories["securities traded"],
+            memo="for rent",
+        )
 
-    # Sell remaining next week
-    txn = Transaction.create(
-        account_id=account.id_,
-        date=today + datetime.timedelta(days=7),
-        amount=50,
-        statement=rand_str_generator(),
-        payee="Monkey Bank",
-        cleared=True,
-    )
-    TransactionSplit.create(
-        parent=txn,
-        amount=txn.amount,
-        asset_id=asset.id_,
-        asset_quantity_unadjusted=-5,
-        category_id=categories["securities traded"],
-        memo="rent transfer",
-    )
+        # Sell remaining next week
+        txn = Transaction.create(
+            account_id=account.id_,
+            date=today + datetime.timedelta(days=7),
+            amount=50,
+            statement=rand_str_generator(),
+            payee="Monkey Bank",
+            cleared=True,
+        )
+        TransactionSplit.create(
+            parent=txn,
+            amount=txn.amount,
+            asset_id=asset.id_,
+            asset_quantity_unadjusted=-5,
+            category_id=categories["securities traded"],
+            memo="rent transfer",
+        )
 
-    LabelLink.create(label_id=labels["engineer"], t_split_id=t_split_0.id_)
-    LabelLink.create(label_id=labels["engineer"], t_split_id=t_split_1.id_)
-    return Transaction.query().order_by(Transaction.date_ord).all()
+        LabelLink.create(label_id=labels["engineer"], t_split_id=t_split_0.id_)
+        LabelLink.create(label_id=labels["engineer"], t_split_id=t_split_1.id_)
+        return Transaction.query().order_by(Transaction.date_ord).all()
 
 
 @pytest.fixture
@@ -591,53 +596,54 @@ def transactions_spending(
     categories: dict[str, int],
     labels: dict[str, int],
 ) -> list[Transaction]:
-    statement_income = rand_str_generator()
-    statement_groceries = rand_str_generator()
-    statement_rent = rand_str_generator()
-    specs = [
-        (account, Decimal(100), statement_income, "other income"),
-        (account, Decimal(100), statement_income, "other income"),
-        (account, Decimal(120), statement_income, "other income"),
-        (account, Decimal(-10), statement_groceries, "groceries"),
-        (account, Decimal(-10), statement_groceries + " other word", "groceries"),
-        (account, Decimal(-50), statement_rent, "rent"),
-        (account, Decimal(1000), rand_str_generator(), "other income"),
-        (account_savings, Decimal(100), statement_income, "other income"),
-    ]
-    for acct, amount, statement, category in specs:
+    with session.begin_nested():
+        statement_income = rand_str_generator()
+        statement_groceries = rand_str_generator()
+        statement_rent = rand_str_generator()
+        specs = [
+            (account, Decimal(100), statement_income, "other income"),
+            (account, Decimal(100), statement_income, "other income"),
+            (account, Decimal(120), statement_income, "other income"),
+            (account, Decimal(-10), statement_groceries, "groceries"),
+            (account, Decimal(-10), statement_groceries + " other word", "groceries"),
+            (account, Decimal(-50), statement_rent, "rent"),
+            (account, Decimal(1000), rand_str_generator(), "other income"),
+            (account_savings, Decimal(100), statement_income, "other income"),
+        ]
+        for acct, amount, statement, category in specs:
+            txn = Transaction.create(
+                account_id=acct.id_,
+                date=today,
+                amount=amount,
+                statement=statement,
+            )
+            TransactionSplit.create(
+                parent=txn,
+                amount=txn.amount,
+                category_id=categories[category],
+            )
+
         txn = Transaction.create(
-            account_id=acct.id_,
+            account_id=account.id_,
             date=today,
-            amount=amount,
-            statement=statement,
+            amount=-50,
+            statement=statement_rent + " other word",
         )
         TransactionSplit.create(
             parent=txn,
             amount=txn.amount,
-            category_id=categories[category],
+            asset_id=asset.id_,
+            asset_quantity_unadjusted=10,
+            category_id=categories["securities traded"],
         )
 
-    txn = Transaction.create(
-        account_id=account.id_,
-        date=today,
-        amount=-50,
-        statement=statement_rent + " other word",
-    )
-    TransactionSplit.create(
-        parent=txn,
-        amount=txn.amount,
-        asset_id=asset.id_,
-        asset_quantity_unadjusted=10,
-        category_id=categories["securities traded"],
-    )
+        query = TransactionSplit.query(TransactionSplit.id_).where(
+            TransactionSplit.category_id == categories["rent"],
+        )
+        t_split_id = sql.one(query)
+        LabelLink.create(label_id=labels["apartments 4 U"], t_split_id=t_split_id)
 
-    query = TransactionSplit.query(TransactionSplit.id_).where(
-        TransactionSplit.category_id == categories["rent"],
-    )
-    t_split_id = sql.one(query)
-    LabelLink.create(label_id=labels["apartments 4 U"], t_split_id=t_split_id)
-
-    return session.query(Transaction).order_by(Transaction.date_ord).all()
+        return session.query(Transaction).order_by(Transaction.date_ord).all()
 
 
 @pytest.fixture
@@ -657,22 +663,23 @@ def budget_assignments(
         ]
 
     """
-    BudgetAssignment.create(
-        month_ord=month_ord,
-        amount=Decimal(50),
-        category_id=categories["groceries"],
-    )
-    BudgetAssignment.create(
-        month_ord=month_ord,
-        amount=Decimal(100),
-        category_id=categories["emergency fund"],
-    )
-    BudgetAssignment.create(
-        month_ord=utils.date_add_months(month, 1).toordinal(),
-        amount=Decimal(2000),
-        category_id=categories["rent"],
-    )
-    return BudgetAssignment.all()
+    with session.begin_nested():
+        BudgetAssignment.create(
+            month_ord=month_ord,
+            amount=Decimal(50),
+            category_id=categories["groceries"],
+        )
+        BudgetAssignment.create(
+            month_ord=month_ord,
+            amount=Decimal(100),
+            category_id=categories["emergency fund"],
+        )
+        BudgetAssignment.create(
+            month_ord=utils.date_add_months(month, 1).toordinal(),
+            amount=Decimal(2000),
+            category_id=categories["rent"],
+        )
+        return BudgetAssignment.all()
 
 
 @pytest.fixture
@@ -686,13 +693,14 @@ def budget_target(
         Target for Emergency Fund, $1000, no due date
 
     """
-    return Target.create(
-        category_id=categories["emergency fund"],
-        amount=Decimal(1000),
-        type_=TargetType.BALANCE,
-        period=TargetPeriod.ONCE,
-        repeat_every=0,
-    )
+    with session.begin_nested():
+        return Target.create(
+            category_id=categories["emergency fund"],
+            amount=Decimal(1000),
+            type_=TargetType.BALANCE,
+            period=TargetPeriod.ONCE,
+            repeat_every=0,
+        )
 
 
 @pytest.fixture(autouse=True)
@@ -747,7 +755,7 @@ class FlaskAppGenerator:
         class MockExtension(web.FlaskExtension):
             @override
             @classmethod
-            def _open_portfolio(cls, config: flask.Config) -> Portfolio:
+            def _open_portfolio(cls, config: dict[str, object]) -> Portfolio:
                 _ = config
                 return generator()[0]
 

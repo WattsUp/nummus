@@ -3,17 +3,14 @@
 from __future__ import annotations
 
 import datetime
-from typing import override, TYPE_CHECKING
+from typing import override
 
+from nummus import sql
 from nummus.health_checks.base import HealthCheck
 from nummus.models.account import Account
 from nummus.models.asset import Asset
-from nummus.models.base import YIELD_PER
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
-
-if TYPE_CHECKING:
-    from sqlalchemy import orm
 
 
 class EmptyFields(HealthCheck):
@@ -23,53 +20,36 @@ class EmptyFields(HealthCheck):
     _SEVERE = False
 
     @override
-    def test(self, s: orm.Session) -> None:
-        accounts = Account.map_name(s)
+    def test(self) -> None:
+        accounts = Account.map_name()
 
         # List of (uri, source, field)
         issues: list[tuple[str, str, str]] = []
 
-        query = (
-            s.query(Account)
-            .with_entities(Account.id_, Account.name)
-            .where(Account.number.is_(None))
-        )
-        for acct_id, name in query.yield_per(YIELD_PER):
-            acct_id: int
-            name: str
+        query = Account.query(Account.id_, Account.name).where(Account.number.is_(None))
+        for acct_id, name in sql.yield_(query):
             uri = Account.id_to_uri(acct_id)
             issues.append(
                 (f"{uri}.number", f"Account {name}", "has an empty number"),
             )
 
-        query = (
-            s.query(Asset)
-            .with_entities(Asset.id_, Asset.name)
-            .where(Asset.description.is_(None))
+        query = Asset.query(Asset.id_, Asset.name).where(
+            Asset.description.is_(None),
         )
-        for a_id, name in query.yield_per(YIELD_PER):
-            a_id: int
-            name: str
+        for a_id, name in sql.yield_(query):
             uri = Asset.id_to_uri(a_id)
             issues.append(
                 (f"{uri}.description", f"Asset {name}", "has an empty description"),
             )
 
-        query = (
-            s.query(Transaction)
-            .with_entities(
-                Transaction.id_,
-                Transaction.date_ord,
-                Transaction.account_id,
-            )
-            .where(
-                Transaction.payee.is_(None),
-            )
+        query = Transaction.query(
+            Transaction.id_,
+            Transaction.date_ord,
+            Transaction.account_id,
+        ).where(
+            Transaction.payee.is_(None),
         )
-        for t_id, date_ord, acct_id in query.yield_per(YIELD_PER):
-            t_id: int
-            date_ord: int
-            acct_id: int
+        for t_id, date_ord, acct_id in sql.yield_(query):
             uri = Transaction.id_to_uri(t_id)
 
             date = datetime.date.fromordinal(date_ord)
@@ -78,20 +58,13 @@ class EmptyFields(HealthCheck):
                 (f"{uri}.payee", source, "has an empty payee"),
             )
 
-        uncategorized_id, _ = TransactionCategory.uncategorized(s)
-        query = (
-            s.query(TransactionSplit)
-            .with_entities(
-                TransactionSplit.id_,
-                TransactionSplit.date_ord,
-                TransactionSplit.account_id,
-            )
-            .where(TransactionSplit.category_id == uncategorized_id)
-        )
-        for t_id, date_ord, acct_id in query.yield_per(YIELD_PER):
-            t_id: int
-            date_ord: int
-            acct_id: int
+        uncategorized_id, _ = TransactionCategory.uncategorized()
+        query = TransactionSplit.query(
+            TransactionSplit.id_,
+            TransactionSplit.date_ord,
+            TransactionSplit.account_id,
+        ).where(TransactionSplit.category_id == uncategorized_id)
+        for t_id, date_ord, acct_id in sql.yield_(query):
             uri = TransactionSplit.id_to_uri(t_id)
 
             date = datetime.date.fromordinal(date_ord)
@@ -101,6 +74,5 @@ class EmptyFields(HealthCheck):
         source_len = max(len(item[1]) for item in issues) if issues else 0
 
         self._commit_issues(
-            s,
             {uri: f"{source:{source_len}} {field}" for uri, source, field in issues},
         )

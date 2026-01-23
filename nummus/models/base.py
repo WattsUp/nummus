@@ -145,6 +145,18 @@ class QueryMixIn(SessionMixIn):
         c4: sql_roles.TypedColumnsClauseRole[T4],
     ) -> orm.query.RowReturningQuery[tuple[T0, T1, T2, T3, T4]]: ...
 
+    @overload
+    @classmethod
+    def query[T0, T1, T2, T3, T4, T5](
+        cls,
+        c0: sql_roles.TypedColumnsClauseRole[T0],
+        c1: sql_roles.TypedColumnsClauseRole[T1],
+        c2: sql_roles.TypedColumnsClauseRole[T2],
+        c3: sql_roles.TypedColumnsClauseRole[T3],
+        c4: sql_roles.TypedColumnsClauseRole[T4],
+        c5: sql_roles.TypedColumnsClauseRole[T5],
+    ) -> orm.query.RowReturningQuery[tuple[T0, T1, T2, T3, T4, T5]]: ...
+
     @classmethod
     def query[T](
         cls,
@@ -176,6 +188,36 @@ class QueryMixIn(SessionMixIn):
 
         """
         return cls.query().all()
+
+    @classmethod
+    def one(cls) -> Self:
+        """Fetch one rows.
+
+        Returns:
+            Only row
+
+        """
+        return cls.query().one()
+
+    @classmethod
+    def first(cls) -> Self | None:
+        """Fetch first rows.
+
+        Returns:
+            First row
+
+        """
+        return cls.query().first()
+
+    @classmethod
+    def count(cls) -> int:
+        """Count number of rows.
+
+        Returns:
+            Number of rows
+
+        """
+        return sql.count(cls.query())
 
 
 class Base(orm.DeclarativeBase, QueryMixIn):

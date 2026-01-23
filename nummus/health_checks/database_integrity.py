@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from typing import override, TYPE_CHECKING
+from typing import override
 
 import sqlalchemy
 
 from nummus.health_checks.base import HealthCheck
-
-if TYPE_CHECKING:
-    from sqlalchemy import orm
+from nummus.models.base import Base
 
 
 class DatabaseIntegrity(HealthCheck):
@@ -19,11 +17,11 @@ class DatabaseIntegrity(HealthCheck):
     _SEVERE = True
 
     @override
-    def test(self, s: orm.Session) -> None:
-        result = s.execute(sqlalchemy.text("PRAGMA integrity_check"))
+    def test(self) -> None:
+        result = Base.session().execute(sqlalchemy.text("PRAGMA integrity_check"))
         rows = [row for row, in result.all()]
         if len(rows) != 1 or rows[0] != "ok":
             issues = {str(i): row for i, row in enumerate(rows)}
         else:
             issues = {}
-        self._commit_issues(s, issues)
+        self._commit_issues(issues)

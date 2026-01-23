@@ -3,18 +3,15 @@
 from __future__ import annotations
 
 import datetime
-from typing import NamedTuple, override, TYPE_CHECKING
+from typing import NamedTuple, override
 
 from sqlalchemy import func
 
+from nummus import sql
 from nummus.health_checks.base import HealthCheck
 from nummus.models.account import Account
-from nummus.models.base import YIELD_PER
 from nummus.models.transaction import TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
-
-if TYPE_CHECKING:
-    from sqlalchemy import orm
 
 
 class RawIssue(NamedTuple):
@@ -33,15 +30,14 @@ class UnnecessarySplits(HealthCheck):
     _SEVERE = False
 
     @override
-    def test(self, s: orm.Session) -> None:
-        accounts = Account.map_name(s)
-        categories = TransactionCategory.map_name_emoji(s)
+    def test(self) -> None:
+        accounts = Account.map_name()
+        categories = TransactionCategory.map_name_emoji()
 
         issues: list[RawIssue] = []
 
         query = (
-            s.query(TransactionSplit)
-            .with_entities(
+            TransactionSplit.query(
                 TransactionSplit.date_ord,
                 TransactionSplit.account_id,
                 TransactionSplit.parent_id,
@@ -55,14 +51,7 @@ class UnnecessarySplits(HealthCheck):
             .order_by(TransactionSplit.date_ord)
             .having(func.count() > 1)
         )
-        for date_ord, acct_id, t_id, payee, t_cat_id in query.yield_per(
-            YIELD_PER,
-        ):
-            date_ord: int
-            acct_id: int
-            t_id: int
-            payee: str | None
-            t_cat_id: int
+        for date_ord, acct_id, t_id, payee, t_cat_id in sql.yield_(query):
             # Create a robust uri for this duplicate
             uri = f"{t_id}.{payee}.{t_cat_id}"
 
@@ -82,7 +71,6 @@ class UnnecessarySplits(HealthCheck):
             t_cat_len = 0
 
         self._commit_issues(
-            s,
             {
                 issue.uri: (
                     f"{issue.source:{source_len}}: "

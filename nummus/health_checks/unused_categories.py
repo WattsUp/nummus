@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-from typing import override, TYPE_CHECKING
+from typing import override
 
+from nummus import sql
 from nummus.health_checks.base import HealthCheck
 from nummus.models.budget import BudgetAssignment
 from nummus.models.transaction import TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
-from nummus.models.utils import query_to_dict
-
-if TYPE_CHECKING:
-    from sqlalchemy import orm
 
 
 class UnusedCategories(HealthCheck):
@@ -21,23 +18,22 @@ class UnusedCategories(HealthCheck):
     _SEVERE = False
 
     @override
-    def test(self, s: orm.Session) -> None:
+    def test(self) -> None:
         # Only check unlocked categories
-        query = (
-            s.query(TransactionCategory)
-            .with_entities(TransactionCategory.id_, TransactionCategory.emoji_name)
-            .where(TransactionCategory.locked.is_(False))
-        )
-        categories: dict[int, str] = query_to_dict(query)
+        query = TransactionCategory.query(
+            TransactionCategory.id_,
+            TransactionCategory.emoji_name,
+        ).where(TransactionCategory.locked.is_(False))
+        categories: dict[int, str] = sql.to_dict(query)
         if len(categories) == 0:
-            self._commit_issues(s, {})
+            self._commit_issues({})
             return
 
-        query = s.query(TransactionSplit.category_id)
-        used_categories = {r[0] for r in query.distinct()}
+        query = TransactionSplit.query(TransactionSplit.category_id)
+        used_categories = set(sql.col0(query))
 
-        query = s.query(BudgetAssignment.category_id)
-        used_categories.update(r[0] for r in query.distinct())
+        query = BudgetAssignment.query(BudgetAssignment.category_id)
+        used_categories.update(sql.col0(query))
 
         categories = {
             t_cat_id: name
@@ -49,7 +45,6 @@ class UnusedCategories(HealthCheck):
         )
 
         self._commit_issues(
-            s,
             {
                 TransactionCategory.id_to_uri(t_cat_id): (
                     f"{name:{category_len}} has no "

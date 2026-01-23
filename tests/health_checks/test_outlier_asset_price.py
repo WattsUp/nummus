@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from nummus import sql
 from nummus.health_checks.outlier_asset_price import OutlierAssetPrice
 from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 from nummus.models.health_checks import HealthCheckIssue
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -20,9 +20,9 @@ if TYPE_CHECKING:
     from nummus.models.transaction import Transaction
 
 
-def test_empty(session: orm.Session) -> None:
+def test_empty() -> None:
     c = OutlierAssetPrice()
-    c.test(session)
+    c.test()
     assert c.issues == {}
 
 
@@ -31,15 +31,15 @@ def test_zero_quantity(
     transactions: list[Transaction],
     asset_valuation: AssetValuation,
 ) -> None:
-    t_split = transactions[1].splits[0]
-    t_split.asset_quantity_unadjusted = Decimal()
-    asset_valuation.date_ord = t_split.date_ord
-    asset_valuation.value = Decimal(10)
-    session.commit()
+    with session.begin_nested():
+        t_split = transactions[1].splits[0]
+        t_split.asset_quantity_unadjusted = Decimal()
+        asset_valuation.date_ord = t_split.date_ord
+        asset_valuation.value = Decimal(10)
 
     c = OutlierAssetPrice()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 0
+    c.test()
+    assert not sql.any_(HealthCheckIssue.query())
 
 
 @pytest.mark.parametrize(
@@ -58,21 +58,21 @@ def test_check(
     amount: Decimal,
     target_word: str | None,
 ) -> None:
-    t_split = transactions[1].splits[0]
-    asset_valuation.date_ord = t_split.date_ord
-    asset_valuation.value = Decimal(10)
-    t_split.amount = amount
-    session.commit()
+    with session.begin_nested():
+        t_split = transactions[1].splits[0]
+        asset_valuation.date_ord = t_split.date_ord
+        asset_valuation.value = Decimal(10)
+        t_split.amount = amount
 
     c = OutlierAssetPrice()
-    c.test(session)
+    c.test()
 
     if target_word is None:
-        assert query_count(session.query(HealthCheckIssue)) == 0
+        assert not sql.any_(HealthCheckIssue.query())
         return
-    assert query_count(session.query(HealthCheckIssue)) == 1
+    assert HealthCheckIssue.count() == 1
 
-    i = session.query(HealthCheckIssue).one()
+    i = HealthCheckIssue.one()
     assert i.check == c.name()
     assert i.value == t_split.uri
     uri = i.uri

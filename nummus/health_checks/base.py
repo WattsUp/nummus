@@ -3,15 +3,11 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import ClassVar, TYPE_CHECKING
+from typing import ClassVar
 
-from nummus import utils
-from nummus.models.base import YIELD_PER
+from nummus import sql, utils
 from nummus.models.health_checks import HealthCheckIssue
 from nummus.models.utils import update_rows
-
-if TYPE_CHECKING:
-    from sqlalchemy import orm
 
 
 class HealthCheck(ABC):
@@ -24,7 +20,7 @@ class HealthCheck(ABC):
         self,
         *,
         no_ignores: bool = False,
-        **_,
+        **_: object,
     ) -> None:
         """Initialize Base health check.
 
@@ -79,26 +75,20 @@ class HealthCheck(ABC):
         return cls._SEVERE
 
     @abstractmethod
-    def test(self, s: orm.Session) -> None:
-        """Run the health check on a portfolio.
-
-        Args:
-            s: SQL session to use
-
-        """
+    def test(self) -> None:
+        """Run the health check on a portfolio."""
         raise NotImplementedError
 
     @classmethod
-    def ignore(cls, s: orm.Session, values: list[str] | set[str]) -> None:
+    def ignore(cls, values: list[str] | set[str]) -> None:
         """Ignore false positive issues.
 
         Args:
-            s: SQL session to use
             values: List of issues to ignore
 
         """
         (
-            s.query(HealthCheckIssue)
+            HealthCheckIssue.query()
             .where(
                 HealthCheckIssue.check == cls.name(),
                 HealthCheckIssue.value.in_(values),
@@ -106,40 +96,36 @@ class HealthCheck(ABC):
             .update({"ignore": True})
         )
 
-    def _commit_issues(self, s: orm.Session, issues: dict[str, str]) -> None:
+    def _commit_issues(self, issues: dict[str, str]) -> None:
         """Commit issues to Portfolio.
 
         Args:
-            s: SQL session to use
             issues: dict{value: message}
 
         """
-        query = s.query(HealthCheckIssue.value).where(
+        query = HealthCheckIssue.query(HealthCheckIssue.value).where(
             HealthCheckIssue.check == self.name(),
             HealthCheckIssue.ignore.is_(True),
         )
-        ignored = {r[0] for r in query.yield_per(YIELD_PER)}
+        ignored = set(sql.col0(query))
 
         updates: dict[object, dict[str, object]] = {
             value: {"check": self.name(), "ignore": value in ignored, "msg": msg}
             for value, msg in issues.items()
         }
-        query = s.query(HealthCheckIssue).where(
+        query = HealthCheckIssue.query().where(
             HealthCheckIssue.check == self.name(),
         )
-        update_rows(s, HealthCheckIssue, query, "value", updates)
-        s.flush()
+        update_rows(HealthCheckIssue, query, "value", updates)
 
-        query = (
-            s.query(HealthCheckIssue)
-            .with_entities(HealthCheckIssue.id_, HealthCheckIssue.msg)
-            .where(
-                HealthCheckIssue.check == self.name(),
-            )
+        query = HealthCheckIssue.query(
+            HealthCheckIssue.id_,
+            HealthCheckIssue.msg,
+        ).where(
+            HealthCheckIssue.check == self.name(),
         )
         if not self._no_ignores:
             query = query.where(HealthCheckIssue.ignore.is_(False))
         self._issues = {
-            HealthCheckIssue.id_to_uri(id_): msg
-            for id_, msg in query.yield_per(YIELD_PER)
+            HealthCheckIssue.id_to_uri(id_): msg for id_, msg in sql.yield_(query)
         }

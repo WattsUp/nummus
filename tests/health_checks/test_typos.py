@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from nummus import sql
 from nummus.health_checks.typos import Typos
 from nummus.models.health_checks import HealthCheckIssue
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -16,20 +16,18 @@ if TYPE_CHECKING:
     from nummus.models.transaction import Transaction
 
 
-def test_empty(session: orm.Session) -> None:
+def test_empty() -> None:
     c = Typos()
-    c.test(session)
+    c.test()
     assert c.issues == {}
 
 
 def test_no_issues(
-    session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     c = Typos()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 0
+    c.test()
+    assert not sql.any_(HealthCheckIssue.query())
 
 
 def test_mispelled_proper_noun(
@@ -37,14 +35,14 @@ def test_mispelled_proper_noun(
     account: Account,
     account_savings: Account,
 ) -> None:
-    # institution is proper noun so make a almost the same
-    account.institution = account_savings.institution + "a"
-    session.commit()
+    with session.begin_nested():
+        # institution is proper noun so make a almost the same
+        account.institution = account_savings.institution + "a"
     c = Typos()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 1
+    c.test()
+    assert HealthCheckIssue.count() == 1
 
-    i = session.query(HealthCheckIssue).one()
+    i = HealthCheckIssue.one()
     assert i.check == c.name()
     assert i.value == account.institution
     uri = i.uri
@@ -59,14 +57,14 @@ def test_mispelled(
     asset: Asset,
     no_description_typos: bool,
 ) -> None:
-    # asset description is checked for dictionary spelling
-    asset.description = "Banana mispel & 1234 bananas"
-    session.commit()
+    with session.begin_nested():
+        # asset description is checked for dictionary spelling
+        asset.description = "Banana mispel & 1234 bananas"
     c = Typos(no_description_typos=no_description_typos)
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 1
+    c.test()
+    assert HealthCheckIssue.count() == 1
 
-    i = session.query(HealthCheckIssue).one()
+    i = HealthCheckIssue.one()
     assert i.check == c.name()
     assert i.value == "mispel"
     uri = i.uri

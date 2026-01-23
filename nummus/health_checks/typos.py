@@ -9,22 +9,17 @@ from collections import defaultdict
 from typing import override, TYPE_CHECKING
 
 import spellchecker
-from sqlalchemy import func, orm
+from sqlalchemy import func
 
-from nummus import utils
+from nummus import sql, utils
 from nummus.health_checks.base import HealthCheck
 from nummus.models.account import Account
 from nummus.models.asset import (
     Asset,
     AssetCategory,
 )
-from nummus.models.base import YIELD_PER
 from nummus.models.label import Label
 from nummus.models.transaction import TransactionSplit
-
-if TYPE_CHECKING:
-    from sqlalchemy import orm
-
 
 _LIMIT_FREQUENCY = 10
 
@@ -60,18 +55,18 @@ class Typos(HealthCheck):
         self._proper_nouns: set[str] = set()
 
     @override
-    def test(self, s: orm.Session) -> None:
+    def test(self) -> None:
         spell = spellchecker.SpellChecker()
 
-        accounts = Account.map_name(s)
-        assets = Asset.map_name(s)
+        accounts = Account.map_name()
+        assets = Asset.map_name()
         issues: dict[str, tuple[str, str, str]] = {}
         self._proper_nouns.update(accounts.values())
         self._proper_nouns.update(assets.values())
 
-        issues.update(self._test_accounts(s, accounts))
-        issues.update(self._test_labels(s))
-        issues.update(self._test_transaction_nouns(s, accounts))
+        issues.update(self._test_accounts(accounts))
+        issues.update(self._test_labels())
+        issues.update(self._test_transaction_nouns(accounts))
 
         # Escape words and sort to replace longest words first
         # So long words aren't partially replaced if they contain a short word
@@ -82,8 +77,8 @@ class Typos(HealthCheck):
         # Remove proper nouns indicated by word boundary or space at end
         re_cleaner = re.compile(rf"\b(?:{'|'.join(proper_nouns_re)})(?:\b|(?= |$))")
 
-        issues.update(self._test_transaction_texts(s, accounts, re_cleaner, spell))
-        issues.update(self._test_assets(s, assets, re_cleaner, spell))
+        issues.update(self._test_transaction_texts(accounts, re_cleaner, spell))
+        issues.update(self._test_assets(assets, re_cleaner, spell))
 
         source_len = 0
         field_len = 0
@@ -95,7 +90,6 @@ class Typos(HealthCheck):
         # Getting a suggested correction is slow and error prone,
         # Just say if a word is outside of the dictionary
         self._commit_issues(
-            s,
             {
                 uri: f"{source:{source_len}} {field:{field_len}}: {word}"
                 for uri, (word, source, field) in issues.items()
@@ -138,29 +132,22 @@ class Typos(HealthCheck):
 
     def _test_accounts(
         self,
-        s: orm.Session,
         accounts: dict[int, str],
     ) -> dict[str, tuple[str, str, str]]:
-        query = s.query(Account).with_entities(
+        query = Account.query(
             Account.id_,
             Account.institution,
         )
-        for acct_id, institution in query.yield_per(YIELD_PER):
-            acct_id: int
-            institution: str
+        for acct_id, institution in sql.yield_(query):
             name = accounts[acct_id]
             source = f"Account {name}"
             self._add(institution, source, "institution", 1)
             self._proper_nouns.add(institution)
         return self._create_issues()
 
-    def _test_labels(
-        self,
-        s: orm.Session,
-    ) -> dict[str, tuple[str, str, str]]:
-        query = s.query(Label.name)
-        for (name,) in query.yield_per(YIELD_PER):
-            name: str
+    def _test_labels(self) -> dict[str, tuple[str, str, str]]:
+        query = Label.query(Label.name)
+        for name in sql.col0(query):
             source = f"Label {name}"
             self._add(name, source, "name", 1)
             self._proper_nouns.add(name)
@@ -168,7 +155,6 @@ class Typos(HealthCheck):
 
     def _test_transaction_nouns(
         self,
-        s: orm.Session,
         accounts: dict[int, str],
     ) -> dict[str, tuple[str, str, str]]:
         issues: dict[str, tuple[str, str, str]] = {}
@@ -177,8 +163,7 @@ class Typos(HealthCheck):
         ]
         for field in txn_fields:
             query = (
-                s.query(TransactionSplit)
-                .with_entities(
+                TransactionSplit.query(
                     TransactionSplit.date_ord,
                     TransactionSplit.account_id,
                     field,
@@ -187,10 +172,10 @@ class Typos(HealthCheck):
                 .where(field.is_not(None))
                 .group_by(field)
             )
-            for date_ord, acct_id, value, count in query.yield_per(YIELD_PER):
-                date_ord: int
-                acct_id: int
-                value: str
+            for date_ord, acct_id, value, count in sql.yield_(query):
+                if TYPE_CHECKING:
+                    # Enforced by query and SQL constraints
+                    assert value is not None
                 date = datetime.date.fromordinal(date_ord)
                 source = f"{date} - {accounts[acct_id]}"
                 self._add(value, source, field.key, count)
@@ -200,27 +185,24 @@ class Typos(HealthCheck):
 
     def _test_transaction_texts(
         self,
-        s: orm.Session,
         accounts: dict[int, str],
-        re_cleaner: re.Pattern,
+        re_cleaner: re.Pattern[str],
         spell: spellchecker.SpellChecker,
     ) -> dict[str, tuple[str, str, str]]:
         query = (
-            s.query(TransactionSplit)
-            .with_entities(
+            TransactionSplit.query(
                 TransactionSplit.date_ord,
                 TransactionSplit.account_id,
                 TransactionSplit.memo,
                 func.count(),
             )
             .group_by(TransactionSplit.memo)
+            .where(TransactionSplit.memo.is_not(None))
         )
-        for date_ord, acct_id, value, count in query.yield_per(YIELD_PER):
-            date_ord: int
-            acct_id: int
-            value: str | None
-            if value is None:
-                continue
+        for date_ord, acct_id, value, count in sql.yield_(query):
+            if TYPE_CHECKING:
+                # Enforced by query and SQL constraints
+                assert value is not None
             date = datetime.date.fromordinal(date_ord)
             source = f"{date} - {accounts[acct_id]}"
             cleaned = re_cleaner.sub("", value).lower()
@@ -237,25 +219,21 @@ class Typos(HealthCheck):
 
     def _test_assets(
         self,
-        s: orm.Session,
         assets: dict[int, str],
-        re_cleaner: re.Pattern,
+        re_cleaner: re.Pattern[str],
         spell: spellchecker.SpellChecker,
     ) -> dict[str, tuple[str, str, str]]:
-        query = (
-            s.query(Asset)
-            .with_entities(
-                Asset.id_,
-                Asset.description,
-            )
-            .where(
-                Asset.category != AssetCategory.INDEX,
-                Asset.description.is_not(None),
-            )
+        query = Asset.query(
+            Asset.id_,
+            Asset.description,
+        ).where(
+            Asset.category != AssetCategory.INDEX,
+            Asset.description.is_not(None),
         )
-        for a_id, value in query.yield_per(YIELD_PER):
-            a_id: int
-            value: str
+        for a_id, value in sql.yield_(query):
+            if TYPE_CHECKING:
+                # Enforced by query and SQL constraints
+                assert value is not None
             source = f"Asset {assets[a_id]}"
             cleaned = re_cleaner.sub("", value).lower()
             for word in self._RE_WORDS.split(cleaned):
