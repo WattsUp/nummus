@@ -47,7 +47,6 @@ def test_no_file(web_client: WebClient) -> None:
         ),
     ],
 )
-@pytest.mark.xfail
 def test_error(
     capsys: pytest.CaptureFixture[str],
     web_client: WebClient,
@@ -72,7 +71,6 @@ def test_error(
         assert not captured.err
 
 
-@pytest.mark.xfail
 def test_import_file(
     web_client: WebClient,
     data_path: Path,
@@ -88,7 +86,6 @@ def test_import_file(
     assert "account" in headers["HX-Trigger"]
 
 
-@pytest.mark.xfail
 def test_duplicate(
     today: datetime.date,
     web_client: WebClient,
@@ -112,7 +109,6 @@ def test_duplicate(
     assert "Force importing" in result
 
 
-@pytest.mark.xfail
 def test_duplicate_force(
     web_client: WebClient,
     data_path: Path,

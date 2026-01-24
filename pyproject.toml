@@ -76,7 +76,7 @@ dev = [
   "isort",
   "pre-commit",
   "djlint>=1.36.4",
-  "pyright>=1.1.402",
+  "pyright>=1.1.408",
   "taplo",
   "scipy-stubs",
   "pandas-stubs",

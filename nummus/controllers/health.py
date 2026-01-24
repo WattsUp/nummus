@@ -123,7 +123,7 @@ def ctx_checks(*, run: bool) -> HealthContext:
 
         if run:
             c = check_type()
-            c.test(HealthCheckIssue.session())
+            c.test()
             c_issues = c.issues
         else:
             c_issues = issues[name]

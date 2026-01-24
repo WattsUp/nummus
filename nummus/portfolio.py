@@ -38,9 +38,7 @@ from nummus.models.currency import (
 from nummus.models.imported_file import ImportedFile
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
-from nummus.models.utils import (
-    one_or_none,
-)
+from nummus.models.utils import one_or_none
 from nummus.version import __version__
 
 if TYPE_CHECKING:

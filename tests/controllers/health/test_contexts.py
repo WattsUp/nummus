@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 from nummus import sql
 from nummus.controllers import health
 from nummus.health_checks.top import HEALTH_CHECKS
@@ -18,7 +16,6 @@ def test_ctx_empty() -> None:
     assert not has_issues
 
 
-@pytest.mark.xfail
 def test_ctx_empty_run() -> None:
     ctx = health.ctx_checks(run=True)
 

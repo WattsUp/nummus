@@ -298,3 +298,10 @@ def test_query_kwargs() -> None:
     with pytest.raises(exc.NoKeywordArgumentsError):
         # Intentional bad argument
         Parent.query(kw=None)  # type: ignore[attr-defined]
+
+
+def test_unbound_error() -> None:
+    s = Base._sessions.pop()
+    with pytest.raises(exc.UnboundExecutionError):
+        Base.session()
+    Base._sessions.append(s)

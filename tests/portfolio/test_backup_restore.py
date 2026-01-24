@@ -156,8 +156,8 @@ def test_restore_path_traversal(tmp_path: Path) -> None:
 
 def test_restore(empty_portfolio: Portfolio) -> None:
     # Delete ENCRYPTION_TEST so reload fails
-    with empty_portfolio.begin_session() as s:
-        s.query(Config).where(Config.key == ConfigKey.ENCRYPTION_TEST).delete()
+    with empty_portfolio.begin_session():
+        Config.query().where(Config.key == ConfigKey.ENCRYPTION_TEST).delete()
     empty_portfolio.backup()
     empty_portfolio.path.unlink()
 
@@ -169,8 +169,8 @@ def test_restore(empty_portfolio: Portfolio) -> None:
 
 def test_restore_path(empty_portfolio: Portfolio) -> None:
     # Delete ENCRYPTION_TEST so reload fails
-    with empty_portfolio.begin_session() as s:
-        s.query(Config).where(Config.key == ConfigKey.ENCRYPTION_TEST).delete()
+    with empty_portfolio.begin_session():
+        Config.query().where(Config.key == ConfigKey.ENCRYPTION_TEST).delete()
     empty_portfolio.backup()
     empty_portfolio.path.unlink()
 

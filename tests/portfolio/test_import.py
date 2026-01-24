@@ -176,8 +176,8 @@ def test_import_file_bad_category(
 
     assert not path_debug.exists()
 
-    with empty_portfolio.begin_session() as s:
-        t_split = s.query(TransactionSplit).one()
+    with empty_portfolio.begin_session():
+        t_split = TransactionSplit.one()
         assert t_split.category_id == categories["uncategorized"]
 
 

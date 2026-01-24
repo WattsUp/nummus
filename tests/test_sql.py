@@ -7,6 +7,7 @@ from sqlalchemy import orm
 
 from nummus import sql
 from nummus.encryption.top import Encryption, ENCRYPTION_AVAILABLE
+from nummus.models.config import Config, ConfigKey
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -60,3 +61,116 @@ def test_escape_not_reserved() -> None:
 
 def test_escape_reserved() -> None:
     assert sql.escape("where") == "`where`"
+
+
+def test_to_dict() -> None:
+    query = Config.query(Config.key, Config.value)
+    result = sql.to_dict(query)
+    assert isinstance(result, dict)
+    assert all(isinstance(k, ConfigKey) for k in result)
+    assert all(isinstance(v, str) for v in result.values())
+
+
+def test_to_dict_tuple() -> None:
+    query = Config.query(Config.id_, Config.key, Config.value)
+    result = sql.to_dict_tuple(query)
+    assert isinstance(result, dict)
+    assert all(isinstance(k, int) for k in result)
+    assert all(isinstance(v, tuple) for v in result.values())
+    assert all(len(v) == 2 for v in result.values())
+    assert all(isinstance(v[0], ConfigKey) for v in result.values())
+    assert all(isinstance(v[1], str) for v in result.values())
+
+
+def test_count() -> None:
+    query = Config.query()
+    assert sql.count(query) == query.count()
+
+
+def test_any() -> None:
+    assert sql.any_(Config.query())
+
+
+def test_any_none() -> None:
+    Config.query().delete()
+    assert not sql.any_(Config.query())
+
+
+def test_one() -> None:
+    query = Config.query().where(
+        Config.key == ConfigKey.VERSION,
+    )
+    result = sql.one(query)
+    assert isinstance(result, Config)
+
+
+def test_one_value() -> None:
+    query = Config.query(Config.key).where(
+        Config.key == ConfigKey.VERSION,
+    )
+    result = sql.one(query)
+    assert isinstance(result, ConfigKey)
+
+
+def test_one_tuple() -> None:
+    query = Config.query(Config.key, Config.value).where(
+        Config.key == ConfigKey.VERSION,
+    )
+    result = sql.one(query)
+    assert isinstance(result, tuple)
+    assert len(result) == 2
+    assert isinstance(result[0], ConfigKey)
+    assert isinstance(result[1], str)
+
+
+def test_scalar() -> None:
+    query = Config.query().where(
+        Config.key == ConfigKey.VERSION,
+    )
+    result = sql.scalar(query)
+    assert isinstance(result, Config)
+
+
+def test_scalar_value() -> None:
+    query = Config.query(Config.key).where(
+        Config.key == ConfigKey.VERSION,
+    )
+    result = sql.scalar(query)
+    assert isinstance(result, ConfigKey)
+
+
+def test_scalar_tuple() -> None:
+    query = Config.query(Config.key, Config.value).where(
+        Config.key == ConfigKey.VERSION,
+    )
+    result = sql.scalar(query)
+    assert isinstance(result, ConfigKey)
+
+
+def test_yield() -> None:
+    query = Config.query().where()
+    for r in sql.yield_(query):
+        assert isinstance(r, Config)
+
+
+def test_yield_value() -> None:
+    query = Config.query(Config.key)
+    for r in sql.yield_(query):
+        assert isinstance(r, tuple)
+        assert len(r) == 1
+        assert isinstance(r[0], ConfigKey)
+
+
+def test_yield_tuple() -> None:
+    query = Config.query(Config.key, Config.value)
+    for r in sql.yield_(query):
+        assert isinstance(r, tuple)
+        assert len(r) == 2
+        assert isinstance(r[0], ConfigKey)
+        assert isinstance(r[1], str)
+
+
+def test_col0() -> None:
+    query = Config.query(Config.key)
+    for r in sql.col0(query):
+        assert isinstance(r, ConfigKey)

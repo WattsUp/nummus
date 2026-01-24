@@ -92,8 +92,8 @@ def test_no_encryption_test(
     empty_portfolio: Portfolio,
     key: ConfigKey,
 ) -> None:
-    with empty_portfolio.begin_session() as s:
-        s.query(Config).where(Config.key == key).delete()
+    with empty_portfolio.begin_session():
+        Config.query().where(Config.key == key).delete()
 
     with pytest.raises(exc.ProtectedObjectNotFoundError):
         Portfolio(empty_portfolio.path, None)

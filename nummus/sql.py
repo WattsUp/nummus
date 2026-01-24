@@ -199,7 +199,6 @@ def one[T0, T1](
 ) -> tuple[T0, T1]: ...
 
 
-# TODO (WattsUp): #0 Add unit tests with isinstance
 # TODO (WattsUp): #0 Replace instances of .one with this; better typing
 @overload
 def one[T](query: orm.Query[T]) -> T: ...
@@ -220,13 +219,25 @@ def one[T](query: orm.Query[T]) -> object:
         return ret
     if len(ret) == 1:  # type: ignore[attr-defined]
         return ret[0]  # type: ignore[attr-defined]
-    return ret  # type: ignore[attr-defined]
+    return ret[0:]  # type: ignore[attr-defined]
 
 
 @overload
-def scalar[T](
-    query: orm.query.RowReturningQuery[tuple[T]],
-) -> T | None: ...
+def scalar[T0](
+    query: orm.query.RowReturningQuery[tuple[T0]],
+) -> T0 | None: ...
+
+
+@overload
+def scalar[T0, T1](
+    query: orm.query.RowReturningQuery[tuple[T0, T1]],
+) -> T0 | None: ...
+
+
+@overload
+def scalar[T0, T1, T2](
+    query: orm.query.RowReturningQuery[tuple[T0, T1, T2]],
+) -> T0 | None: ...
 
 
 @overload
@@ -263,12 +274,13 @@ def yield_[T](query: orm.Query[T]) -> Iterable[object]:
     Args:
         query: Query to yield
 
-    Returns:
+    Yields:
         Rows
 
     """
     # Yield per instead of fetch all is faster
-    return query.yield_per(100)
+    for r in query.yield_per(100):
+        yield r[0:] if isinstance(r, Sequence) else r
 
 
 # TODO (WattsUp): #0 Replace instances of {r for r, in query} with this; better typing

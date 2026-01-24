@@ -22,7 +22,6 @@ def test_page(web_client: WebClient) -> None:
 
 
 # For creating new LAST_HEALTH_CHECK_TS or modifying it
-@pytest.mark.xfail
 @pytest.mark.parametrize("n_runs", [1, 2])
 def test_refresh(web_client: WebClient, n_runs: int) -> None:
     for _ in range(n_runs - 1):
@@ -35,11 +34,10 @@ def test_refresh(web_client: WebClient, n_runs: int) -> None:
     assert "Last checks ran 0.0 seconds ago" in result
 
 
-@pytest.mark.xfail
 def test_ignore(web_client: WebClient, session: orm.Session) -> None:
-    c = UnusedCategories()
-    c.test(session)
-    session.commit()
+    with session.begin_nested():
+        c = UnusedCategories()
+        c.test()
 
     uri = next(iter(c.issues.keys()))
 
