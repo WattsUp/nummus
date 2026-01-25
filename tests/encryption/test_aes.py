@@ -15,10 +15,12 @@ if TYPE_CHECKING:
 try:
     from nummus.encryption.aes import EncryptionAES as Encryption
 except ImportError:
-    NO_ENCRYPTION = True
+    no_encryption = True
     from nummus.encryption.base import NoEncryption as Encryption
 else:
-    NO_ENCRYPTION = False
+    no_encryption = False
+
+NO_ENCRYPTION = no_encryption
 
 
 @pytest.fixture

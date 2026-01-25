@@ -29,7 +29,7 @@ class TailwindCSSFilter(webassets.filter.Filter):
     DEBUG = False
 
     @override
-    def output(self, _in: io.StringIO, out: io.StringIO, **_) -> None:
+    def output(self, _in: io.StringIO, out: io.StringIO, **_: object) -> None:
         if pytailwindcss is None:
             raise NotImplementedError
         path_root = Path(__file__).parent.resolve()
@@ -54,7 +54,7 @@ class JSMinFilter(webassets.filter.Filter):
     """webassets Filter for running jsmin over."""
 
     @override
-    def output(self, _in: io.StringIO, out: io.StringIO, **_) -> None:
+    def output(self, _in: io.StringIO, out: io.StringIO, **_: object) -> None:
         if jsmin is None:
             raise NotImplementedError
         # Add back tick to quote_chars for template strings

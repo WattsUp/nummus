@@ -84,6 +84,6 @@ class MockTicker:
             dt += datetime.timedelta(days=1)
 
         return pd.DataFrame(
-            index=pd.to_datetime(dates),
+            index=pd.to_datetime(dates),  # type: ignore[attr-defined]
             data={"Close": close, "Stock Splits": split},
         )
