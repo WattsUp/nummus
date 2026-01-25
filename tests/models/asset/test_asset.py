@@ -39,9 +39,8 @@ def valuations(
         today_ord + 3: {"value": Decimal(10), "asset_id": a_id},
     }
 
-    query = AssetValuation.query()
-    update_rows(AssetValuation, query, "date_ord", updates)
-    return query.all()
+    update_rows(AssetValuation, AssetValuation.query(), "date_ord", updates)
+    return AssetValuation.all()
 
 
 @pytest.fixture
@@ -58,9 +57,8 @@ def valuations_five(
         today_ord + 7: {"value": Decimal(10), "asset_id": a_id},
     }
 
-    query = AssetValuation.query()
-    update_rows(AssetValuation, query, "date_ord", updates)
-    return query.all()
+    update_rows(AssetValuation, AssetValuation.query(), "date_ord", updates)
+    return AssetValuation.all()
 
 
 def test_init_properties(
@@ -105,7 +103,6 @@ def test_get_value(
     asset: Asset,
     valuations: list[AssetValuation],
 ) -> None:
-    _ = valuations
     start_ord = today_ord - 3
     end_ord = today_ord + 3
     result = asset.get_value(start_ord, end_ord)
@@ -127,7 +124,6 @@ def test_get_value_interpolate(
     valuations: list[AssetValuation],
 ) -> None:
     asset.interpolate = True
-    _ = valuations
     start_ord = today_ord - 3
     end_ord = today_ord + 3
     result = asset.get_value(start_ord, end_ord)
@@ -148,7 +144,6 @@ def test_get_value_today(
     asset: Asset,
     valuations: list[AssetValuation],
 ) -> None:
-    _ = valuations
     result = asset.get_value(today_ord, today_ord)
     assert result == [Decimal(100)]
 
@@ -159,7 +154,6 @@ def test_get_value_tomorrow_interpolate(
     valuations: list[AssetValuation],
 ) -> None:
     asset.interpolate = True
-    _ = valuations
     result = asset.get_value(today_ord + 1, today_ord + 1)
     assert result == [Decimal(70)]
 
@@ -170,7 +164,6 @@ def test_update_splits_empty(
     asset: Asset,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     asset.update_splits()
     assets = account.get_asset_qty(today_ord, today_ord)
     assert assets == {asset.id_: [Decimal(10)]}
@@ -183,8 +176,6 @@ def test_update_splits(
     asset_split: AssetSplit,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
-    _ = asset_split
     asset.update_splits()
     assets = account.get_asset_qty(today_ord, today_ord)
     assert assets == {asset.id_: [Decimal(100)]}
@@ -201,8 +192,6 @@ def test_prune_valuations_none(
     valuations: list[AssetValuation],
     transactions: list[Transaction],
 ) -> None:
-    _ = valuations
-    _ = transactions
     assert asset.prune_valuations() == 0
 
 
@@ -233,12 +222,10 @@ def test_prune_valuations_first_txn(
             LabelLink.query().where(LabelLink.t_split_id == t_split.id_).delete()
             t_split.delete()
         txn.delete()
-    _ = valuations_five
     assert asset.prune_valuations() == target
 
 
 def test_prune_valuations_index(asset: Asset, valuations: list[AssetValuation]) -> None:
-    _ = valuations
     asset.category = AssetCategory.INDEX
     assert asset.prune_valuations() == 0
 
@@ -293,7 +280,6 @@ def test_update_valuations_delisted(
     asset: Asset,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     asset.ticker = "APPLE"
     with pytest.raises(exc.AssetWebError):
         asset.update_valuations(through_today=True)
@@ -360,7 +346,7 @@ def test_index_twrr_today(today_ord: int, asset: Asset) -> None:
 
 
 def test_add_indices() -> None:
-    for asset in Asset.query().all():
+    for asset in Asset.all():
         assert asset.name is not None
         assert asset.description is not None
         assert not asset.interpolate
@@ -376,7 +362,6 @@ def test_autodetect_interpolate_sparse(
     asset: Asset,
     valuations: list[AssetValuation],
 ) -> None:
-    _ = valuations
     asset.autodetect_interpolate()
     assert asset.interpolate
 
@@ -387,7 +372,6 @@ def test_autodetect_interpolate_daily(
 ) -> None:
     for i, v in enumerate(valuations):
         v.date_ord = valuations[0].date_ord + i
-    _ = valuations
     asset.autodetect_interpolate()
     assert not asset.interpolate
 

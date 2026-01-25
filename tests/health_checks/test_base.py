@@ -67,12 +67,14 @@ def test_commit_issues(
     # Refresh c.issues
     c._commit_issues(d)
 
-    i_0 = HealthCheckIssue.query().where(HealthCheckIssue.value == value_0).one()
+    query = HealthCheckIssue.query().where(HealthCheckIssue.value == value_0)
+    i_0 = sql.one(query)
     assert i_0.check == MockCheck.name()
     assert i_0.msg == "msg 0"
     assert i_0.ignore
 
-    i_1 = HealthCheckIssue.query().where(HealthCheckIssue.value == value_1).one()
+    query = HealthCheckIssue.query().where(HealthCheckIssue.value == value_1)
+    i_1 = sql.one(query)
     assert i_1.check == MockCheck.name()
     assert i_1.msg == "msg 1"
     assert not i_1.ignore
@@ -94,13 +96,15 @@ def test_ignore(
     issues: list[tuple[str, int]],
 ) -> None:
     MockCheck.ignore([issues[0][0]])
-    i = HealthCheckIssue.query().where(HealthCheckIssue.id_ == issues[0][1]).one()
+    query = HealthCheckIssue.query().where(HealthCheckIssue.id_ == issues[0][1])
+    i = sql.one(query)
     assert i.check == MockCheck.name()
     assert i.value == issues[0][0]
     assert i.msg == "msg 0"
     assert i.ignore
 
-    i = HealthCheckIssue.query().where(HealthCheckIssue.id_ == issues[1][1]).one()
+    query = HealthCheckIssue.query().where(HealthCheckIssue.id_ == issues[1][1])
+    i = sql.one(query)
     assert i.check == MockCheck.name()
     assert i.value == issues[1][0]
     assert i.msg == "msg 1"

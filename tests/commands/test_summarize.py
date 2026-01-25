@@ -52,9 +52,6 @@ def test_non_empty_summary(
     transactions: list[Transaction],
     asset_valuation: AssetValuation,
 ) -> None:
-    _ = transactions
-    _ = asset_valuation
-
     c = Summarize(empty_portfolio.path, None, include_all=False)
 
     utc = utc.replace(tzinfo=zoneinfo.ZoneInfo("UTC"))
@@ -102,10 +99,8 @@ def test_exclude_empty(
     account: Account,
     asset: Asset,
 ) -> None:
-    account.closed = True
-    session.commit()
-    _ = asset
-
+    with session.begin_nested():
+        account.closed = True
     c = Summarize(empty_portfolio.path, None, include_all=False)
     result = c._get_summary()
 
@@ -128,7 +123,6 @@ def test_empty_print(
     capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
 ) -> None:
-
     c = Summarize(empty_portfolio.path, None, include_all=False)
     assert c.run() == 0
 
@@ -148,9 +142,6 @@ def test_non_empty_print(
     transactions: list[Transaction],
     asset_valuation: AssetValuation,
 ) -> None:
-    _ = transactions
-    _ = asset_valuation
-
     c = Summarize(empty_portfolio.path, None, include_all=False)
 
     utc = utc.replace(tzinfo=zoneinfo.ZoneInfo("UTC"))

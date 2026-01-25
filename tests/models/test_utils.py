@@ -10,8 +10,6 @@ from nummus import sql
 from nummus.models import utils
 from nummus.models.account import Account
 from nummus.models.asset import (
-    Asset,
-    AssetCategory,
     AssetSplit,
     AssetValuation,
 )
@@ -20,6 +18,9 @@ from nummus.models.transaction import Transaction, TransactionSplit
 if TYPE_CHECKING:
     import datetime
 
+    from nummus.models.asset import (
+        Asset,
+    )
     from tests.conftest import RandomStringGenerator
 
 
@@ -56,9 +57,8 @@ def valuations(
         today_ord: {"value": Decimal(100), "asset_id": a_id},
     }
 
-    query = AssetValuation.query()
-    utils.update_rows(AssetValuation, query, "date_ord", updates)
-    return query.all()
+    utils.update_rows(AssetValuation, AssetValuation.query(), "date_ord", updates)
+    return AssetValuation.all()
 
 
 def test_paginate_all(transactions: list[Transaction]) -> None:
@@ -118,10 +118,12 @@ def test_update_rows_new(
 ) -> None:
     assert sql.count(AssetValuation.query()) == len(valuations)
 
-    v = AssetValuation.query().where(AssetValuation.date_ord == today_ord).one()
+    v = sql.one(AssetValuation.query().where(AssetValuation.date_ord == today_ord))
     assert v.value == Decimal(100)
 
-    v = AssetValuation.query().where(AssetValuation.date_ord == (today_ord - 1)).one()
+    v = sql.one(
+        AssetValuation.query().where(AssetValuation.date_ord == (today_ord - 1)),
+    )
     assert v.value == Decimal(10)
 
 
@@ -138,10 +140,12 @@ def test_update_rows_edit(
     utils.update_rows(AssetValuation, query, "date_ord", updates)
     assert sql.count(query) == len(valuations)
 
-    v = query.where(AssetValuation.date_ord == today_ord).one()
+    v = sql.one(AssetValuation.query().where(AssetValuation.date_ord == today_ord))
     assert v.value == Decimal(50)
 
-    v = query.where(AssetValuation.date_ord == (today_ord - 2)).one()
+    v = sql.one(
+        AssetValuation.query().where(AssetValuation.date_ord == (today_ord - 2)),
+    )
     assert v.value == Decimal(5)
 
 
@@ -184,14 +188,11 @@ def test_update_rows_list_edit(
     assert t_split_0.memo == memo_0
     assert t_split_0.amount == txn.amount - new_split_amount
 
-    t_split_1 = (
-        TransactionSplit.query()
-        .where(
-            TransactionSplit.parent_id == txn.id_,
-            TransactionSplit.id_ != t_split_0.id_,
-        )
-        .one()
+    query = TransactionSplit.query().where(
+        TransactionSplit.parent_id == txn.id_,
+        TransactionSplit.id_ != t_split_0.id_,
     )
+    t_split_1 = sql.one(query)
     assert t_split_1.parent_id == txn.id_
     assert t_split_1.memo == memo_1
     assert t_split_1.amount == new_split_amount
@@ -207,23 +208,3 @@ def test_update_rows_list_delete(
         [],
     )
     assert len(txn.splits) == 0
-
-
-@pytest.mark.parametrize(
-    ("where", "expect_asset"),
-    [
-        ([], False),
-        ([Asset.category == AssetCategory.STOCKS], True),
-        ([Asset.category == AssetCategory.BONDS], False),
-    ],
-)
-def test_one_or_none(
-    asset: Asset,
-    where: list[sql.ColumnClause],
-    expect_asset: bool,
-) -> None:
-    query = Asset.query().where(*where)
-    if expect_asset:
-        assert utils.one_or_none(query) == asset
-    else:
-        assert utils.one_or_none(query) is None

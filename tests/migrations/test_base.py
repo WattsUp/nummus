@@ -27,7 +27,6 @@ class MockMigrator(Migrator):
 
     @override
     def migrate(self, p: Portfolio) -> list[str]:
-        _ = p
         return ["Comments"]
 
 
@@ -102,7 +101,6 @@ def test_rename_column(session: orm.Session) -> None:
 
 
 def test_migrate_schemas_no_value_set(empty_portfolio: Portfolio, asset: Asset) -> None:
-    _ = asset
     m = SchemaMigrator(set())
     with empty_portfolio.begin_session():
         m.drop_column(Asset, "category")
@@ -114,7 +112,6 @@ def test_migrate_schemas_no_value_set(empty_portfolio: Portfolio, asset: Asset) 
 
 
 def test_migrate_schemas_value_set(empty_portfolio: Portfolio, asset: Asset) -> None:
-    _ = asset
     m = SchemaMigrator(set())
     with empty_portfolio.begin_session():
         m.drop_column(Asset, "category")

@@ -20,7 +20,6 @@ def test_ctx_chart_empty(
     today: datetime.date,
     account: Account,
 ) -> None:
-    _ = account
     ctx = net_worth.ctx_chart(today, "max")
 
     chart: base.ChartData = {

@@ -31,21 +31,17 @@ from nummus.models.asset import Asset
 from nummus.models.base import Base
 from nummus.models.base_uri import Cipher, load_cipher
 from nummus.models.config import Config, ConfigKey
-from nummus.models.currency import (
-    Currency,
-    DEFAULT_CURRENCY,
-)
+from nummus.models.currency import DEFAULT_CURRENCY
 from nummus.models.imported_file import ImportedFile
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
-from nummus.models.utils import one_or_none
 from nummus.version import __version__
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from nummus.importers.base import TxnDict
-    from nummus.models.currency import Currency
+    from nummus.models.base import NamePair
 
 
 class AssetUpdate(NamedTuple):
@@ -395,8 +391,8 @@ class Portfolio:
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
             # Cache a mapping from account/asset name to the ID
-            acct_mapping: dict[str, tuple[int, str | None]] = {}
-            asset_mapping: dict[str, tuple[int, str | None]] = {}
+            acct_mapping: dict[str, NamePair] = {}
+            asset_mapping: dict[str, NamePair] = {}
             try:
                 txns_raw = i.run()
             except Exception as e:
@@ -409,12 +405,12 @@ class Portfolio:
 
                 # Create a single split for each transaction
                 acct_raw = d["account"]
-                acct_id, _ = self.find(Account, acct_raw, acct_mapping)
+                acct_id, _ = Account.find(acct_raw, acct_mapping)
 
                 asset_raw = d["asset"]
                 asset_id: int | None = None
                 if asset_raw:
-                    asset_id, asset_name = self.find(Asset, asset_raw, asset_mapping)
+                    asset_id, asset_name = Asset.find(asset_raw, asset_mapping)
                     if not d["statement"]:
                         d["statement"] = f"Asset Transaction {asset_name}"
 
@@ -427,7 +423,7 @@ class Portfolio:
             query = Asset.query().where(
                 Asset.id_.in_(a_id for a_id, _ in asset_mapping.values()),
             )
-            for asset in query.all():
+            for asset in sql.yield_(query):
                 asset.update_splits()
 
         # If successful, delete the temp file
@@ -590,71 +586,6 @@ class Portfolio:
 
         msg = f"'{category_name}' is not a valid category for asset transaction"
         raise exc.InvalidAssetTransactionCategoryError(msg)
-
-    # TODO (WattsUp): #0 Move to each class
-    @classmethod
-    def find(
-        cls,
-        model: type[Base],
-        search: str,
-        cache: dict[str, tuple[int, str | None]],
-    ) -> tuple[int, str | None]:
-        """Find a matching object by  uri, or field value.
-
-        Args:
-            model: Type of model to search for
-            search: Search query
-            cache: Cache results to speed up look ups
-
-        Returns:
-            tuple(id_, name)
-
-        Raises:
-            NoResultFound: if object not found
-
-        """
-        id_, name = cache.get(search, (None, None))
-        if id_ is not None:
-            return id_, name
-
-        def cache_and_return(m: Base) -> tuple[int, str | None]:
-            id_ = m.id_
-            name: str | None = getattr(m, "name", None)
-            cache[search] = id_, name
-            return id_, name
-
-        try:
-            # See if query is an URI
-            id_ = model.uri_to_id(search)
-        except (exc.InvalidURIError, exc.WrongURITypeError):
-            pass
-        else:
-            query = model.query().where(model.id_ == id_)
-            if m := one_or_none(query):
-                return cache_and_return(m)
-
-        properties: dict[type[Base], list[sql.Column]] = {
-            Account: [Account.number, Account.institution, Account.name],
-            Asset: [Asset.ticker, Asset.name],
-        }
-        for prop in properties[model]:
-            # Exact?
-            query = model.query().where(prop == search)
-            if m := one_or_none(query):
-                return cache_and_return(m)
-
-            # Exact lower case?
-            query = model.query().where(prop.ilike(search))
-            if m := one_or_none(query):
-                return cache_and_return(m)
-
-            # For account number, see if there is one ending in the search
-            query = model.query().where(prop.ilike(f"%{search}"))
-            if prop is Account.number and (m := one_or_none(query)):
-                return cache_and_return(m)
-
-        msg = f"{model.__name__} matching '{search}' could not be found"
-        raise exc.NoResultFound(msg)
 
     def backup(self) -> tuple[Path, int]:
         """Back up database, duplicates files.
@@ -916,13 +847,12 @@ class Portfolio:
 
         with self.begin_session():
             # Get FOREXes, add if need be
-            currencies: set[Currency] = {
-                r[0] for r in Account.query(Account.currency).all()
-            }
+            currencies = set(sql.col0(Account.query(Account.currency)))
             base_currency = Config.base_currency()
             Asset.create_forex(base_currency, currencies)
 
-            assets = Asset.query().where(Asset.ticker.isnot(None)).all()
+            query = Asset.query().where(Asset.ticker.isnot(None))
+            assets = list(sql.yield_(query))
             ids = [asset.id_ for asset in assets]
 
             # Get currently held assets

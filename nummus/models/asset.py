@@ -228,6 +228,8 @@ class Asset(Base):
         *string_column_args("ticker", short_check=False),
     )
 
+    _SEARCH_PROPERTIES = ("ticker", "name")
+
     @orm.validates("name", "description", "ticker")
     def validate_strings(self, key: str, field: str | None) -> str | None:
         """Validate string fields satisfy constraints.
@@ -540,10 +542,8 @@ class Asset(Base):
             through_today = True
         else:
             query = query.where(TransactionSplit.asset_id == self.id_)
-        start_ord, end_ord = query.one()
-        start_ord: int | None
-        end_ord: int | None
-        if start_ord is None or end_ord is None:
+        start_ord, end_ord = sql.one(query)
+        if not start_ord or not end_ord:
             return None, None
 
         start_ord -= utils.DAYS_IN_WEEK
@@ -661,7 +661,7 @@ class Asset(Base):
 
         """
         try:
-            a_id = Asset.query(Asset.id_).where(Asset.name == name).one()[0]
+            a_id = sql.one(Asset.query(Asset.id_).where(Asset.name == name))
         except exc.NoResultFound as e:
             msg = f"Could not find asset index {name}"
             raise exc.ProtectedObjectNotFoundError(msg) from e
@@ -716,9 +716,8 @@ class Asset(Base):
                 ),
             },
         }
-        s = cls.session()
         for ticker, item in indices.items():
-            a = cls(
+            cls.create(
                 name=item["name"],
                 description=item["description"],
                 category=AssetCategory.INDEX,
@@ -726,7 +725,6 @@ class Asset(Base):
                 ticker=ticker,
                 currency=DEFAULT_CURRENCY,
             )
-            s.add(a)
 
     def autodetect_interpolate(self) -> None:
         """Autodetect if Asset needs interpolation.

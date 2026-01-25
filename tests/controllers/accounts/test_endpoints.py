@@ -45,7 +45,6 @@ def test_txns_options(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     result, _ = web_client.GET(("accounts.txns_options", {"uri": account.uri}))
     assert 'name="period"' in result
     assert 'name="category"' in result
@@ -78,7 +77,6 @@ def test_page(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     result, _ = web_client.GET(("accounts.page", {"uri": account.uri}))
     assert "Transactions" in result
     assert "Balance" in result
@@ -94,7 +92,6 @@ def test_page_performance(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     with session.begin_nested():
         account.category = AccountCategory.INVESTMENT
 
@@ -133,7 +130,7 @@ def test_new(
     assert "All changes saved" in result
     assert "account" in headers["HX-Trigger"]
 
-    account = session.query(Account).one()
+    account = Account.one()
     assert account.name == "New name"
     assert account.category == AccountCategory.INVESTMENT
     assert account.currency == Currency.USD
@@ -186,7 +183,6 @@ def test_account_get(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     result, _ = web_client.GET(("accounts.account", {"uri": account.uri}))
     assert account.name in result
     assert account.institution in result
@@ -242,7 +238,6 @@ def test_account_edit_error(
     target: str,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     form = {
         "name": name,
         "category": "INVESTMENT",
@@ -268,7 +263,6 @@ def test_performance(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     result, headers = web_client.GET(("accounts.performance", {"uri": account.uri}))
     assert headers["HX-Push-URL"] == web_client.url_for(
         "accounts.page",
@@ -300,7 +294,6 @@ def test_validation(
     value: str,
     target: str,
 ) -> None:
-    _ = account_investments
     result, _ = web_client.GET(
         (
             "accounts.validation",

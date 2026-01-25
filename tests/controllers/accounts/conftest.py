@@ -74,4 +74,6 @@ def transactions(
             category_id=categories["investment fees"],
         )
 
-        return Transaction.query().order_by(Transaction.date_ord).all()
+        return (
+            Transaction.query().order_by(Transaction.date_ord).all()  # nummus: ignore
+        )

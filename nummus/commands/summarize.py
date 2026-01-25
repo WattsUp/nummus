@@ -120,12 +120,8 @@ class Summarize(Command):
 
         with self._p.begin_session():
             accts = {acct.id_: acct for acct in Account.all()}
-            assets = {
-                a.id_: a
-                for a in (
-                    Asset.query().where(Asset.category != AssetCategory.INDEX).all()
-                )
-            }
+            query = Asset.query().where(Asset.category != AssetCategory.INDEX)
+            assets = {a.id_: a for a in sql.yield_(query)}
 
             # Get the inception date
             query = TransactionSplit.query(

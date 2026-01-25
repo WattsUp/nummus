@@ -273,7 +273,7 @@ def test_move_from_income(
     dest_cat_id = categories["groceries"]
     BudgetAssignment.move(month_ord, src_cat_id, dest_cat_id, Decimal(100))
 
-    a = BudgetAssignment.query().one()
+    a = BudgetAssignment.one()
     assert a.category_id == dest_cat_id
     assert a.month_ord == month_ord
     assert a.amount == 100

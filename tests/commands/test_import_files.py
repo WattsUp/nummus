@@ -63,9 +63,6 @@ def test_data_dir(
     tmp_path: Path,
     data_path: Path,
 ) -> None:
-    _ = account
-    _ = account_investments
-    _ = asset
     files = [
         "transactions_required.csv",
         "transactions_extras.csv",
@@ -95,9 +92,6 @@ def test_unknown_importer(
     tmp_path: Path,
     data_path: Path,
 ) -> None:
-    _ = account
-    _ = account_investments
-    _ = asset
     file = "transactions_lacking.csv"
     path = tmp_path / file
     shutil.copyfile(data_path / file, path)
@@ -129,9 +123,6 @@ def test_duplicate(
     tmp_path: Path,
     data_path: Path,
 ) -> None:
-    _ = account
-    _ = account_investments
-    _ = asset
     file = "transactions_required.csv"
     path = tmp_path / file
     shutil.copyfile(data_path / file, path)

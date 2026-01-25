@@ -67,7 +67,7 @@ def test_assign_new(
 
     assert "Ungrouped" in result
 
-    a = BudgetAssignment.query().one()
+    a = BudgetAssignment.one()
     assert a.category_id == t_cat_id
     assert a.month_ord == month.toordinal()
     assert a.amount == round(rand_real, 2)
@@ -118,8 +118,6 @@ def test_move_get_income(
     transactions_spending: list[Transaction],
     budget_assignments: list[BudgetAssignment],
 ) -> None:
-    _ = transactions_spending
-    _ = budget_assignments
     result, _ = web_client.GET(
         ("budgeting.move", {"uri": "income", "month": month.isoformat()[:7]}),
     )
@@ -136,8 +134,6 @@ def test_move_get(
     categories: dict[str, int],
     budget_assignments: list[BudgetAssignment],
 ) -> None:
-    _ = transactions_spending
-    _ = budget_assignments
     t_cat_uri = TransactionCategory.id_to_uri(categories["groceries"])
 
     result, _ = web_client.GET(
@@ -156,8 +152,6 @@ def test_move_get_destination(
     categories: dict[str, int],
     budget_assignments: list[BudgetAssignment],
 ) -> None:
-    _ = transactions_spending
-    _ = budget_assignments
     t_cat_uri = TransactionCategory.id_to_uri(categories["groceries"])
 
     result, _ = web_client.GET(
@@ -178,7 +172,6 @@ def test_move_get_overspending(
     transactions_spending: list[Transaction],
     categories: dict[str, int],
 ) -> None:
-    _ = transactions_spending
     t_cat_uri = TransactionCategory.id_to_uri(categories["groceries"])
 
     result, _ = web_client.GET(
@@ -197,7 +190,6 @@ def test_move_overspending(
     budget_assignments: list[BudgetAssignment],
     categories: dict[str, int],
 ) -> None:
-    _ = transactions_spending
     a = budget_assignments[0]
     uri = TransactionCategory.id_to_uri(categories["securities traded"])
     dest_uri = TransactionCategory.id_to_uri(a.category_id)
@@ -221,7 +213,6 @@ def test_move_to_income(
     transactions_spending: list[Transaction],
     budget_assignments: list[BudgetAssignment],
 ) -> None:
-    _ = transactions_spending
     a = budget_assignments[0]
     t_cat_uri = TransactionCategory.id_to_uri(a.category_id)
 
@@ -257,7 +248,6 @@ def test_reorder_empty(
     web_client: WebClient,
     budget_group: BudgetGroup,
 ) -> None:
-    _ = budget_group
     result, _ = web_client.PUT(
         "budgeting.reorder",
         data={
@@ -283,14 +273,14 @@ def test_reorder(
     web_client: WebClient,
     budget_group: BudgetGroup,
 ) -> None:
-    t_cat_0 = (
-        TransactionCategory.query().where(TransactionCategory.name == "groceries").one()
+    t_cat_0 = sql.one(
+        TransactionCategory.query().where(TransactionCategory.name == "groceries"),
     )
-    t_cat_1 = (
-        TransactionCategory.query().where(TransactionCategory.name == "rent").one()
+    t_cat_1 = sql.one(
+        TransactionCategory.query().where(TransactionCategory.name == "rent"),
     )
-    t_cat_2 = (
-        TransactionCategory.query().where(TransactionCategory.name == "transfers").one()
+    t_cat_2 = sql.one(
+        TransactionCategory.query().where(TransactionCategory.name == "transfers"),
     )
 
     result, _ = web_client.PUT(
@@ -508,7 +498,7 @@ def test_target_new(
     assert "Groceries target created" in result
     assert "budget" in headers["HX-Trigger"]
 
-    tar = Target.query().one()
+    tar = Target.one()
     assert tar.category_id == t_cat_id
     assert tar.amount == Decimal(10)
     assert tar.type_ == TargetType.ACCUMULATE

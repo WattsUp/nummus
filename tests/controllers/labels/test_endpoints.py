@@ -54,7 +54,6 @@ def test_label_delete(
     labels: dict[str, int],
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     uri = Label.id_to_uri(labels["engineer"])
 
     result, headers = web_client.DELETE(
@@ -81,7 +80,7 @@ def test_label_edit(
     assert "All changes saved" in result
     assert "label" in headers["HX-Trigger"]
 
-    label = Label.query().where(Label.name == "new label").one()
+    label = sql.one(Label.query().where(Label.name == "new label"))
     assert label.id_ == labels["engineer"]
 
 

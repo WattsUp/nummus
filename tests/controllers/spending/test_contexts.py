@@ -59,7 +59,6 @@ def test_data_query(
     is_income: bool,
     target: tuple[int, bool],
 ) -> None:
-    _ = transactions_spending
     dat_query = spending.data_query(
         DEFAULT_CURRENCY,
         account.uri if include_account else None,
@@ -81,7 +80,6 @@ def test_ctx_options(
     categories: dict[str, int],
     labels: dict[str, int],
 ) -> None:
-    _ = transactions
     dat_query = spending.DataQuery(
         TransactionSplit.query(),
         {},
@@ -168,7 +166,6 @@ def test_ctx_chart_empty(
     today: datetime.date,
     account: Account,
 ) -> None:
-    _ = account
     ctx, title = spending.ctx_chart(
         today,
         selected_account=None,
@@ -199,7 +196,6 @@ def test_ctx_chart(
     today: datetime.date,
     transactions_spending: list[Transaction],
 ) -> None:
-    _ = transactions_spending
     ctx, title = spending.ctx_chart(
         today,
         None,

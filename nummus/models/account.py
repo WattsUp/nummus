@@ -90,6 +90,8 @@ class Account(Base):
         *string_column_args("institution"),
     )
 
+    _SEARCH_PROPERTIES = ("number", "institution", "name")
+
     @orm.validates("name", "number", "institution")
     def validate_strings(self, key: str, field: str | None) -> str | None:
         """Validate string fields satisfy constraints.
@@ -157,7 +159,7 @@ class Account(Base):
         cost_basis_accounts: dict[int, list[Decimal | None]] = defaultdict(
             lambda: [None] * n,
         )
-        ids = ids or {r[0] for r in Account.query(Account.id_).all()}
+        ids = ids or set(sql.col0(Account.query(Account.id_)))
 
         # Profit = Interest + dividends + rewards + change in asset value - fees
         # Dividends, fees, and change in value can be assigned to an asset
@@ -166,7 +168,7 @@ class Account(Base):
         query = TransactionCategory.query(TransactionCategory.id_).where(
             TransactionCategory.is_profit_loss.is_(True),
         )
-        cost_basis_skip_ids = {t_cat_id for t_cat_id, in query.all()}
+        cost_basis_skip_ids = set(sql.col0(query))
 
         # Get Account cash value on start date
         query = (
@@ -473,7 +475,7 @@ class Account(Base):
         deltas_accounts: dict[int, dict[int, list[Decimal | None]]] = defaultdict(
             lambda: defaultdict(lambda: [None] * n),
         )
-        ids = ids or {r[0] for r in Account.query(Account.id_).all()}
+        ids = ids or set(sql.col0(Account.query(Account.id_)))
 
         # Get Asset quantities on start date
         query = (

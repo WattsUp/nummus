@@ -57,7 +57,6 @@ def id_func(val: object) -> str | None:
     return None
 
 
-# TODO (WattsUp): #0 Enforce no need to _ = fixture
 class RandomStringGenerator:
 
     @classmethod
@@ -582,7 +581,9 @@ def transactions(
 
         LabelLink.create(label_id=labels["engineer"], t_split_id=t_split_0.id_)
         LabelLink.create(label_id=labels["engineer"], t_split_id=t_split_1.id_)
-        return Transaction.query().order_by(Transaction.date_ord).all()
+        return (
+            Transaction.query().order_by(Transaction.date_ord).all()  # nummus: ignore
+        )
 
 
 @pytest.fixture
@@ -643,7 +644,9 @@ def transactions_spending(
         t_split_id = sql.one(query)
         LabelLink.create(label_id=labels["apartments 4 U"], t_split_id=t_split_id)
 
-        return session.query(Transaction).order_by(Transaction.date_ord).all()
+        return (
+            Transaction.query().order_by(Transaction.date_ord).all()  # nummus: ignore
+        )
 
 
 @pytest.fixture
@@ -756,7 +759,6 @@ class FlaskAppGenerator:
             @override
             @classmethod
             def _open_portfolio(cls, config: dict[str, object]) -> Portfolio:
-                _ = config
                 return generator()[0]
 
         self._ext = MockExtension()

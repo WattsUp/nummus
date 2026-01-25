@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import re
 from decimal import Decimal
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
 from sqlalchemy import ForeignKey, orm
 
+import nummus
+import tests
 from nummus import exceptions as exc
 from nummus import sql
 from nummus.models.base import (
@@ -19,11 +23,14 @@ from nummus.models.base import (
     SQLEnum,
     string_column_args,
 )
+from tests import conftest
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Mapping
-    from pathlib import Path
+    from collections.abc import Callable, Generator, Mapping
 
+    from nummus.models.base import (
+        NamePair,
+    )
     from tests.conftest import RandomStringGenerator
 
 
@@ -57,6 +64,8 @@ class Parent(Base, skip_register=True):
     children: orm.Mapped[list[Child]] = orm.relationship(back_populates="parent")
 
     __table_args__ = (*string_column_args("name"),)
+
+    _SEARCH_PROPERTIES = ("name",)
 
     @orm.validates("name")
     def validate_strings(self, key: str, field: str | None) -> str | None:
@@ -107,11 +116,11 @@ def session(tmp_path: Path) -> Generator[orm.Session]:
     """
     path = tmp_path / "sql.db"
     s = orm.Session(sql.get_engine(path, None))
-    Base.metadata.create_all(
-        s.get_bind(),
-        tables=[Parent.sql_table(), Child.sql_table()],
-    )
-    s.commit()
+    with s.begin_nested():
+        Base.metadata.create_all(
+            s.get_bind(),
+            tables=[Parent.sql_table(), Child.sql_table()],
+        )
     with Base.set_session(s):
         yield s
 
@@ -158,23 +167,20 @@ def test_wrong_uri_type(parent: Parent) -> None:
         Child.uri_to_id(parent.uri)
 
 
-def test_set_decimal_none(session: orm.Session, child: Child) -> None:
+def test_set_decimal_none(child: Child) -> None:
     child.height = None
-    session.commit()
     assert child.height is None
 
 
-def test_set_decimal_value(session: orm.Session, child: Child) -> None:
+def test_set_decimal_value(child: Child) -> None:
     height = Decimal("1.2")
     child.height = height
-    session.commit()
     assert isinstance(child.height, Decimal)
     assert child.height == height
 
 
-def test_set_enum(session: orm.Session, child: Child) -> None:
+def test_set_enum(child: Child) -> None:
     child.color = Derived.RED
-    session.commit()
     assert isinstance(child.color, Derived)
     assert child.color == Derived.RED
 
@@ -185,11 +191,9 @@ def test_no_uri() -> None:
         _ = no_uri.uri
 
 
-def test_comparators_same_session(session: orm.Session) -> None:
-    parent_a = Parent()
-    parent_b = Parent()
-    session.add_all([parent_a, parent_b])
-    session.commit()
+def test_comparators_same_session() -> None:
+    parent_a = Parent.create()
+    parent_b = Parent.create()
 
     assert parent_a == parent_a  # noqa: PLR0124
     assert parent_a != parent_b
@@ -211,14 +215,9 @@ def test_map_name_none() -> None:
         Base.map_name()
 
 
-def test_map_name_parent(
-    session: orm.Session,
-    rand_str_generator: RandomStringGenerator,
-) -> None:
-    parent_a = Parent(name=rand_str_generator())
-    parent_b = Parent(name=rand_str_generator())
-    session.add_all([parent_a, parent_b])
-    session.commit()
+def test_map_name_parent(rand_str_generator: RandomStringGenerator) -> None:
+    parent_a = Parent.create(name=rand_str_generator())
+    parent_b = Parent.create(name=rand_str_generator())
 
     target = {
         parent_a.id_: parent_a.name,
@@ -305,3 +304,141 @@ def test_unbound_error() -> None:
     with pytest.raises(exc.UnboundExecutionError):
         Base.session()
     Base._sessions.append(s)
+
+
+def noop[T](x: T) -> T:
+    return x
+
+
+def lower(s: str) -> str:
+    return s.lower()
+
+
+def upper(s: str) -> str:
+    return s.upper()
+
+
+@pytest.mark.parametrize(
+    ("prop", "value_adjuster"),
+    [
+        ("uri", noop),
+        ("name", noop),
+        ("name", lower),
+        ("name", upper),
+    ],
+)
+def test_find(
+    parent: Parent,
+    prop: str,
+    value_adjuster: Callable[[str], str],
+) -> None:
+    parent.name = "Fake"
+    query = value_adjuster(getattr(parent, prop))
+
+    cache: dict[str, NamePair] = {}
+
+    result = Parent.find(query, cache)
+    assert result.id_ == parent.id_
+    assert result.name == parent.name
+
+    assert cache == {query: result}
+
+
+def test_find_missing(parent: Parent) -> None:
+    query = Parent.id_to_uri(parent.id_ + 1)
+
+    cache: dict[str, NamePair] = {}
+    with pytest.raises(exc.NoResultFound):
+        Parent.find(query, cache)
+
+    assert not cache
+
+
+def check_no_session_add(line: str) -> str:
+    if re.match(r"^ *(s|session)\.add\(\w\)", line):
+        return "Use of session.add found, use Model.create()"
+    return ""
+
+
+def check_no_session_query(line: str) -> str:
+    if re.search(r"[( ](s|session)\.query\(", line):
+        return "Use of session.query found, use Model.query()"
+    return ""
+
+
+def check_no_query_with_entities(line: str) -> str:
+    if ".with_entities" in line:  # nummus: ignore
+        return "Use of with_entities found, use Model.query(col, ...)"
+    return ""
+
+
+def check_no_query_scalar(line: str) -> str:
+    if (m := re.search(r"(\w*)\.scalar\(", line)) and m.group(1) != "sql":
+        return "Use of query.scalar found, use sql.scalar()"
+    return ""
+
+
+def check_no_query_one(line: str) -> str:
+    if not (m := re.search(r"(\w*)\.one\(", line)):
+        return ""
+    g = m.group(1)
+    if (g and g[0] == g[0].upper()) or g == "sql":
+        # use of Model.one()
+        return ""
+    return "Use of query.one found, use sql.one()"
+
+
+def check_no_query_all(line: str) -> str:
+    if not (m := re.search(r"(\w*)\.all\(", line)):
+        return ""
+    g = m.group(1)
+    if (g and g[0] == g[0].upper()) or g == "sql":
+        # use of Model.all()
+        return ""
+    return "Use of query.all found, use sql.yield_()"
+
+
+def check_no_query_col0(line: str) -> str:
+    if re.search(r"for \w+,? in query", line):
+        return "Use of first column iterator found, use sql.col0()"
+    return ""
+
+
+@pytest.mark.parametrize(
+    "path",
+    sorted(
+        [
+            *Path(nummus.__file__).parent.glob("**/*.py"),
+            *Path(tests.__file__).parent.glob("**/*.py"),
+        ],
+    ),
+    ids=conftest.id_func,
+)
+def test_use_of_mixins(path: Path) -> None:
+    lines = path.read_text("utf-8").splitlines()
+
+    ignore = "# nummus: ignore"
+
+    errors: list[str] = []
+
+    for i, line in enumerate(lines):
+        checks = [
+            check_no_session_add(line),
+            check_no_session_query(line),
+            check_no_query_with_entities(line),
+            check_no_query_scalar(line),
+            check_no_query_one(line),
+            check_no_query_all(line),
+            check_no_query_col0(line),
+        ]
+        checks = [f"{path:}:{i + 1}: {c}" for c in checks if c]
+        if checks:
+            if not line.endswith(ignore):
+                errors.extend(checks)
+        elif line.endswith(ignore):
+            errors.append(
+                f"{path}:{i + 1}: Use of unnecessary 'nummus: ignore'",
+            )
+
+    print("\n".join(errors))
+    assert not errors

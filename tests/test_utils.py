@@ -32,7 +32,7 @@ def test_camel_to_snake(s: str, c: str) -> None:
 
 
 def test_get_input_insecure(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
     rand_str_generator: RandomStringGenerator,
 ) -> None:
@@ -49,7 +49,7 @@ def test_get_input_insecure(
 
 
 def test_get_input_insecure_abort(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
     rand_str_generator: RandomStringGenerator,
 ) -> None:
@@ -66,7 +66,7 @@ def test_get_input_insecure_abort(
 
 
 def test_get_input_secure(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
     rand_str_generator: RandomStringGenerator,
 ) -> None:
@@ -83,7 +83,7 @@ def test_get_input_secure(
 
 
 def test_get_input_secure_abort(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
     rand_str: str,
 ) -> None:
@@ -97,7 +97,7 @@ def test_get_input_secure_abort(
 
 
 def test_get_input_secure_with_icon(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
     rand_str_generator: RandomStringGenerator,
 ) -> None:
@@ -149,7 +149,7 @@ def test_get_password(
     ],
 )
 def test_confirm(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
     rand_str: str,
     queue: list[str | None],
@@ -651,8 +651,20 @@ def test_pretty_table_no_header() -> None:
         utils.pretty_table([None])
 
 
-def test_pretty_table_only_header(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("shutil.get_terminal_size", lambda **_: (80, 24))
+@pytest.fixture
+def fixed_terminal(
+    monkeypatch: pytest.MonkeyPatch,
+    width: int,
+    height: int,
+) -> None:
+    def mock_terminal_size(**_: object) -> tuple[int, int]:
+        return width, height
+
+    monkeypatch.setattr("shutil.get_terminal_size", mock_terminal_size)
+
+
+@pytest.mark.parametrize(("width", "height"), [(80, 24)])
+def test_pretty_table_only_header(fixed_terminal: None) -> None:
     table: list[list[str] | None] = [
         ["H1", ">H2", "<H3", "^H4", "H5.", "H6/"],
     ]
@@ -664,12 +676,9 @@ def test_pretty_table_only_header(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert "\n".join(utils.pretty_table(table)) == target
 
-    # Reset terminal width before verbose info is printed
-    monkeypatch.undo()
 
-
-def test_pretty_table_only_separator(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("shutil.get_terminal_size", lambda **_: (80, 24))
+@pytest.mark.parametrize(("width", "height"), [(80, 24)])
+def test_pretty_table_only_separator(fixed_terminal: None) -> None:
     table: list[list[str] | None] = [
         ["H1", ">H2", "<H3", "^H4", "H5.", "H6/"],
         None,
@@ -683,9 +692,6 @@ def test_pretty_table_only_separator(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert "\n".join(utils.pretty_table(table)) == target
 
-    # Reset terminal width before verbose info is printed
-    monkeypatch.undo()
-
 
 @pytest.fixture
 def table() -> list[list[str] | None]:
@@ -698,11 +704,11 @@ def table() -> list[list[str] | None]:
     ]
 
 
+@pytest.mark.parametrize(("width", "height"), [(80, 24)])
 def test_pretty_table_width_80(
-    monkeypatch: pytest.MonkeyPatch,
+    fixed_terminal: None,
     table: list[list[str] | None],
 ) -> None:
-    monkeypatch.setattr("shutil.get_terminal_size", lambda **_: (80, 24))
     target = textwrap.dedent(
         """\
     ╭───────────┬───────────┬───────────┬───────────┬───────────┬───────────╮
@@ -715,16 +721,12 @@ def test_pretty_table_width_80(
     )
     assert "\n".join(utils.pretty_table(table)) == target
 
-    # Reset terminal width before verbose info is printed
-    monkeypatch.undo()
 
-
+@pytest.mark.parametrize(("width", "height"), [(70, 24)])
 def test_pretty_table_width_70(
-    monkeypatch: pytest.MonkeyPatch,
+    fixed_terminal: None,
     table: list[list[str] | None],
 ) -> None:
-    # Make terminal smaller, extra space goes first
-    monkeypatch.setattr("shutil.get_terminal_size", lambda **_: (70, 24))
     target = textwrap.dedent(
         """\
     ╭───────────┬───────────┬───────────┬───────────┬─────────┬─────────╮
@@ -737,16 +739,12 @@ def test_pretty_table_width_70(
     )
     assert "\n".join(utils.pretty_table(table)) == target
 
-    # Reset terminal width before verbose info is printed
-    monkeypatch.undo()
 
-
+@pytest.mark.parametrize(("width", "height"), [(60, 24)])
 def test_pretty_table_width_60(
-    monkeypatch: pytest.MonkeyPatch,
+    fixed_terminal: None,
     table: list[list[str] | None],
 ) -> None:
-    # Make terminal smaller, truncate column goes next
-    monkeypatch.setattr("shutil.get_terminal_size", lambda **_: (60, 24))
     target = textwrap.dedent(
         """\
     ╭─────────┬─────────┬─────────┬─────────┬───────┬─────────╮
@@ -759,16 +757,12 @@ def test_pretty_table_width_60(
     )
     assert "\n".join(utils.pretty_table(table)) == target
 
-    # Reset terminal width before verbose info is printed
-    monkeypatch.undo()
 
-
+@pytest.mark.parametrize(("width", "height"), [(50, 24)])
 def test_pretty_table_width_50(
-    monkeypatch: pytest.MonkeyPatch,
+    fixed_terminal: None,
     table: list[list[str] | None],
 ) -> None:
-    # Make terminal smaller, other columns go next
-    monkeypatch.setattr("shutil.get_terminal_size", lambda **_: (50, 24))
     target = textwrap.dedent(
         """\
     ╭───────┬───────┬───────┬────────┬────┬─────────╮
@@ -781,16 +775,12 @@ def test_pretty_table_width_50(
     )
     assert "\n".join(utils.pretty_table(table)) == target
 
-    # Reset terminal width before verbose info is printed
-    monkeypatch.undo()
 
-
+@pytest.mark.parametrize(("width", "height"), [(10, 24)])
 def test_pretty_table_width_10(
-    monkeypatch: pytest.MonkeyPatch,
+    fixed_terminal: None,
     table: list[list[str] | None],
 ) -> None:
-    # Make terminal tiny, other columns go next, never last
-    monkeypatch.setattr("shutil.get_terminal_size", lambda **_: (10, 24))
     target = textwrap.dedent(
         """\
     ╭────┬────┬────┬────┬────┬─────────╮
@@ -802,9 +792,6 @@ def test_pretty_table_width_10(
     ╰────┴────┴────┴────┴────┴─────────╯""",
     )
     assert "\n".join(utils.pretty_table(table)) == target
-
-    # Reset terminal width before verbose info is printed
-    monkeypatch.undo()
 
 
 @pytest.mark.parametrize(

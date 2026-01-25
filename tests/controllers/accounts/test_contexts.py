@@ -180,7 +180,6 @@ def test_ctx_assets(
     asset_valuation: AssetValuation,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     with session.begin_nested():
         asset_valuation.date_ord -= 7
 

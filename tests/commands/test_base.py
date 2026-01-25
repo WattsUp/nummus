@@ -32,7 +32,7 @@ class MockCommand(Command):
 
     @classmethod
     def setup_args(cls, parser: argparse.ArgumentParser) -> None:
-        _ = parser
+        pass
 
     @override
     def run(self) -> int:

@@ -823,7 +823,7 @@ def pretty_table(table: list[list[str] | None]) -> list[str]:
             col_widths[i] = n
             margin += n_trim
             extra = False
-        excess.append(0 if cell[-1] == "/" else col_widths[i] - n_label)
+        excess.append(0 if cell[-1] == "/" else max(0, col_widths[i] - n_label))
 
     # Distribute excess
     while margin < 0 and any(excess):

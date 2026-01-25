@@ -151,11 +151,8 @@ def test_wrong_date(
     c.test()
     assert HealthCheckIssue.count() == 2
 
-    i = (
-        HealthCheckIssue.query()
-        .where(HealthCheckIssue.value == today.isoformat())
-        .one()
-    )
+    query = HealthCheckIssue.query().where(HealthCheckIssue.value == today.isoformat())
+    i = sql.one(query)
     assert i.check == c.name()
     cf = CURRENCY_FORMATS[DEFAULT_CURRENCY]
     lines = (
@@ -164,11 +161,10 @@ def test_wrong_date(
     )
     assert i.msg == "\n".join(lines)
 
-    i = (
-        HealthCheckIssue.query()
-        .where(HealthCheckIssue.value == tomorrow.isoformat())
-        .one()
+    query = HealthCheckIssue.query().where(
+        HealthCheckIssue.value == tomorrow.isoformat(),
     )
+    i = sql.one(query)
     assert i.check == c.name()
     assert i.value == tomorrow.isoformat()
     lines = (

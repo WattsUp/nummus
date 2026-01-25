@@ -164,7 +164,6 @@ def test_ctx_asset(
     asset_valuation: AssetValuation,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     ctx = assets.ctx_asset(asset, today, None, None, None, None, None)
     assert ctx["uri"] == asset.uri
     assert ctx["name"] == asset.name
@@ -209,7 +208,6 @@ def test_ctx_rows(
     asset_valuation: AssetValuation,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     ctx = assets.ctx_rows(today, include_unheld=False)
     target: dict[AssetCategory, list[assets.RowContext]] = {
         asset.category: [

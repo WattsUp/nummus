@@ -12,7 +12,6 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 
-from nummus import exceptions as exc
 from nummus import sql
 
 if TYPE_CHECKING:
@@ -49,7 +48,7 @@ def paginate[T: Base](
     # Apply limiting, and offset
     query = query.limit(limit).offset(offset)
 
-    results = query.all()
+    results = list(sql.yield_(query))
 
     # Compute next_offset
     n_current = len(results)
@@ -76,8 +75,10 @@ def dump_table_configs(model: type[Base]) -> list[str]:
             type='table'
             AND name='{model.__tablename__}'
         """.strip()  # noqa: S608
-    result = model.session().execute(sqlalchemy.text(stmt)).one()[0]
-    result: str
+    query: orm.query.RowReturningQuery[tuple[str]] = model.session().execute(  # type: ignore[attr-defined]
+        sqlalchemy.text(stmt),
+    )
+    result: str = sql.one(query)
     return [s.replace("\t", "    ") for s in result.splitlines()]
 
 
@@ -151,8 +152,7 @@ def update_rows[T: Base](
             for k, v in update.items():
                 setattr(m, k, v)
         else:
-            m = cls(**{id_key: id_, **update})
-            s.add(m)
+            cls.create(**{id_key: id_, **update})
 
     # Delete any leftovers
     for m in leftovers:
@@ -203,17 +203,3 @@ def update_rows_list[T: Base](
     ids.extend(m.id_ for m in to_add)
 
     return ids
-
-
-def one_or_none[T](query: orm.Query[T]) -> T | None:
-    """Return one result.
-
-    Returns:
-        One result
-        If no results or multiple, return None
-
-    """
-    try:
-        return query.one_or_none()
-    except (exc.NoResultFound, exc.MultipleResultsFound):
-        return None

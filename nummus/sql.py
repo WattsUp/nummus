@@ -170,7 +170,7 @@ def count[T](query: orm.Query[T]) -> int:
         maintain_column_froms=True,
     )
     counter = counter.order_by(None)
-    return query.session.execute(counter).scalar() or 0
+    return query.session.execute(counter).scalar() or 0  # nummus: ignore
 
 
 def any_[T](query: orm.Query[T]) -> bool:
@@ -186,7 +186,6 @@ def any_[T](query: orm.Query[T]) -> bool:
     return count(query.limit(1)) != 0
 
 
-# TODO (WattsUp): #0 Replace instances of .scalar with this; better typing
 @overload
 def one[T0](
     query: orm.query.RowReturningQuery[tuple[T0]],
@@ -199,7 +198,6 @@ def one[T0, T1](
 ) -> tuple[T0, T1]: ...
 
 
-# TODO (WattsUp): #0 Replace instances of .one with this; better typing
 @overload
 def one[T](query: orm.Query[T]) -> T: ...
 
@@ -214,7 +212,7 @@ def one[T](query: orm.Query[T]) -> object:
         One result
 
     """
-    ret: T | Sequence[T] = query.one()
+    ret: T | Sequence[T] = query.one()  # nummus: ignore
     if not isinstance(ret, Sequence):
         return ret
     if len(ret) == 1:  # type: ignore[attr-defined]
@@ -254,10 +252,9 @@ def scalar[T](query: orm.Query[T]) -> object | None:
         One result
 
     """
-    return query.scalar()
+    return query.scalar()  # nummus: ignore
 
 
-# TODO (WattsUp): #0 Replace instances of .all with this; better typing
 @overload
 def yield_[T: tuple[object, ...]](
     query: orm.query.RowReturningQuery[T],
@@ -279,11 +276,10 @@ def yield_[T](query: orm.Query[T]) -> Iterable[object]:
 
     """
     # Yield per instead of fetch all is faster
-    for r in query.yield_per(100):
+    for r in query.yield_per(100):  # nummus: ignore
         yield r[0:] if isinstance(r, Sequence) else r
 
 
-# TODO (WattsUp): #0 Replace instances of {r for r, in query} with this; better typing
 def col0[T](query: orm.query.RowReturningQuery[tuple[T]]) -> Generator[T]:
     """Yield a query into a list.
 

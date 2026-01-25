@@ -459,7 +459,7 @@ def find[T: Base](cls: type[T], uri: str) -> T:
     except (exc.InvalidURIError, exc.WrongURITypeError) as e:
         raise exc.http.BadRequest(str(e)) from e
     try:
-        obj = cls.query().where(cls.id_ == id_).one()
+        obj = sql.one(cls.query().where(cls.id_ == id_))
     except exc.NoResultFound as e:
         msg = f"{cls.__name__} {uri} not found in Portfolio"
         raise exc.http.NotFound(msg) from e

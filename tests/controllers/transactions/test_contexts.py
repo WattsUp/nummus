@@ -52,7 +52,6 @@ def test_table_query(
     uncleared: bool,
     target: tuple[int, bool],
 ) -> None:
-    _ = transactions
     tbl_query = txn_controller.table_query(
         None,
         account.uri if include_account else None,
@@ -190,7 +189,6 @@ def test_ctx_options(
     transactions: list[Transaction],
     categories: dict[str, int],
 ) -> None:
-    _ = transactions
     tbl_query = txn_controller.TableQuery(
         TransactionSplit.query(),
         {},
@@ -365,7 +363,7 @@ def test_table_results(
                     categories,
                     {
                         label_id: labels[label_id]
-                        for label_id, in session.query(LabelLink.label_id).where(
+                        for label_id, in LabelLink.query(LabelLink.label_id).where(
                             LabelLink.t_split_id == txn.splits[0].id_,
                         )
                     },
@@ -466,7 +464,6 @@ def test_ctx_table_search(
     today: datetime.date,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     ctx, _ = txn_controller.ctx_table(
         today,
         "rent",
@@ -487,7 +484,6 @@ def test_ctx_table_search_paging(
     today: datetime.date,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     ctx, _ = txn_controller.ctx_table(
         today,
         "rent",

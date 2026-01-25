@@ -227,7 +227,7 @@ class TransactionSplit(Base):
     @property
     def parent(self) -> Transaction:
         """Parent Transaction."""
-        return Transaction.query().where(Transaction.id_ == self.parent_id).one()
+        return sql.one(Transaction.query().where(Transaction.id_ == self.parent_id))
 
     @parent.setter
     def parent(self, parent: Transaction) -> None:
@@ -280,7 +280,9 @@ class TransactionSplit(Base):
         )
         query = cls._search_not(query, tokens_not, category_names_rev, label_names_rev)
 
-        sub_query = query.with_entities(TransactionSplit.id_).scalar_subquery()
+        sub_query = query.with_entities(  # nummus: ignore
+            TransactionSplit.id_,
+        ).scalar_subquery()
         query_modified = LabelLink.query(
             LabelLink.t_split_id,
             LabelLink.label_id,
@@ -289,7 +291,7 @@ class TransactionSplit(Base):
         for t_split_id, label_id in sql.yield_(query_modified):
             split_labels[t_split_id].add(label_id)
 
-        query_modified = query.with_entities(
+        query_modified = query.with_entities(  # nummus: ignore
             TransactionSplit.id_,
             TransactionSplit.date_ord,
             TransactionSplit.category_id,

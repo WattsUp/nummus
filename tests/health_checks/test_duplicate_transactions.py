@@ -25,7 +25,6 @@ def test_empty() -> None:
 def test_no_issues(
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     c = DuplicateTransactions()
     c.test()
     assert not sql.any_(HealthCheckIssue.query())
@@ -35,8 +34,6 @@ def test_duplicate(
     session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
-
     txn_to_copy = transactions[0]
 
     # Fund account on 3 days before today

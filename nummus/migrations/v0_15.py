@@ -7,12 +7,15 @@ from typing import override, TYPE_CHECKING
 import sqlalchemy
 
 from nummus import exceptions as exc
+from nummus import sql
 from nummus.migrations.base import Migrator
 from nummus.models.base import Base
 from nummus.models.label import Label, LabelLink
 from nummus.models.utils import dump_table_configs
 
 if TYPE_CHECKING:
+    from sqlalchemy import orm
+
     from nummus import portfolio
 
 
@@ -43,8 +46,10 @@ class MigratorV0_15(Migrator):
         # Move existing tags to labels
         with p.begin_session() as s:
             stmt = "SELECT id_, name FROM tag"
-            # Hand crafted SQL statement can't use query_to_dict
-            tags: dict[int, str] = dict(s.execute(sqlalchemy.text(stmt)).all())  # type: ignore[attr-defined]
+            query: orm.query.RowReturningQuery[tuple[int, str]] = s.execute(  # type: ignore[attr-defined]
+                sqlalchemy.text(stmt),
+            )
+            tags: dict[int, str] = sql.to_dict(query)
 
             for tag_id, name in tags.items():
                 Label.create(id_=tag_id, name=name)

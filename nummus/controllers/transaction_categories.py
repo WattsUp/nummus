@@ -171,13 +171,11 @@ def validation() -> str:
             return f"{utils.MIN_STR_LEN} characters required"
         with p.begin_session():
             # Only get original name if locked
-            locked_name = (
-                TransactionCategory.query(TransactionCategory.name)
-                .where(
+            locked_name = sql.scalar(
+                TransactionCategory.query(TransactionCategory.name).where(
                     TransactionCategory.id_ == category_id,
                     TransactionCategory.locked,
-                )
-                .scalar()
+                ),
             )
             if locked_name and locked_name != name:
                 return "May only add/remove emojis"

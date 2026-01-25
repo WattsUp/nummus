@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 import enum
 from decimal import Decimal
-from typing import ClassVar, overload, override, Self, TYPE_CHECKING
+from typing import ClassVar, NamedTuple, overload, override, Self, TYPE_CHECKING
 
 import sqlalchemy
 from sqlalchemy import CheckConstraint, orm, types
@@ -28,6 +28,13 @@ ORMStr = orm.Mapped[str]
 ORMStrOpt = orm.Mapped[str | None]
 ORMReal = orm.Mapped[Decimal]
 ORMRealOpt = orm.Mapped[Decimal | None]
+
+
+class NamePair(NamedTuple):
+    """ID & name pair."""
+
+    id_: int
+    name: str | None
 
 
 class SessionMixIn:
@@ -69,7 +76,6 @@ class SessionMixIn:
 class QueryMixIn(SessionMixIn):
     """Mix-in that provides a query interface to the type."""
 
-    # TODO (WattsUp): #0 Enforce Base.create instead of s.add
     @classmethod
     def create(cls, **kwargs: object) -> Self:
         """Create a new instance.
@@ -83,7 +89,7 @@ class QueryMixIn(SessionMixIn):
         """
         i = cls(**kwargs)
         s = cls.session()
-        s.add(i)
+        s.add(i)  # nummus: ignore
         s.flush()
         return i
 
@@ -95,7 +101,6 @@ class QueryMixIn(SessionMixIn):
         """Refresh an instance."""
         self.session().refresh(self)
 
-    # TODO (WattsUp): #0 Enforce query(col, col, col) instead of .with_entities
     @overload
     @classmethod
     def query(cls) -> orm.Query[Self]: ...
@@ -176,7 +181,7 @@ class QueryMixIn(SessionMixIn):
             raise exc.NoKeywordArgumentsError
         query: orm.Query[Self] = cls.session().query(cls)
         if columns:
-            return query.with_entities(*columns)
+            return query.with_entities(*columns)  # nummus: ignore
         return query
 
     @classmethod
@@ -187,7 +192,7 @@ class QueryMixIn(SessionMixIn):
             List of each row object
 
         """
-        return cls.query().all()
+        return list(sql.yield_(cls.query()))
 
     @classmethod
     def one(cls) -> Self:
@@ -197,7 +202,7 @@ class QueryMixIn(SessionMixIn):
             Only row
 
         """
-        return cls.query().one()
+        return sql.one(cls.query())
 
     @classmethod
     def first(cls) -> Self | None:
@@ -234,6 +239,8 @@ class Base(orm.DeclarativeBase, QueryMixIn):
     __table_id__: int | None
 
     id_: ORMInt = orm.mapped_column(primary_key=True, autoincrement=True)
+
+    _SEARCH_PROPERTIES: tuple[str, ...] = ()
 
     @override
     def __init_subclass__(cls, *, skip_register: bool = False, **kw: object) -> None:
@@ -421,6 +428,66 @@ class Base(orm.DeclarativeBase, QueryMixIn):
 
         """
         return utils.strip_emojis(s).strip().lower()
+
+    @classmethod
+    def find(
+        cls,
+        search: str,
+        cache: dict[str, NamePair],
+    ) -> NamePair:
+        """Find a matching object by  uri, or field value.
+
+        Args:
+            search: Search query
+            cache: Cache results to speed up look ups
+
+        Returns:
+            tuple(id_, name)
+
+        Raises:
+            NoResultFound: if object not found
+
+        """
+        pair = cache.get(search)
+        if pair is not None:
+            return pair
+
+        def cache_and_return(m: Self) -> NamePair:
+            id_ = m.id_
+            name: str | None = getattr(m, "name", None)
+            pair = NamePair(id_, name)
+            cache[search] = pair
+            return pair
+
+        try:
+            # See if query is an URI
+            id_ = cls.uri_to_id(search)
+        except (exc.InvalidURIError, exc.WrongURITypeError):
+            pass
+        else:
+            query = cls.query().where(cls.id_ == id_)
+            if m := sql.scalar(query):
+                return cache_and_return(m)
+
+        for name in cls._SEARCH_PROPERTIES:
+            prop: sql.Column = getattr(cls, name)
+            # Exact?
+            query = cls.query().where(prop == search)
+            if m := sql.scalar(query):
+                return cache_and_return(m)
+
+            # Exact lower case?
+            query = cls.query().where(prop.ilike(search))
+            if m := sql.scalar(query):
+                return cache_and_return(m)
+
+            # For account number, see if there is one ending in the search
+            query = cls.query().where(prop.ilike(f"%{search}"))
+            if name == "number" and (m := sql.scalar(query)):
+                return cache_and_return(m)
+
+        msg = f"{cls.__name__} matching '{search}' could not be found"
+        raise exc.NoResultFound(msg)
 
 
 class BaseEnum(enum.IntEnum):

@@ -256,7 +256,7 @@ def data_query(
         label_id = Label.uri_to_id(selected_label)
         label_query = (
             query.join(LabelLink)
-            .with_entities(TransactionSplit.id_)
+            .with_entities(TransactionSplit.id_)  # nummus: ignore
             .where(LabelLink.label_id == label_id)
             .distinct()
         )
@@ -307,7 +307,7 @@ def ctx_options(
     clauses = dat_query.clauses.copy()
     clauses.pop("account", None)
     query_options = (
-        query.with_entities(TransactionSplit.account_id)
+        query.with_entities(TransactionSplit.account_id)  # nummus: ignore
         .where(*clauses.values())
         .distinct()
     )
@@ -325,7 +325,7 @@ def ctx_options(
     clauses = dat_query.clauses.copy()
     clauses.pop("category", None)
     query_options = (
-        query.with_entities(TransactionSplit.category_id)
+        query.with_entities(TransactionSplit.category_id)  # nummus: ignore
         .where(*clauses.values())
         .distinct()
     )
@@ -348,7 +348,7 @@ def ctx_options(
     clauses.pop("label", None)
     query_options = (
         query.join(LabelLink)
-        .with_entities(LabelLink.label_id)
+        .with_entities(LabelLink.label_id)  # nummus: ignore
         .where(*clauses.values())
         .distinct()
     )
@@ -435,7 +435,7 @@ def ctx_chart(
         final_query = dat_query.final_query
         n_matches = sql.count(final_query)
 
-    query = final_query.with_entities(
+    query = final_query.with_entities(  # nummus: ignore
         TransactionSplit.account_id,
         func.sum(TransactionSplit.amount),
     ).group_by(TransactionSplit.account_id)
@@ -446,7 +446,7 @@ def ctx_chart(
     ]
     by_account = sorted(by_account, key=operator.itemgetter(1), reverse=True)
 
-    query = final_query.with_entities(
+    query = final_query.with_entities(  # nummus: ignore
         TransactionSplit.payee,
         func.sum(TransactionSplit.amount),
     ).group_by(TransactionSplit.payee)
@@ -457,7 +457,7 @@ def ctx_chart(
     ]
     by_payee = sorted(by_payee, key=operator.itemgetter(1), reverse=True)
 
-    query = final_query.with_entities(
+    query = final_query.with_entities(  # nummus: ignore
         TransactionSplit.category_id,
         func.sum(TransactionSplit.amount),
     ).group_by(TransactionSplit.category_id)
@@ -470,7 +470,7 @@ def ctx_chart(
 
     query = (
         final_query.join(LabelLink, full=True)
-        .with_entities(
+        .with_entities(  # nummus: ignore
             LabelLink.label_id,
             func.sum(TransactionSplit.amount),
         )

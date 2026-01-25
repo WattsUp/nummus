@@ -6,6 +6,7 @@ import pytest
 from packaging.version import Version
 
 from nummus import exceptions as exc
+from nummus import sql
 from nummus.migrations.top import MIGRATORS
 from nummus.models.config import Config, ConfigKey
 from nummus.models.currency import DEFAULT_CURRENCY
@@ -47,21 +48,17 @@ def test_short() -> None:
 
 def test_set(rand_str: str) -> None:
     Config.set_(ConfigKey.VERSION, rand_str)
-
-    v = Config.query(Config.value).where(Config.key == ConfigKey.VERSION).scalar()
-    assert v == rand_str
+    assert Config.fetch(ConfigKey.VERSION) == rand_str
 
 
 def test_set_new(rand_str: str) -> None:
     Config.set_(ConfigKey.WEB_KEY, rand_str)
-
-    v = Config.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
-    assert v == rand_str
+    assert Config.fetch(ConfigKey.WEB_KEY) == rand_str
 
 
 def test_fetch() -> None:
-    target = Config.query(Config.value).where(Config.key == ConfigKey.VERSION).scalar()
-    assert Config.fetch(ConfigKey.VERSION) == target
+    v = sql.scalar(Config.query(Config.value).where(Config.key == ConfigKey.VERSION))
+    assert Config.fetch(ConfigKey.VERSION) == v
 
 
 def test_fetch_missing() -> None:

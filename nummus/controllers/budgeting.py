@@ -598,7 +598,7 @@ def target(uri: str) -> str | flask.Response:
             t_cat_id = TransactionCategory.uri_to_id(uri)
             tar = Target.query().where(Target.category_id == t_cat_id).one_or_none()
 
-        query = s.query(TransactionCategory.emoji_name).where(
+        query = TransactionCategory.query(TransactionCategory.emoji_name).where(
             TransactionCategory.id_ == t_cat_id,
         )
         emoji_name = sql.one(query)

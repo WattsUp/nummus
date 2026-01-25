@@ -42,7 +42,7 @@ class MissingAssetLink(HealthCheck):
         query = TransactionCategory.query(TransactionCategory.id_).where(
             TransactionCategory.asset_linked.is_(True),
         )
-        categories_assets_id = {r for r, in query.all()}
+        categories_assets_id = set(sql.col0(query))
 
         # Get transactions in these categories that do not have an asset
         query = TransactionSplit.query(

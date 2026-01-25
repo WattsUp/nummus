@@ -26,7 +26,6 @@ def test_ctx_chart_empty(
     today: datetime.date,
     account: Account,
 ) -> None:
-    _ = account
     ctx = performance.ctx_chart(today, "max", "S&P 500", set())
 
     chart: performance.ChartData = {

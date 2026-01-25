@@ -151,7 +151,6 @@ def test_parent(transactions: list[Transaction]) -> None:
 
 
 def test_search_none(transactions: list[Transaction]) -> None:
-    _ = transactions
     query = TransactionSplit.query()
     with pytest.raises(exc.EmptySearchError):
         TransactionSplit.search(query, "")

@@ -142,7 +142,7 @@ def ctx_chart(
         query = TransactionSplit.query(func.min(TransactionSplit.date_ord)).where(
             TransactionSplit.asset_id.is_(None),
         )
-        start_ord = query.scalar()
+        start_ord = sql.scalar(query)
         start = datetime.date.fromordinal(start_ord) if start_ord else end
     start_ord = start.toordinal()
     end_ord = end.toordinal()

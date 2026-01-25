@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from nummus import utils
+from nummus import sql, utils
 from nummus.controllers import budgeting
 from nummus.models.budget import (
     BudgetAssignment,
@@ -37,9 +37,6 @@ def test_ctx_sidebar_global(
     budget_assignments: list[BudgetAssignment],
     budget_target: Target,
 ) -> None:
-    _ = transactions_spending
-    _ = budget_assignments
-    _ = budget_target
     data = BudgetAssignment.get_monthly_available(month)
 
     ctx = budgeting.ctx_sidebar(
@@ -54,7 +51,7 @@ def test_ctx_sidebar_global(
         TransactionCategory.name.not_in({"emergency fund"}),
         TransactionCategory.group != TransactionCategoryGroup.INCOME,
     )
-    categories = {t_cat.uri: t_cat.emoji_name for t_cat in query.all()}
+    categories = {t_cat.uri: t_cat.emoji_name for t_cat in sql.yield_(query)}
 
     target: budgeting.SidebarContext = {
         "uri": None,
@@ -79,8 +76,6 @@ def test_ctx_sidebar_no_target(
     budget_assignments: list[BudgetAssignment],
     categories: dict[str, int],
 ) -> None:
-    _ = transactions_spending
-    _ = budget_assignments
     data = BudgetAssignment.get_monthly_available(month)
     uri = TransactionCategory.id_to_uri(categories["emergency fund"])
 
@@ -113,8 +108,6 @@ def test_ctx_sidebar(
     budget_assignments: list[BudgetAssignment],
     budget_target: Target,
 ) -> None:
-    _ = transactions_spending
-    _ = budget_assignments
     data = BudgetAssignment.get_monthly_available(month)
     data_cat = data.categories[budget_target.category_id]
     uri = TransactionCategory.id_to_uri(budget_target.category_id)

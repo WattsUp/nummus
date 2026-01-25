@@ -47,7 +47,6 @@ def test_ids(account: Account) -> None:
 
 
 def test_ids_none(account: Account) -> None:
-    _ = account
     ids = Account.ids(AccountCategory.CREDIT)
     assert ids == set()
 
@@ -57,7 +56,6 @@ def test_date_properties(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     assert account.opened_on_ord == today_ord - 3
     assert account.updated_on_ord == today_ord + 7
 
@@ -82,8 +80,6 @@ def test_get_asset_qty_none(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    _ = account
-    _ = transactions
     start_ord = today_ord - 3
     end_ord = today_ord + 3
 
@@ -98,7 +94,6 @@ def test_get_asset_qty(
     asset: Asset,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     start_ord = today_ord - 3
     end_ord = today_ord + 3
     result_qty = account.get_asset_qty(start_ord, end_ord)
@@ -122,7 +117,6 @@ def test_get_asset_qty_today(
     asset: Asset,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     result_qty = account.get_asset_qty(today_ord, today_ord)
     assert result_qty == {asset.id_: [Decimal(10)]}
 
@@ -151,8 +145,6 @@ def test_get_value_none(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    _ = account
-    _ = transactions
     start_ord = today_ord - 3
     end_ord = today_ord + 3
 
@@ -172,8 +164,6 @@ def test_get_value(
     asset_valuation: AssetValuation,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
-    _ = asset_valuation
     start_ord = today_ord - 4
     end_ord = today_ord + 3
     values, profits, assets = account.get_value(start_ord, end_ord)
@@ -270,8 +260,6 @@ def test_get_value_today(
     asset_valuation: AssetValuation,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
-    _ = asset_valuation
     values, profits, assets = account.get_value(today_ord, today_ord)
     assert values == [Decimal(110)]
     assert profits == [Decimal()]
@@ -284,7 +272,6 @@ def test_get_value_buy_day(
     asset: Asset,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     values, profits, assets = account.get_value(today_ord - 2, today_ord - 2)
     assert values == [Decimal(90)]
     assert profits == [Decimal(-10)]
@@ -296,7 +283,6 @@ def test_get_value_fund_day(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     values, profits, assets = account.get_value(today_ord - 3, today_ord - 3)
     assert values == [Decimal(100)]
     assert profits == [Decimal()]
@@ -324,7 +310,6 @@ def test_get_cash_flow(
     transactions: list[Transaction],
     categories: dict[str, int],
 ) -> None:
-    _ = transactions
     start_ord = today_ord - 3
     end_ord = today_ord + 3
     result = account.get_cash_flow(start_ord, end_ord)
@@ -356,7 +341,6 @@ def test_get_cash_flow_today(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     result = account.get_cash_flow(today_ord, today_ord)
     assert result == {}
 
@@ -382,8 +366,6 @@ def test_get_profit_by_asset(
     transactions: list[Transaction],
     asset_valuation: AssetValuation,
 ) -> None:
-    _ = transactions
-    _ = asset_valuation
     start_ord = today_ord - 3
     end_ord = today_ord + 3
     result = account.get_profit_by_asset(start_ord, end_ord)
@@ -399,7 +381,6 @@ def test_get_profit_by_asset_today(
     asset: Asset,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     result = account.get_profit_by_asset(today_ord, today_ord)
     assert result == {asset.id_: Decimal()}
 
@@ -424,6 +405,14 @@ def test_do_include_closed(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     account.closed = True
     assert account.do_include(today_ord)
+
+
+def test_find(
+    account: Account,
+) -> None:
+    account.number = "1234567890"
+    id_, name = Account.find("7890", {})
+    assert id_ == account.id_
+    assert name == account.name

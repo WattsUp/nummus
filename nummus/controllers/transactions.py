@@ -1080,7 +1080,7 @@ def ctx_options(
     clauses = tbl_query.clauses.copy()
     clauses.pop("account", None)
     query_options = (
-        query.with_entities(TransactionSplit.account_id)
+        query.with_entities(TransactionSplit.account_id)  # nummus: ignore
         .where(*clauses.values())
         .distinct()
     )
@@ -1098,7 +1098,7 @@ def ctx_options(
     clauses = tbl_query.clauses.copy()
     clauses.pop("category", None)
     query_options = (
-        query.with_entities(TransactionSplit.category_id)
+        query.with_entities(TransactionSplit.category_id)  # nummus: ignore
         .where(*clauses.values())
         .distinct()
     )
@@ -1215,7 +1215,9 @@ def ctx_table(
         t_split_order = {}
 
     final_query = tbl_query.final_query
-    query_total = final_query.with_entities(func.sum(TransactionSplit.amount))
+    query_total = final_query.with_entities(  # nummus: ignore
+        func.sum(TransactionSplit.amount),
+    )
 
     if matches is not None:
         i_start = page_start_int or 0
@@ -1226,7 +1228,7 @@ def ctx_table(
         # Find the fewest dates to include that will make page at least
         # PAGE_LEN long
         included_date_ords: set[int] = set()
-        query_page_count = final_query.with_entities(
+        query_page_count = final_query.with_entities(  # nummus: ignore
             TransactionSplit.date_ord,
             func.count(),
         ).group_by(TransactionSplit.date_ord)
@@ -1274,7 +1276,7 @@ def ctx_table(
     return {
         "uri": acct_uri,
         "transactions": groups,
-        "query_total": query_total.scalar() or Decimal(),
+        "query_total": sql.scalar(query_total) or Decimal(),
         "no_matches": n_matches == 0 and page_start_int is None,
         "next_page": None if n_matches < PAGE_LEN else str(next_page),
         "any_filters": tbl_query.any_filters,

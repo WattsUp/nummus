@@ -61,7 +61,7 @@ def test_check(
 
     assert sql.count(HealthCheckIssue.query()) == 1
 
-    i = HealthCheckIssue.query().one()
+    i = HealthCheckIssue.one()
     assert i.check == c.name()
     assert i.value == t_uri
     uri = i.uri

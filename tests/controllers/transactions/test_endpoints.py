@@ -50,7 +50,6 @@ def test_table_options(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     result, _ = web_client.GET("transactions.table_options")
     assert 'name="period"' in result
     assert 'name="category"' in result
@@ -172,7 +171,7 @@ def test_new(
     assert "Transaction created" in result
     assert "account" in headers["HX-Trigger"]
 
-    txn = Transaction.query().one()
+    txn = Transaction.one()
     assert txn.account_id == account.id_
     assert txn.date == today
     assert txn.amount == round(rand_real, 2)
@@ -219,7 +218,7 @@ def test_new_split(
     assert "Transaction created" in result
     assert "account" in headers["HX-Trigger"]
 
-    txn = Transaction.query().one()
+    txn = Transaction.one()
     assert txn.account_id == account.id_
     assert txn.date == today
     assert txn.amount == round(rand_real, 2)
@@ -388,9 +387,8 @@ def test_transaction_clear(
     session.refresh(txn)
     assert txn.cleared
 
-    t_split = (
-        TransactionSplit.query().where(TransactionSplit.parent_id == txn.id_).one()
-    )
+    query = TransactionSplit.query().where(TransactionSplit.parent_id == txn.id_)
+    t_split = sql.one(query)
     assert t_split.cleared
 
 

@@ -50,5 +50,6 @@ def test_add_links(
     assert sql.count(LabelLink.query()) == len(transactions) * 2
     assert sql.count(Label.query()) == len(labels) + 1
 
-    label = Label.query().where(Label.id_.not_in(labels.values())).one()
+    query = Label.query().where(Label.id_.not_in(labels.values()))
+    label = sql.one(query)
     assert label.name == rand_str

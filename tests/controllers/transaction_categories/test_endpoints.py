@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from nummus import sql
 from nummus.controllers import base
 from nummus.models.transaction import TransactionSplit
 from nummus.models.transaction_category import (
@@ -73,11 +74,10 @@ def test_new(
     assert f"Created category {rand_str}" in result
     assert "category" in headers["HX-Trigger"]
 
-    t_cat = (
-        TransactionCategory.query()
-        .where(TransactionCategory.emoji_name == rand_str)
-        .one()
+    query = TransactionCategory.query().where(
+        TransactionCategory.emoji_name == rand_str,
     )
+    t_cat = sql.one(query)
     assert t_cat.group == TransactionCategoryGroup.EXPENSE
     assert t_cat.is_profit_loss
     assert t_cat.essential_spending
@@ -133,7 +133,6 @@ def test_category_delete_unlocked(
     categories: dict[str, int],
     transactions_spending: list[Transaction],
 ) -> None:
-    _ = transactions_spending
     t_split = (
         TransactionSplit.query()
         .where(TransactionSplit.category_id == categories["groceries"])
@@ -174,7 +173,8 @@ def test_category_edit_unlocked(
     assert "All changes saved" in result
     assert "category" in headers["HX-Trigger"]
 
-    t_cat = TransactionCategory.query().where(TransactionCategory.name == "food").one()
+    query = TransactionCategory.query().where(TransactionCategory.name == "food")
+    t_cat = sql.one(query)
     assert t_cat.emoji_name == "Food"
     assert t_cat.group == TransactionCategoryGroup.EXPENSE
     assert not t_cat.is_profit_loss
@@ -195,11 +195,10 @@ def test_category_edit_locked(
     assert "All changes saved" in result
     assert "category" in headers["HX-Trigger"]
 
-    t_cat = (
-        TransactionCategory.query()
-        .where(TransactionCategory.name == "uncategorized")
-        .one()
+    query = TransactionCategory.query().where(
+        TransactionCategory.name == "uncategorized",
     )
+    t_cat = sql.one(query)
     assert t_cat.emoji_name == "Uncategorized 🤷"
     assert t_cat.group == TransactionCategoryGroup.OTHER
     assert not t_cat.is_profit_loss

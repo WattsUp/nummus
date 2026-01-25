@@ -24,7 +24,6 @@ def test_empty() -> None:
 def test_no_issues(
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     c = MissingAssetLink()
     c.test()
     assert HealthCheckIssue.count() == 0

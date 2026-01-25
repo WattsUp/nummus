@@ -26,7 +26,6 @@ def test_empty(capsys: pytest.CaptureFixture[str], empty_portfolio: Portfolio) -
 
 
 def test_no_txns(empty_portfolio: Portfolio, asset: Asset) -> None:
-    _ = asset
     assert empty_portfolio.update_assets(no_bars=True) == []
 
 

@@ -73,7 +73,7 @@ def test_new(
     assert "All changes saved" in result
     assert "asset" in headers["HX-Trigger"]
 
-    a = Asset.query().one()
+    a = Asset.one()
     assert a.name == "New name"
     assert a.category == AssetCategory.STOCKS
     assert a.currency == Currency.USD
@@ -112,7 +112,6 @@ def test_asset_get(
     asset: Asset,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     result, _ = web_client.GET(("assets.asset", {"uri": asset.uri}))
     assert asset.name in result
     assert asset.ticker is not None
@@ -166,7 +165,6 @@ def test_account_delete(
     asset: Asset,
     asset_valuation: AssetValuation,
 ) -> None:
-    _ = asset_valuation
     result, headers = web_client.DELETE(("assets.asset", {"uri": asset.uri}))
     assert not result
     assert headers["HX-Redirect"] == web_client.url_for("assets.page_all")
@@ -225,7 +223,6 @@ def test_validation(
     value: str,
     target: str,
 ) -> None:
-    _ = asset_etf
     args = {prop: value}
     if include_asset:
         args["uri"] = asset.uri
@@ -262,7 +259,7 @@ def test_new_valuation(
     assert "All changes saved" in result
     assert "valuation" in headers["HX-Trigger"]
 
-    v = AssetValuation.query().one()
+    v = AssetValuation.one()
     assert v.asset_id == asset.id_
     assert v.date == today
     assert v.value == rand_real
