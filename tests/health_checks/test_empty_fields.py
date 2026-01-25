@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from nummus import sql
 from nummus.health_checks.empty_fields import EmptyFields
 from nummus.models.health_checks import HealthCheckIssue
 from nummus.models.transaction_category import TransactionCategory
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -15,20 +15,18 @@ if TYPE_CHECKING:
     from nummus.models.transaction import Transaction
 
 
-def test_empty(session: orm.Session) -> None:
+def test_empty() -> None:
     c = EmptyFields()
-    c.test(session)
+    c.test()
     assert c.issues == {}
 
 
 def test_no_issues(
-    session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     c = EmptyFields()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 0
+    c.test()
+    assert not sql.any_(HealthCheckIssue.query())
 
 
 def test_no_account_number(
@@ -36,14 +34,13 @@ def test_no_account_number(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    account.number = None
-    session.commit()
-    _ = transactions
+    with session.begin_nested():
+        account.number = None
     c = EmptyFields()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 1
+    c.test()
+    assert HealthCheckIssue.count() == 1
 
-    i = session.query(HealthCheckIssue).one()
+    i = HealthCheckIssue.one()
     assert i.check == c.name()
     assert i.value == f"{account.uri}.number"
     uri = i.uri
@@ -57,14 +54,13 @@ def test_no_asset_description(
     asset: Asset,
     transactions: list[Transaction],
 ) -> None:
-    asset.description = None
-    session.commit()
-    _ = transactions
+    with session.begin_nested():
+        asset.description = None
     c = EmptyFields()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 1
+    c.test()
+    assert HealthCheckIssue.count() == 1
 
-    i = session.query(HealthCheckIssue).one()
+    i = HealthCheckIssue.one()
     assert i.check == c.name()
     assert i.value == f"{asset.uri}.description"
     uri = i.uri
@@ -78,14 +74,14 @@ def test_no_txn_payee(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    txn = transactions[0]
-    txn.payee = None
-    session.commit()
+    with session.begin_nested():
+        txn = transactions[0]
+        txn.payee = None
     c = EmptyFields()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 1
+    c.test()
+    assert HealthCheckIssue.count() == 1
 
-    i = session.query(HealthCheckIssue).one()
+    i = HealthCheckIssue.one()
     assert i.check == c.name()
     assert i.value == f"{txn.uri}.payee"
     uri = i.uri
@@ -99,14 +95,14 @@ def test_uncategorized(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    t_split = transactions[0].splits[0]
-    t_split.category_id = TransactionCategory.uncategorized(session)[0]
-    session.commit()
+    with session.begin_nested():
+        t_split = transactions[0].splits[0]
+        t_split.category_id = TransactionCategory.uncategorized()[0]
     c = EmptyFields()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 1
+    c.test()
+    assert HealthCheckIssue.count() == 1
 
-    i = session.query(HealthCheckIssue).one()
+    i = HealthCheckIssue.one()
     assert i.check == c.name()
     assert i.value == f"{t_split.uri}.category"
     uri = i.uri

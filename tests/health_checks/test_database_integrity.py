@@ -1,27 +1,27 @@
 from __future__ import annotations
 
+import textwrap
 from typing import TYPE_CHECKING
 
 import sqlalchemy
-from pandas.core.indexes.api import textwrap
 
+from nummus import sql
 from nummus.health_checks.database_integrity import DatabaseIntegrity
 from nummus.models.config import Config
 from nummus.models.health_checks import HealthCheckIssue
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
 
-def test_empty(session: orm.Session) -> None:
+def test_empty() -> None:
     c = DatabaseIntegrity()
-    c.test(session)
+    c.test()
     assert c.issues == {}
 
 
 def test_corrupt(session: orm.Session) -> None:
-    n = session.query(Config).update({"value": "abc"})
+    n = Config.query().update({"value": "abc"})
     # Simulating a corrupt database is difficult
     # Instead update the Account schema to have unique constraint
     # PRAGMA integrity_check should catch duplicates
@@ -45,18 +45,17 @@ def test_corrupt(session: orm.Session) -> None:
     session.commit()
 
     c = DatabaseIntegrity()
-    c.test(session)
+    c.test()
 
-    assert query_count(session.query(HealthCheckIssue)) == n - 1
+    assert sql.count(HealthCheckIssue.query()) == n - 1
 
-    i = session.query(HealthCheckIssue).first()
+    i = HealthCheckIssue.first()
     assert i is not None
     assert i.check == c.name()
     assert i.value == "0"
 
     # The balanced $100 transfer also on this day will not show up
     target = {
-        i.uri: f"non-unique entry in index {index_name}"
-        for i in session.query(HealthCheckIssue).all()
+        i.uri: f"non-unique entry in index {index_name}" for i in HealthCheckIssue.all()
     }
     assert c.issues == target

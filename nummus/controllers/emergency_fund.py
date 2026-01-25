@@ -16,8 +16,6 @@ from nummus.models.currency import CURRENCY_FORMATS
 if TYPE_CHECKING:
     from decimal import Decimal
 
-    from sqlalchemy import orm
-
     from nummus.models.currency import CurrencyFormat
 
 
@@ -62,11 +60,11 @@ def page() -> flask.Response:
 
     """
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         return base.page(
             "emergency-fund/page.jinja",
             "Emergency fund",
-            ctx=ctx_page(s, base.today_client()),
+            ctx=ctx_page(base.today_client()),
         )
 
 
@@ -78,18 +76,17 @@ def dashboard() -> str:
 
     """
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         return flask.render_template(
             "emergency-fund/dashboard.jinja",
-            ctx=ctx_page(s, base.today_client()),
+            ctx=ctx_page(base.today_client()),
         )
 
 
-def ctx_page(s: orm.Session, today: datetime.date) -> EFundContext:
+def ctx_page(today: datetime.date) -> EFundContext:
     """Get the context to build the emergency fund page.
 
     Args:
-        s: SQL session to use
         today: Today's date
 
     Returns:
@@ -103,7 +100,6 @@ def ctx_page(s: orm.Session, today: datetime.date) -> EFundContext:
 
     t_lowers, t_uppers, balances, categories, categories_total = (
         BudgetAssignment.get_emergency_fund(
-            s,
             start_ord,
             today_ord,
             utils.DAYS_IN_QUARTER,
@@ -144,7 +140,7 @@ def ctx_page(s: orm.Session, today: datetime.date) -> EFundContext:
         key=lambda item: (-round(item["monthly"], 2), item["name"]),
     )
 
-    cf = CURRENCY_FORMATS[Config.base_currency(s)]
+    cf = CURRENCY_FORMATS[Config.base_currency()]
     return {
         "chart": {
             "labels": [d.isoformat() for d in dates],

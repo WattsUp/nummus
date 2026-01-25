@@ -4,20 +4,15 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
-from typing import override, TYPE_CHECKING
+from typing import override
 
 from sqlalchemy import func
 
+from nummus import sql
 from nummus.health_checks.base import HealthCheck
 from nummus.models.account import Account, AccountCategory
-from nummus.models.base import YIELD_PER
 from nummus.models.currency import CURRENCY_FORMATS
 from nummus.models.transaction import TransactionSplit
-
-if TYPE_CHECKING:
-    from sqlalchemy import orm
-
-    from nummus.models.currency import Currency
 
 
 class OverdrawnAccounts(HealthCheck):
@@ -27,38 +22,30 @@ class OverdrawnAccounts(HealthCheck):
     _SEVERE = True
 
     @override
-    def test(self, s: orm.Session) -> None:
+    def test(self) -> None:
         # Get a list of accounts subject to overdrawn so not credit and loans
         categories_exclude = [
             AccountCategory.CREDIT,
             AccountCategory.LOAN,
             AccountCategory.MORTGAGE,
         ]
-        query = (
-            s.query(Account)
-            .with_entities(Account.id_, Account.name, Account.currency)
-            .where(Account.category.not_in(categories_exclude))
+        query = Account.query(Account.id_, Account.name, Account.currency).where(
+            Account.category.not_in(categories_exclude),
         )
-        accounts: dict[int, tuple[str, Currency]] = {
-            r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
-        }
+        accounts = sql.to_dict_tuple(query)
         acct_ids = set(accounts)
 
         issues: list[tuple[str, str, str]] = []
 
-        start_ord, end_ord = (
-            s.query(
+        start_ord, end_ord = sql.one(
+            TransactionSplit.query(
                 func.min(TransactionSplit.date_ord),
                 func.max(TransactionSplit.date_ord),
-            )
-            .where(TransactionSplit.account_id.in_(acct_ids))
-            .one()
+            ).where(TransactionSplit.account_id.in_(acct_ids)),
         )
-        start_ord: int | None
-        end_ord: int | None
-        if start_ord is None or end_ord is None:
-            # No asset transactions at all
-            self._commit_issues(s, {})
+        if start_ord is None or end_ord is None:  # type: ignore[attr-defined]
+            # No transactions at all
+            self._commit_issues({})
             return
         n = end_ord - start_ord + 1
 
@@ -66,20 +53,13 @@ class OverdrawnAccounts(HealthCheck):
             cf = CURRENCY_FORMATS[currency]
             # Get cash holdings across all time
             cash_flow: list[Decimal | None] = [None] * n
-            query = (
-                s.query(TransactionSplit)
-                .with_entities(
-                    TransactionSplit.date_ord,
-                    TransactionSplit.amount,
-                )
-                .where(
-                    TransactionSplit.account_id == acct_id,
-                )
+            query = TransactionSplit.query(
+                TransactionSplit.date_ord,
+                TransactionSplit.amount,
+            ).where(
+                TransactionSplit.account_id == acct_id,
             )
-            for date_ord, amount in query.yield_per(YIELD_PER):
-                date_ord: int
-                amount: Decimal
-
+            for date_ord, amount in sql.yield_(query):
                 i = date_ord - start_ord
 
                 v = cash_flow[i]
@@ -111,7 +91,6 @@ class OverdrawnAccounts(HealthCheck):
             amount_len = 0
 
         self._commit_issues(
-            s,
             {
                 uri: f"{source:{source_len}}: {amount_str:>{amount_len}}"
                 for uri, source, amount_str in issues

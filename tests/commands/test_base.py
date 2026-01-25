@@ -32,7 +32,7 @@ class MockCommand(Command):
 
     @classmethod
     def setup_args(cls, parser: argparse.ArgumentParser) -> None:
-        _ = parser
+        pass
 
     @override
     def run(self) -> int:
@@ -43,7 +43,7 @@ def test_no_unlock(tmp_path: Path) -> None:
     MockCommand(tmp_path / "fake.db", None, do_unlock=False)
 
 
-def test_no_file(capsys: pytest.CaptureFixture, tmp_path: Path) -> None:
+def test_no_file(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
     path = tmp_path / "fake.db"
     with pytest.raises(SystemExit):
         MockCommand(path, None)
@@ -54,7 +54,7 @@ def test_no_file(capsys: pytest.CaptureFixture, tmp_path: Path) -> None:
     assert captured.err == target
 
 
-def test_unlock(capsys: pytest.CaptureFixture, empty_portfolio: Portfolio) -> None:
+def test_unlock(capsys: pytest.CaptureFixture[str], empty_portfolio: Portfolio) -> None:
     MockCommand(empty_portfolio.path, None)
 
     captured = capsys.readouterr()
@@ -63,7 +63,10 @@ def test_unlock(capsys: pytest.CaptureFixture, empty_portfolio: Portfolio) -> No
     assert not captured.err
 
 
-def test_migration_required(capsys: pytest.CaptureFixture, data_path: Path) -> None:
+def test_migration_required(
+    capsys: pytest.CaptureFixture[str],
+    data_path: Path,
+) -> None:
     with pytest.raises(SystemExit):
         MockCommand(data_path / "old_versions" / "v0.1.16.db", None)
 
@@ -80,7 +83,7 @@ def test_migration_required(capsys: pytest.CaptureFixture, data_path: Path) -> N
 @pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="Encryption is not installed")
 @pytest.mark.encryption
 def test_unlock_encrypted_path(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio_encrypted: tuple[Portfolio, str],
     tmp_path: Path,
 ) -> None:
@@ -99,7 +102,7 @@ def test_unlock_encrypted_path(
 @pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="Encryption is not installed")
 @pytest.mark.encryption
 def test_unlock_encrypted_path_bad_key(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio_encrypted: tuple[Portfolio, str],
     tmp_path: Path,
 ) -> None:
@@ -119,7 +122,7 @@ def test_unlock_encrypted_path_bad_key(
 @pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="Encryption is not installed")
 @pytest.mark.encryption
 def test_unlock_encrypted(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
     empty_portfolio_encrypted: tuple[Portfolio, str],
 ) -> None:
@@ -147,7 +150,7 @@ def test_unlock_encrypted(
 @pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="Encryption is not installed")
 @pytest.mark.encryption
 def test_unlock_encrypted_cancel(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
     empty_portfolio_encrypted: tuple[Portfolio, str],
 ) -> None:
@@ -171,7 +174,7 @@ def test_unlock_encrypted_cancel(
 @pytest.mark.skipif(not ENCRYPTION_AVAILABLE, reason="Encryption is not installed")
 @pytest.mark.encryption
 def test_unlock_encrypted_failed(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
     empty_portfolio_encrypted: tuple[Portfolio, str],
 ) -> None:

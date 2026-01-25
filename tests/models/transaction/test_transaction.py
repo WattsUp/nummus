@@ -10,15 +10,12 @@ if TYPE_CHECKING:
     import datetime
     from decimal import Decimal
 
-    from sqlalchemy import orm
-
     from nummus.models.account import Account
     from tests.conftest import RandomStringGenerator
 
 
 def test_init_properties(
     today: datetime.date,
-    session: orm.Session,
     account: Account,
     rand_real: Decimal,
     rand_str_generator: RandomStringGenerator,
@@ -31,9 +28,7 @@ def test_init_properties(
         "payee": rand_str_generator(),
     }
 
-    txn = Transaction(**d)
-    session.add(txn)
-    session.commit()
+    txn = Transaction.create(**d)
 
     assert txn.account_id == account.id_
     assert txn.date_ord == today.toordinal()

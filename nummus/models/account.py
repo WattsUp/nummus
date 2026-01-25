@@ -8,7 +8,7 @@ from typing import NamedTuple, TYPE_CHECKING
 
 from sqlalchemy import func, orm, UniqueConstraint
 
-from nummus import utils
+from nummus import sql, utils
 from nummus.models.asset import Asset
 from nummus.models.base import (
     Base,
@@ -18,12 +18,10 @@ from nummus.models.base import (
     ORMStrOpt,
     SQLEnum,
     string_column_args,
-    YIELD_PER,
 )
 from nummus.models.currency import Currency
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
-from nummus.models.utils import obj_session
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -92,6 +90,8 @@ class Account(Base):
         *string_column_args("institution"),
     )
 
+    _SEARCH_PROPERTIES = ("number", "institution", "name")
+
     @orm.validates("name", "number", "institution")
     def validate_strings(self, key: str, field: str | None) -> str | None:
         """Validate string fields satisfy constraints.
@@ -109,25 +109,22 @@ class Account(Base):
     @property
     def opened_on_ord(self) -> int | None:
         """Date ordinal of first Transaction."""
-        s = obj_session(self)
-        query = s.query(func.min(Transaction.date_ord)).where(
+        query = Transaction.query(func.min(Transaction.date_ord)).where(
             Transaction.account_id == self.id_,
         )
-        return query.scalar()
+        return sql.scalar(query)
 
     @property
     def updated_on_ord(self) -> int | None:
         """Date ordinal of latest Transaction."""
-        s = obj_session(self)
-        query = s.query(func.max(Transaction.date_ord)).where(
+        query = Transaction.query(func.max(Transaction.date_ord)).where(
             Transaction.account_id == self.id_,
         )
-        return query.scalar()
+        return sql.scalar(query)
 
     @classmethod
     def get_value_all(
         cls,
-        s: orm.Session,
         start_ord: int,
         end_ord: int,
         ids: Iterable[int] | None = None,
@@ -136,7 +133,6 @@ class Account(Base):
         """Get the value of all Accounts from start to end date.
 
         Args:
-            s: SQL session to use
             start_ord: First date ordinal to evaluate
             end_ord: Last date ordinal to evaluate (inclusive)
             ids: Limit results to specific Accounts by ID
@@ -151,10 +147,11 @@ class Account(Base):
         n = end_ord - start_ord + 1
 
         if not ids and ids is not None:
-            acct_values = defaultdict(lambda: [Decimal()] * n)
-            acct_profit = defaultdict(lambda: [Decimal()] * n)
-            asset_values = defaultdict(lambda: [Decimal()] * n)
-            return ValueResultAll(acct_values, acct_profit, asset_values)
+            return ValueResultAll(
+                defaultdict(lambda: [Decimal()] * n),
+                defaultdict(lambda: [Decimal()] * n),
+                defaultdict(lambda: [Decimal()] * n),
+            )
 
         cash_flow_accounts: dict[int, list[Decimal | None]] = defaultdict(
             lambda: [None] * n,
@@ -162,21 +159,20 @@ class Account(Base):
         cost_basis_accounts: dict[int, list[Decimal | None]] = defaultdict(
             lambda: [None] * n,
         )
-        ids = ids or {r[0] for r in s.query(Account.id_).all()}
+        ids = ids or set(sql.col0(Account.query(Account.id_)))
 
         # Profit = Interest + dividends + rewards + change in asset value - fees
         # Dividends, fees, and change in value can be assigned to an asset
         # Change in value = current value - basis
         # Get list of transaction categories not included in cost basis
-        query = s.query(TransactionCategory.id_).where(
+        query = TransactionCategory.query(TransactionCategory.id_).where(
             TransactionCategory.is_profit_loss.is_(True),
         )
-        cost_basis_skip_ids = {t_cat_id for t_cat_id, in query.all()}
+        cost_basis_skip_ids = set(sql.col0(query))
 
         # Get Account cash value on start date
         query = (
-            s.query(TransactionSplit)
-            .with_entities(
+            TransactionSplit.query(
                 TransactionSplit.account_id,
                 func.sum(TransactionSplit.amount),
             )
@@ -186,15 +182,12 @@ class Account(Base):
             )
             .group_by(TransactionSplit.account_id)
         )
-        for acct_id, iv in query.all():
-            acct_id: int
-            iv: Decimal
+        for acct_id, iv in sql.yield_(query):
             cash_flow_accounts[acct_id][0] = iv
 
         # Calculate cost basis on first day
         query = (
-            s.query(TransactionSplit)
-            .with_entities(
+            TransactionSplit.query(
                 TransactionSplit.account_id,
                 func.sum(TransactionSplit.amount),
             )
@@ -205,36 +198,24 @@ class Account(Base):
             )
             .group_by(TransactionSplit.account_id)
         )
-        for acct_id, iv in query.all():
-            acct_id: int
-            iv: Decimal
+        for acct_id, iv in sql.yield_(query):
             cost_basis_accounts[acct_id][0] = -iv
 
         if start_ord != end_ord:
             # Get cash_flow on each day between start and end
             # Not Account.get_cash_flow because being categorized doesn't matter and
             # slows it down
-            query = (
-                s.query(TransactionSplit)
-                .with_entities(
-                    TransactionSplit.account_id,
-                    TransactionSplit.date_ord,
-                    TransactionSplit.amount,
-                    TransactionSplit.category_id,
-                )
-                .where(
-                    TransactionSplit.date_ord <= end_ord,
-                    TransactionSplit.date_ord > start_ord,
-                    TransactionSplit.account_id.in_(ids),
-                )
+            query = TransactionSplit.query(
+                TransactionSplit.account_id,
+                TransactionSplit.date_ord,
+                TransactionSplit.amount,
+                TransactionSplit.category_id,
+            ).where(
+                TransactionSplit.date_ord <= end_ord,
+                TransactionSplit.date_ord > start_ord,
+                TransactionSplit.account_id.in_(ids),
             )
-
-            for acct_id, date_ord, amount, t_cat_id in query.yield_per(YIELD_PER):
-                acct_id: int
-                date_ord: int
-                amount: Decimal
-                t_cat_id: int
-
+            for acct_id, date_ord, amount, t_cat_id in sql.yield_(query):
                 i = date_ord - start_ord
 
                 v = cash_flow_accounts[acct_id][i]
@@ -248,33 +229,29 @@ class Account(Base):
 
         # Get assets for all Accounts
         assets_accounts = cls.get_asset_qty_all(
-            s,
             start_ord,
             end_ord,
             list(cash_flow_accounts.keys()),
         )
 
         # Get day one asset transactions to add to profit & loss
-        query = (
-            s.query(TransactionSplit)
-            .with_entities(
-                TransactionSplit.account_id,
-                TransactionSplit.asset_id,
-                TransactionSplit.asset_quantity,
-            )
-            .where(
-                TransactionSplit.asset_id.isnot(None),
-                TransactionSplit.date_ord == start_ord,
-                TransactionSplit.account_id.in_(ids),
-            )
+        query = TransactionSplit.query(
+            TransactionSplit.account_id,
+            TransactionSplit.asset_id,
+            TransactionSplit.asset_quantity,
+        ).where(
+            TransactionSplit.asset_id.isnot(None),
+            TransactionSplit.date_ord == start_ord,
+            TransactionSplit.account_id.in_(ids),
         )
         assets_day_zero: dict[int, dict[int, Decimal]] = defaultdict(
             lambda: defaultdict(Decimal),
         )
-        for acct_id, a_id, qty in query.yield_per(YIELD_PER):
-            acct_id: int
-            a_id: int
-            qty: Decimal
+        for acct_id, a_id, qty in sql.yield_(query):
+            if TYPE_CHECKING:
+                # Enforced by query and SQL constraints
+                assert a_id is not None
+                assert qty is not None
             assets_day_zero[acct_id][a_id] += qty
 
         # Remove zeros
@@ -295,17 +272,15 @@ class Account(Base):
         a_ids: set[int] = utils.set_sub_keys(assets_accounts)
         a_ids.update(utils.set_sub_keys(assets_day_zero))
 
-        asset_prices = Asset.get_value_all(s, start_ord, end_ord, a_ids)
+        asset_prices = Asset.get_value_all(start_ord, end_ord, a_ids)
 
         forex_by_account: dict[int, list[Decimal]] | None = None
         if forex is not None:
-            query = (
-                s.query(Account)
-                .with_entities(Account.id_, Account.currency)
-                .where(Account.id_.in_(ids))
+            query = Account.query(Account.id_, Account.currency).where(
+                Account.id_.in_(ids),
             )
             forex_by_account = {
-                acct_id: forex[currency] for acct_id, currency in query.all()
+                acct_id: forex[currency] for acct_id, currency in sql.yield_(query)
             }
 
         return cls._merge_value_data(
@@ -384,23 +359,23 @@ class Account(Base):
         self,
         start_ord: int,
         end_ord: int,
+        forex: dict[Currency, list[Decimal]] | None = None,
     ) -> ValueResult:
         """Get the value of Account from start to end date.
 
         Args:
             start_ord: First date ordinal to evaluate
             end_ord: Last date ordinal to evaluate (inclusive)
+            forex: Currency exchange rates, None will not normalize
 
         Returns:
             ValueResult
 
         """
-        s = obj_session(self)
-
         # Not reusing get_value_all is faster by ~2ms,
         # not worth maintaining two almost identical implementations
 
-        r = self.get_value_all(s, start_ord, end_ord, [self.id_])
+        r = self.get_value_all(start_ord, end_ord, [self.id_], forex=forex)
         return ValueResult(
             r.values_by_account[self.id_],
             r.profits[self.id_],
@@ -410,7 +385,6 @@ class Account(Base):
     @classmethod
     def get_cash_flow_all(
         cls,
-        s: orm.Session,
         start_ord: int,
         end_ord: int,
         ids: Iterable[int] | None = None,
@@ -420,7 +394,6 @@ class Account(Base):
         Does not separate results by account.
 
         Args:
-            s: SQL session to use
             start_ord: First date ordinal to evaluate
             end_ord: Last date ordinal to evaluate (inclusive)
             ids: Limit results to specific Accounts by ID
@@ -435,26 +408,18 @@ class Account(Base):
         categories: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal()] * n)
 
         # Transactions between start and end
-        query = (
-            s.query(TransactionSplit)
-            .with_entities(
-                TransactionSplit.date_ord,
-                TransactionSplit.amount,
-                TransactionSplit.category_id,
-            )
-            .where(
-                TransactionSplit.date_ord <= end_ord,
-                TransactionSplit.date_ord >= start_ord,
-            )
+        query = TransactionSplit.query(
+            TransactionSplit.date_ord,
+            TransactionSplit.amount,
+            TransactionSplit.category_id,
+        ).where(
+            TransactionSplit.date_ord <= end_ord,
+            TransactionSplit.date_ord >= start_ord,
         )
         if ids is not None:
             query = query.where(TransactionSplit.account_id.in_(ids))
 
-        for t_date_ord, amount, category_id in query.yield_per(YIELD_PER):
-            t_date_ord: int
-            amount: Decimal
-            category_id: int
-
+        for t_date_ord, amount, category_id in sql.yield_(query):
             categories[category_id][t_date_ord - start_ord] += amount
 
         return categories
@@ -478,13 +443,11 @@ class Account(Base):
             Includes None in categories
 
         """
-        s = obj_session(self)
-        return self.get_cash_flow_all(s, start_ord, end_ord, [self.id_])
+        return self.get_cash_flow_all(start_ord, end_ord, [self.id_])
 
     @classmethod
     def get_asset_qty_all(
         cls,
-        s: orm.Session,
         start_ord: int,
         end_ord: int,
         ids: Iterable[int] | None = None,
@@ -492,7 +455,6 @@ class Account(Base):
         """Get the quantity of Assets held from start to end date.
 
         Args:
-            s: SQL session to use
             start_ord: First date ordinal to evaluate
             end_ord: Last date ordinal to evaluate (inclusive)
             ids: Limit results to specific Accounts by ID
@@ -509,13 +471,15 @@ class Account(Base):
                 lambda: defaultdict(lambda: [Decimal()] * n),
             )
 
-        iv_accounts: dict[int, dict[int, Decimal]] = defaultdict(dict)
-        ids = ids or {r[0] for r in s.query(Account.id_).all()}
+        # Daily delta in qty
+        deltas_accounts: dict[int, dict[int, list[Decimal | None]]] = defaultdict(
+            lambda: defaultdict(lambda: [None] * n),
+        )
+        ids = ids or set(sql.col0(Account.query(Account.id_)))
 
         # Get Asset quantities on start date
         query = (
-            s.query(TransactionSplit)
-            .with_entities(
+            TransactionSplit.query(
                 TransactionSplit.account_id,
                 TransactionSplit.asset_id,
                 func.sum(TransactionSplit.asset_quantity),
@@ -530,27 +494,17 @@ class Account(Base):
                 TransactionSplit.asset_id,
             )
         )
-
-        for acct_id, a_id, qty in query.yield_per(YIELD_PER):
-            acct_id: int
-            a_id: int
-            qty: Decimal
-            iv_accounts[acct_id][a_id] = qty
-
-        # Daily delta in qty
-        deltas_accounts: dict[int, dict[int, list[Decimal | None]]] = defaultdict(
-            lambda: defaultdict(lambda: [None] * n),
-        )
-        for acct_id, iv in iv_accounts.items():
-            deltas = deltas_accounts[acct_id]
-            for a_id, v in iv.items():
-                deltas[a_id][0] = v
+        for acct_id, a_id, qty in sql.yield_(query):
+            if TYPE_CHECKING:
+                # Enforced by query and SQL constraints
+                assert a_id is not None
+                assert qty is not None
+            deltas_accounts[acct_id][a_id][0] = qty
 
         if start_ord != end_ord:
             # Transactions between start and end
             query = (
-                s.query(TransactionSplit)
-                .with_entities(
+                TransactionSplit.query(
                     TransactionSplit.date_ord,
                     TransactionSplit.account_id,
                     TransactionSplit.asset_id,
@@ -565,15 +519,14 @@ class Account(Base):
                 .order_by(TransactionSplit.account_id)
             )
 
-            current_acct_id = None
+            current_acct_id: int | None = None
             deltas = {}
 
-            for date_ord, acct_id, a_id, qty in query.yield_per(YIELD_PER):
-                date_ord: int
-                acct_id: int
-                a_id: int
-                qty: Decimal
-
+            for date_ord, acct_id, a_id, qty in sql.yield_(query):
+                if TYPE_CHECKING:
+                    # Enforced by query and SQL constraints
+                    assert a_id is not None
+                    assert qty is not None
                 i = date_ord - start_ord
 
                 if acct_id != current_acct_id:
@@ -608,13 +561,11 @@ class Account(Base):
             dict{Asset.id_: list[values]}
 
         """
-        s = obj_session(self)
-        return self.get_asset_qty_all(s, start_ord, end_ord, [self.id_])[self.id_]
+        return self.get_asset_qty_all(start_ord, end_ord, [self.id_])[self.id_]
 
     @classmethod
     def get_profit_by_asset_all(
         cls,
-        s: orm.Session,
         start_ord: int,
         end_ord: int,
         ids: Iterable[int] | None = None,
@@ -622,7 +573,6 @@ class Account(Base):
         """Get the profit of Assets on end_date since start_ord.
 
         Args:
-            s: SQL session to use
             start_ord: First date ordinal to evaluate
             end_ord: Last date ordinal to evaluate (inclusive)
             ids: Limit results to specific Accounts by ID
@@ -633,9 +583,9 @@ class Account(Base):
 
         """
         # Get Asset quantities on start date
+        initial_qty: dict[int, Decimal] = defaultdict(Decimal)
         query = (
-            s.query(TransactionSplit)
-            .with_entities(
+            TransactionSplit.query(
                 TransactionSplit.asset_id,
                 func.sum(TransactionSplit.asset_quantity),
             )
@@ -647,40 +597,38 @@ class Account(Base):
         )
         if ids is not None:
             query = query.where(TransactionSplit.account_id.in_(ids))
+        for a_id, qty in sql.yield_(query):
+            if TYPE_CHECKING:
+                # Enforced by query and SQL constraints
+                assert a_id is not None
+                assert qty is not None
+            initial_qty[a_id] = qty
 
-        initial_qty: dict[int, Decimal] = defaultdict(
-            Decimal,
-            {a_id: qty for a_id, qty in query.yield_per(YIELD_PER) if qty != 0},
-        )
-
-        query = (
-            s.query(TransactionSplit)
-            .with_entities(
-                TransactionSplit.asset_id,
-                TransactionSplit.asset_quantity,
-                TransactionSplit.amount,
-            )
-            .where(
-                TransactionSplit.asset_id.is_not(None),
-                TransactionSplit.date_ord >= start_ord,
-                TransactionSplit.date_ord <= end_ord,
-            )
+        query = TransactionSplit.query(
+            TransactionSplit.asset_id,
+            TransactionSplit.asset_quantity,
+            TransactionSplit.amount,
+        ).where(
+            TransactionSplit.asset_id.is_not(None),
+            TransactionSplit.date_ord >= start_ord,
+            TransactionSplit.date_ord <= end_ord,
         )
         if ids is not None:
             query = query.where(TransactionSplit.account_id.in_(ids))
 
         cost_basis: dict[int, Decimal] = defaultdict(Decimal)
         end_qty: dict[int, Decimal] = initial_qty.copy()
-        for a_id, qty, amount in query.yield_per(YIELD_PER):
-            a_id: int
-            qty: Decimal
-            amount: Decimal
+        for a_id, qty, amount in sql.yield_(query):
+            if TYPE_CHECKING:
+                # Enforced by query and SQL constraints
+                assert a_id is not None
+                assert qty is not None
             end_qty[a_id] += qty
             cost_basis[a_id] += amount
         a_ids = set(end_qty)
 
-        initial_price = Asset.get_value_all(s, start_ord, start_ord, ids=a_ids)
-        end_price = Asset.get_value_all(s, end_ord, end_ord, ids=a_ids)
+        initial_price = Asset.get_value_all(start_ord, start_ord, ids=a_ids)
+        end_price = Asset.get_value_all(end_ord, end_ord, ids=a_ids)
 
         profits: dict[int, Decimal] = defaultdict(Decimal)
         for a_id in a_ids:
@@ -707,23 +655,21 @@ class Account(Base):
             dict{Asset.id_: profit}
 
         """
-        s = obj_session(self)
-        return self.get_profit_by_asset_all(s, start_ord, end_ord, [self.id_])
+        return self.get_profit_by_asset_all(start_ord, end_ord, [self.id_])
 
     @classmethod
-    def ids(cls, s: orm.Session, category: AccountCategory) -> set[int]:
+    def ids(cls, category: AccountCategory) -> set[int]:
         """Get Account ids for a specific category.
 
         Args:
-            s: SQL session to use
             category: AccountCategory to filter
 
         Returns:
             set{Account.id_}
 
         """
-        query = s.query(Account.id_).where(Account.category == category)
-        return {acct_id for acct_id, in query.all()}
+        query = Account.query(Account.id_).where(Account.category == category)
+        return {acct_id for acct_id, in sql.yield_(query)}
 
     def do_include(self, date_ord: int) -> bool:
         """Test if account should be included for data.

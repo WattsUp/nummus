@@ -20,10 +20,9 @@ if TYPE_CHECKING:
 
 
 def test_empty(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
 ) -> None:
-
     c = UpdateAssets(empty_portfolio.path, None, no_bars=True)
     assert c.run() == 0
 
@@ -38,15 +37,14 @@ def test_empty(
 
 
 def test_one(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     today: datetime.date,
     empty_portfolio: Portfolio,
     transactions: list[Transaction],
     asset: Asset,
 ) -> None:
-    _ = transactions
-    with empty_portfolio.begin_session() as s:
-        s.query(Asset).where(Asset.category == AssetCategory.INDEX).delete()
+    with empty_portfolio.begin_session():
+        Asset.query().where(Asset.category == AssetCategory.INDEX).delete()
 
     c = UpdateAssets(empty_portfolio.path, None, no_bars=True)
     assert c.run() == 0
@@ -62,15 +60,15 @@ def test_one(
 
 
 def test_failed(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
     transactions: list[Transaction],
     asset: Asset,
 ) -> None:
-    _ = transactions
-    with empty_portfolio.begin_session() as s:
-        s.query(Asset).where(Asset.category == AssetCategory.INDEX).delete()
-        s.query(Asset).update({"ticker": "FAKE"})
+    with empty_portfolio.begin_session():
+        Asset.query().where(Asset.category == AssetCategory.INDEX).delete()
+        Asset.query().update({"ticker": "FAKE"})
+    asset.refresh()
 
     c = UpdateAssets(empty_portfolio.path, None, no_bars=True)
     assert c.run() != 0

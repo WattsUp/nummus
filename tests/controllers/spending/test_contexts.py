@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from nummus import sql
 from nummus.controllers import base, spending
 from nummus.models.account import Account
 from nummus.models.currency import DEFAULT_CURRENCY
@@ -13,12 +14,9 @@ from nummus.models.transaction_category import (
     TransactionCategory,
     TransactionCategoryGroup,
 )
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     import datetime
-
-    from sqlalchemy import orm
 
     from nummus.models.transaction import Transaction
 
@@ -48,7 +46,6 @@ if TYPE_CHECKING:
     ],
 )
 def test_data_query(
-    session: orm.Session,
     account: Account,
     transactions_spending: list[Transaction],
     categories: dict[str, int],
@@ -62,9 +59,7 @@ def test_data_query(
     is_income: bool,
     target: tuple[int, bool],
 ) -> None:
-    _ = transactions_spending
     dat_query = spending.data_query(
-        session,
         DEFAULT_CURRENCY,
         account.uri if include_account else None,
         period,
@@ -75,20 +70,18 @@ def test_data_query(
         is_income=is_income,
     )
     assert dat_query.any_filters == target[1]
-    assert query_count(dat_query.final_query) == target[0]
+    assert sql.count(dat_query.final_query) == target[0]
 
 
 def test_ctx_options(
     today: datetime.date,
-    session: orm.Session,
     account: Account,
     transactions: list[Transaction],
     categories: dict[str, int],
     labels: dict[str, int],
 ) -> None:
-    _ = transactions
     dat_query = spending.DataQuery(
-        session.query(TransactionSplit),
+        TransactionSplit.query(),
         {},
         any_filters=False,
     )
@@ -96,9 +89,9 @@ def test_ctx_options(
     ctx = spending.ctx_options(
         dat_query,
         today,
-        Account.map_name(session),
-        base.tranaction_category_groups(session),
-        Label.map_name(session),
+        Account.map_name(),
+        base.tranaction_category_groups(),
+        Label.map_name(),
     )
 
     assert ctx["options_account"] == [base.NamePair(account.uri, account.name)]
@@ -130,13 +123,12 @@ def test_ctx_options(
 
 def test_ctx_options_selected(
     today: datetime.date,
-    session: orm.Session,
     account: Account,
     categories: dict[str, int],
     labels: dict[str, int],
 ) -> None:
     dat_query = spending.DataQuery(
-        session.query(TransactionSplit),
+        TransactionSplit.query(),
         {},
         any_filters=False,
     )
@@ -144,9 +136,9 @@ def test_ctx_options_selected(
     ctx = spending.ctx_options(
         dat_query,
         today,
-        Account.map_name(session),
-        base.tranaction_category_groups(session),
-        Label.map_name(session),
+        Account.map_name(),
+        base.tranaction_category_groups(),
+        Label.map_name(),
         account.uri,
         TransactionCategory.id_to_uri(categories["other income"]),
         Label.id_to_uri(labels["engineer"]),
@@ -173,11 +165,8 @@ def test_ctx_options_selected(
 def test_ctx_chart_empty(
     today: datetime.date,
     account: Account,
-    session: orm.Session,
 ) -> None:
-    _ = account
     ctx, title = spending.ctx_chart(
-        session,
         today,
         selected_account=None,
         selected_category=None,
@@ -205,12 +194,9 @@ def test_ctx_chart_empty(
 
 def test_ctx_chart(
     today: datetime.date,
-    session: orm.Session,
     transactions_spending: list[Transaction],
 ) -> None:
-    _ = transactions_spending
     ctx, title = spending.ctx_chart(
-        session,
         today,
         None,
         None,

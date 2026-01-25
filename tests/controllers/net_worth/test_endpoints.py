@@ -23,9 +23,6 @@ def test_page(
     asset_valuation: AssetValuation,
     transactions: list[Transaction],
 ) -> None:
-    _ = asset_valuation
-    _ = transactions
-
     result, _ = web_client.GET("net_worth.page")
     assert "Net worth" in result
     assert "Assets" in result
@@ -39,10 +36,6 @@ def test_chart(
     asset_valuation: AssetValuation,
     transactions: list[Transaction],
 ) -> None:
-    _ = account
-    _ = asset_valuation
-    _ = transactions
-
     result, headers = web_client.GET("net_worth.chart")
     assert headers["HX-Push-URL"] == web_client.url_for(
         "net_worth.page",
@@ -57,10 +50,6 @@ def test_dashboard(
     asset_valuation: AssetValuation,
     transactions: list[Transaction],
 ) -> None:
-    _ = account
-    _ = asset_valuation
-    _ = transactions
-
     result, _ = web_client.GET("net_worth.dashboard")
     assert "Net worth" in result
     assert "JSON.parse" in result

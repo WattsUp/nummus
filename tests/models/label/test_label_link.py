@@ -2,18 +2,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from nummus import sql
 from nummus.models.label import Label, LabelLink
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
-
-    from sqlalchemy import orm
-
     from nummus.models.transaction import Transaction
 
 
 def test_init_properties(
-    session: orm.Session,
     labels: dict[str, int],
     transactions: list[Transaction],
 ) -> None:
@@ -22,47 +18,38 @@ def test_init_properties(
         "t_split_id": transactions[-1].splits[0].id_,
     }
 
-    link = LabelLink(**d)
-    session.add(link)
-    session.commit()
+    link = LabelLink.create(**d)
 
     assert link.label_id == d["label_id"]
     assert link.t_split_id == d["t_split_id"]
 
 
 def test_add_links_delete(
-    session: orm.Session,
     transactions: list[Transaction],
     labels: dict[str, int],
 ) -> None:
     new_labels: dict[int, set[str]] = {txn.splits[0].id_: set() for txn in transactions}
 
-    LabelLink.add_links(session, new_labels)
+    LabelLink.add_links(new_labels)
 
-    n = query_count(session.query(LabelLink))
-    assert n == 0
-
-    n = query_count(session.query(Label))
-    assert n == len(labels)
+    assert not sql.any_(LabelLink.query())
+    assert sql.count(Label.query()) == len(labels)
 
 
 def test_add_links(
-    session: orm.Session,
     transactions: list[Transaction],
     rand_str: str,
     labels: dict[str, int],
 ) -> None:
     new_labels: dict[int, set[str]] = {
-        txn.splits[0].id_: {rand_str} for txn in transactions
+        txn.splits[0].id_: {rand_str, "engineer"} for txn in transactions
     }
 
-    LabelLink.add_links(session, new_labels)
+    LabelLink.add_links(new_labels)
 
-    n = query_count(session.query(LabelLink))
-    assert n == len(transactions)
+    assert sql.count(LabelLink.query()) == len(transactions) * 2
+    assert sql.count(Label.query()) == len(labels) + 1
 
-    n = query_count(session.query(Label))
-    assert n == len(labels) + 1
-
-    label = session.query(Label).where(Label.id_.not_in(labels.values())).one()
+    query = Label.query().where(Label.id_.not_in(labels.values()))
+    label = sql.one(query)
     assert label.name == rand_str

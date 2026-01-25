@@ -42,7 +42,7 @@ def test_unlock_non_existant(empty_portfolio: Portfolio) -> None:
 
 
 def test_unlock_successful(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
 ) -> None:
     args = ["--portfolio", str(empty_portfolio.path), "unlock"]

@@ -4,12 +4,11 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from nummus import sql
 from nummus.controllers import base
 from nummus.models.label import Label, LabelLink
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
-    from sqlalchemy import orm
 
     from nummus.models.transaction import Transaction
     from tests.controllers.conftest import WebClient
@@ -53,10 +52,8 @@ def test_label_get(web_client: WebClient, labels: dict[str, int]) -> None:
 def test_label_delete(
     web_client: WebClient,
     labels: dict[str, int],
-    session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     uri = Label.id_to_uri(labels["engineer"])
 
     result, headers = web_client.DELETE(
@@ -66,14 +63,12 @@ def test_label_delete(
     assert "Deleted label engineer" in result
     assert "label" in headers["HX-Trigger"]
 
-    n = query_count(session.query(LabelLink))
-    assert n == 0
+    assert not sql.any_(LabelLink.query())
 
 
 def test_label_edit(
     web_client: WebClient,
     labels: dict[str, int],
-    session: orm.Session,
 ) -> None:
     uri = Label.id_to_uri(labels["engineer"])
 
@@ -85,7 +80,7 @@ def test_label_edit(
     assert "All changes saved" in result
     assert "label" in headers["HX-Trigger"]
 
-    label = session.query(Label).where(Label.name == "new label").one()
+    label = sql.one(Label.query().where(Label.name == "new label"))
     assert label.id_ == labels["engineer"]
 
 

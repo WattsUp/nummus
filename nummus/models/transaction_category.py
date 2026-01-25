@@ -7,6 +7,7 @@ from typing import NamedTuple, override
 from sqlalchemy import CheckConstraint, ForeignKey, orm, UniqueConstraint
 
 from nummus import exceptions as exc
+from nummus import sql
 from nummus.models.base import (
     Base,
     BaseEnum,
@@ -16,7 +17,6 @@ from nummus.models.base import (
     SQLEnum,
     string_column_args,
 )
-from nummus.models.utils import query_to_dict
 
 
 class TransactionCategoryGroup(BaseEnum):
@@ -127,11 +127,8 @@ class TransactionCategory(Base):
         return field
 
     @staticmethod
-    def add_default(s: orm.Session) -> dict[str, TransactionCategory]:
+    def add_default() -> dict[str, TransactionCategory]:
         """Create default transaction categories.
-
-        Args:
-            s: SQL session to use
 
         Returns:
             Dictionary {name: category}
@@ -232,7 +229,7 @@ class TransactionCategory(Base):
 
         for group, categories in groups.items():
             for name, spec in categories.items():
-                cat = TransactionCategory(
+                cat = TransactionCategory.create(
                     emoji_name=name,
                     group=group,
                     locked=spec.locked,
@@ -240,7 +237,6 @@ class TransactionCategory(Base):
                     asset_linked=spec.asset_linked,
                     essential_spending=spec.essential_spending,
                 )
-                s.add(cat)
                 d[cat.name] = cat
         return d
 
@@ -248,14 +244,12 @@ class TransactionCategory(Base):
     @classmethod
     def map_name(
         cls,
-        s: orm.Session,
         *,
         no_asset_linked: bool = False,
     ) -> dict[int, str]:
         """Get mapping between id and names.
 
         Args:
-            s: SQL session to use
             no_asset_linked: True will not include asset_linked categories
 
         Returns:
@@ -265,29 +259,20 @@ class TransactionCategory(Base):
             KeyError if model does not have name property
 
         """
-        query = (
-            s.query(TransactionCategory)
-            .with_entities(
-                TransactionCategory.id_,
-                TransactionCategory.name,
-            )
-            .order_by(TransactionCategory.name)
-        )
+        query = cls.query(cls.id_, cls.name).order_by(cls.name)
         if no_asset_linked:
-            query = query.where(TransactionCategory.asset_linked.is_(False))
-        return query_to_dict(query)
+            query = query.where(cls.asset_linked.is_(False))
+        return sql.to_dict(query)
 
     @classmethod
     def map_name_emoji(
         cls,
-        s: orm.Session,
         *,
         no_asset_linked: bool = False,
     ) -> dict[int, str]:
         """Get mapping between id and names with emojis.
 
         Args:
-            s: SQL session to use
             no_asset_linked: True will not include asset_linked categories
 
         Returns:
@@ -297,24 +282,16 @@ class TransactionCategory(Base):
             KeyError if model does not have name property
 
         """
-        query = (
-            s.query(TransactionCategory)
-            .with_entities(
-                TransactionCategory.id_,
-                TransactionCategory.emoji_name,
-            )
-            .order_by(TransactionCategory.name)
-        )
+        query = cls.query(cls.id_, cls.emoji_name).order_by(cls.name)
         if no_asset_linked:
-            query = query.where(TransactionCategory.asset_linked.is_(False))
-        return query_to_dict(query)
+            query = query.where(cls.asset_linked.is_(False))
+        return sql.to_dict(query)
 
     @classmethod
-    def _get_protected_id(cls, s: orm.Session, name: str) -> tuple[int, str]:
+    def _get_protected_id(cls, name: str) -> tuple[int, str]:
         """Get the ID and URI of a protected category.
 
         Args:
-            s: SQL session to use
             name: Name of protected category to fetch
 
         Returns:
@@ -325,23 +302,16 @@ class TransactionCategory(Base):
 
         """
         try:
-            id_ = (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == name)
-                .one()[0]
-            )
+            id_ = sql.one(cls.query(cls.id_).where(TransactionCategory.name == name))
         except exc.NoResultFound as e:
             msg = f"Category {name} not found"
             raise exc.ProtectedObjectNotFoundError(msg) from e
         return id_, cls.id_to_uri(id_)
 
     @classmethod
-    def uncategorized(cls, s: orm.Session) -> tuple[int, str]:
+    def uncategorized(cls) -> tuple[int, str]:
         """Get the ID and URI of the uncategorized category.
 
-        Args:
-            s: SQL session to use
-
         Returns:
             tuple(id_, URI)
 
@@ -349,15 +319,12 @@ class TransactionCategory(Base):
             ProtectedObjectNotFound if not found
 
         """
-        return cls._get_protected_id(s, "uncategorized")
+        return cls._get_protected_id("uncategorized")
 
     @classmethod
-    def emergency_fund(cls, s: orm.Session) -> tuple[int, str]:
+    def emergency_fund(cls) -> tuple[int, str]:
         """Get the ID and URI of the emergency fund category.
 
-        Args:
-            s: SQL session to use
-
         Returns:
             tuple(id_, URI)
 
@@ -365,14 +332,11 @@ class TransactionCategory(Base):
             ProtectedObjectNotFound if not found
 
         """
-        return cls._get_protected_id(s, "emergency fund")
+        return cls._get_protected_id("emergency fund")
 
     @classmethod
-    def securities_traded(cls, s: orm.Session) -> tuple[int, str]:
+    def securities_traded(cls) -> tuple[int, str]:
         """Get the ID and URI of the securities traded category.
-
-        Args:
-            s: SQL session to use
 
         Returns:
             tuple(id_, URI)
@@ -381,4 +345,4 @@ class TransactionCategory(Base):
             ProtectedObjectNotFound if not found
 
         """
-        return cls._get_protected_id(s, "securities traded")
+        return cls._get_protected_id("securities traded")

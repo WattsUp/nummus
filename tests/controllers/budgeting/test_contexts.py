@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from nummus import utils
+from nummus import sql, utils
 from nummus.controllers import budgeting
 from nummus.models.budget import (
     BudgetAssignment,
@@ -33,18 +33,13 @@ if TYPE_CHECKING:
 def test_ctx_sidebar_global(
     today: datetime.date,
     month: datetime.date,
-    session: orm.Session,
     transactions_spending: list[Transaction],
     budget_assignments: list[BudgetAssignment],
     budget_target: Target,
 ) -> None:
-    _ = transactions_spending
-    _ = budget_assignments
-    _ = budget_target
-    data = BudgetAssignment.get_monthly_available(session, month)
+    data = BudgetAssignment.get_monthly_available(month)
 
     ctx = budgeting.ctx_sidebar(
-        session,
         today,
         month,
         data.categories,
@@ -52,11 +47,11 @@ def test_ctx_sidebar_global(
         None,
     )
 
-    query = session.query(TransactionCategory).where(
+    query = TransactionCategory.query().where(
         TransactionCategory.name.not_in({"emergency fund"}),
         TransactionCategory.group != TransactionCategoryGroup.INCOME,
     )
-    categories = {t_cat.uri: t_cat.emoji_name for t_cat in query.all()}
+    categories = {t_cat.uri: t_cat.emoji_name for t_cat in sql.yield_(query)}
 
     target: budgeting.SidebarContext = {
         "uri": None,
@@ -77,18 +72,14 @@ def test_ctx_sidebar_global(
 def test_ctx_sidebar_no_target(
     today: datetime.date,
     month: datetime.date,
-    session: orm.Session,
     transactions_spending: list[Transaction],
     budget_assignments: list[BudgetAssignment],
     categories: dict[str, int],
 ) -> None:
-    _ = transactions_spending
-    _ = budget_assignments
-    data = BudgetAssignment.get_monthly_available(session, month)
+    data = BudgetAssignment.get_monthly_available(month)
     uri = TransactionCategory.id_to_uri(categories["emergency fund"])
 
     ctx = budgeting.ctx_sidebar(
-        session,
         today,
         month,
         data.categories,
@@ -113,19 +104,15 @@ def test_ctx_sidebar_no_target(
 def test_ctx_sidebar(
     today: datetime.date,
     month: datetime.date,
-    session: orm.Session,
     transactions_spending: list[Transaction],
     budget_assignments: list[BudgetAssignment],
     budget_target: Target,
 ) -> None:
-    _ = transactions_spending
-    _ = budget_assignments
-    data = BudgetAssignment.get_monthly_available(session, month)
+    data = BudgetAssignment.get_monthly_available(month)
     data_cat = data.categories[budget_target.category_id]
     uri = TransactionCategory.id_to_uri(budget_target.category_id)
 
     ctx = budgeting.ctx_sidebar(
-        session,
         today,
         month,
         data.categories,
@@ -191,8 +178,8 @@ def test_ctx_target_once(
     budget_target: Target,
 ) -> None:
     due_date = utils.date_add_months(month, 8)
-    budget_target.due_date_ord = due_date.toordinal()
-    session.commit()
+    with session.begin_nested():
+        budget_target.due_date_ord = due_date.toordinal()
 
     ctx = budgeting.ctx_target(
         budget_target,
@@ -226,11 +213,11 @@ def test_ctx_target_weekly_refil(
     budget_target: Target,
 ) -> None:
     month = utils.date_add_months(month, 1)
-    budget_target.period = TargetPeriod.WEEK
-    budget_target.type_ = TargetType.REFILL
-    budget_target.due_date_ord = today.toordinal()
-    budget_target.repeat_every = 1
-    session.commit()
+    with session.begin_nested():
+        budget_target.period = TargetPeriod.WEEK
+        budget_target.type_ = TargetType.REFILL
+        budget_target.due_date_ord = today.toordinal()
+        budget_target.repeat_every = 1
     n_weekdays = utils.weekdays_in_month(today.weekday(), month)
 
     ctx = budgeting.ctx_target(
@@ -264,11 +251,11 @@ def test_ctx_target_weekly_accumulate(
     session: orm.Session,
     budget_target: Target,
 ) -> None:
-    budget_target.period = TargetPeriod.WEEK
-    budget_target.type_ = TargetType.ACCUMULATE
-    budget_target.due_date_ord = today.toordinal()
-    budget_target.repeat_every = 1
-    session.commit()
+    with session.begin_nested():
+        budget_target.period = TargetPeriod.WEEK
+        budget_target.type_ = TargetType.ACCUMULATE
+        budget_target.due_date_ord = today.toordinal()
+        budget_target.repeat_every = 1
     n_weekdays = utils.weekdays_in_month(today.weekday(), month)
 
     ctx = budgeting.ctx_target(
@@ -303,11 +290,11 @@ def test_ctx_target_monthly_refil(
     budget_target: Target,
 ) -> None:
     month = utils.date_add_months(month, 1)
-    budget_target.period = TargetPeriod.MONTH
-    budget_target.type_ = TargetType.REFILL
-    budget_target.due_date_ord = today.toordinal()
-    budget_target.repeat_every = 2
-    session.commit()
+    with session.begin_nested():
+        budget_target.period = TargetPeriod.MONTH
+        budget_target.type_ = TargetType.REFILL
+        budget_target.due_date_ord = today.toordinal()
+        budget_target.repeat_every = 2
 
     ctx = budgeting.ctx_target(
         budget_target,
@@ -340,11 +327,11 @@ def test_ctx_target_monthly_accumulate(
     session: orm.Session,
     budget_target: Target,
 ) -> None:
-    budget_target.period = TargetPeriod.MONTH
-    budget_target.type_ = TargetType.ACCUMULATE
-    budget_target.due_date_ord = today.toordinal()
-    budget_target.repeat_every = 1
-    session.commit()
+    with session.begin_nested():
+        budget_target.period = TargetPeriod.MONTH
+        budget_target.type_ = TargetType.ACCUMULATE
+        budget_target.due_date_ord = today.toordinal()
+        budget_target.repeat_every = 1
 
     ctx = budgeting.ctx_target(
         budget_target,
@@ -374,11 +361,9 @@ def test_ctx_target_monthly_accumulate(
 def test_ctx_budget_empty(
     today: datetime.date,
     month: datetime.date,
-    session: orm.Session,
 ) -> None:
-    data = BudgetAssignment.get_monthly_available(session, month)
+    data = BudgetAssignment.get_monthly_available(month)
     ctx, title = budgeting.ctx_budget(
-        session,
         today,
         month,
         data.categories,
@@ -419,21 +404,18 @@ def test_ctx_budget(
     budget_target: Target,
     categories: dict[str, int],
 ) -> None:
-    session.query(TransactionCategory).where(
-        TransactionCategory.name == "groceries",
-    ).update(
-        {
-            TransactionCategory.budget_group_id: budget_group.id_,
-            TransactionCategory.budget_position: 0,
-        },
-    )
-    session.commit()
-    _ = transactions_spending
-    _ = budget_assignments
-    data = BudgetAssignment.get_monthly_available(session, month)
+    with session.begin_nested():
+        TransactionCategory.query().where(
+            TransactionCategory.name == "groceries",
+        ).update(
+            {
+                TransactionCategory.budget_group_id: budget_group.id_,
+                TransactionCategory.budget_position: 0,
+            },
+        )
+    data = BudgetAssignment.get_monthly_available(month)
 
     ctx, title = budgeting.ctx_budget(
-        session,
         today,
         month,
         data.categories,

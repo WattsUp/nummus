@@ -3,13 +3,11 @@ from __future__ import annotations
 import shutil
 from typing import TYPE_CHECKING
 
+from nummus import sql
 from nummus.migrations.v0_13 import MigratorV0_13
 from nummus.models.label import Label, LabelLink
 from nummus.models.transaction import TransactionSplit
-from nummus.models.utils import (
-    dump_table_configs,
-    query_count,
-)
+from nummus.models.utils import dump_table_configs
 from nummus.portfolio import Portfolio
 
 if TYPE_CHECKING:
@@ -27,17 +25,15 @@ def test_migrate(tmp_path: Path, data_path: Path) -> None:
     target = []
     assert result == target
 
-    with p.begin_session() as s:
-        result = "\n".join(dump_table_configs(s, TransactionSplit))
+    with p.begin_session():
+        result = "\n".join(dump_table_configs(TransactionSplit))
         assert "label" not in result
 
-        result = "\n".join(dump_table_configs(s, Label))
+        result = "\n".join(dump_table_configs(Label))
         assert "name" in result
 
-        n = query_count(s.query(Label))
-        assert n == 1
+        assert sql.count(Label.query()) == 1
 
-        result = "\n".join(dump_table_configs(s, LabelLink))
+        result = "\n".join(dump_table_configs(LabelLink))
         assert "label_id" in result
-        n = query_count(s.query(LabelLink))
-        assert n == 100
+        assert sql.count(LabelLink.query()) == 100

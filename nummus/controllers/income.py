@@ -17,10 +17,9 @@ def page() -> flask.Response:
     """
     args = flask.request.args
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         today = base.today_client()
         ctx, title = spending.ctx_chart(
-            s,
             today,
             args.get("account"),
             args.get("category"),
@@ -48,10 +47,9 @@ def chart() -> flask.Response:
     """
     args = flask.request.args
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         today = base.today_client()
         ctx, title = spending.ctx_chart(
-            s,
             today,
             args.get("account"),
             args.get("category"),
@@ -89,10 +87,9 @@ def dashboard() -> str:
 
     """
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         today = base.today_client()
         ctx, _ = spending.ctx_chart(
-            s,
             today,
             None,
             None,

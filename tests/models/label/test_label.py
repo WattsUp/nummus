@@ -1,23 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import pytest
 
 from nummus import exceptions as exc
 from nummus.models.label import Label
 
-if TYPE_CHECKING:
 
-    from sqlalchemy import orm
-
-
-def test_init_properties(session: orm.Session, rand_str: str) -> None:
+def test_init_properties(rand_str: str) -> None:
     d = {"name": rand_str}
 
-    label = Label(**d)
-    session.add(label)
-    session.commit()
+    label = Label.create(**d)
 
     assert label.name == d["name"]
 

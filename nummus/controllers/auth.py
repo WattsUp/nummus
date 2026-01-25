@@ -124,18 +124,18 @@ def login() -> str | werkzeug.Response:
     if not password:
         return base.error("Password must not be blank")
 
-    with p.begin_session() as s:
-        expected_encoded = Config.fetch(s, ConfigKey.WEB_KEY)
+    with p.begin_session():
+        expected_encoded = Config.fetch(ConfigKey.WEB_KEY)
 
-        expected = p.decrypt(expected_encoded)
-        if password.encode() != expected:
-            return base.error("Bad password")
+    expected = p.decrypt(expected_encoded)
+    if password.encode() != expected:
+        return base.error("Bad password")
 
-        web_user = WebUser()
-        flask_login.login_user(web_user, remember=True)
+    web_user = WebUser()
+    flask_login.login_user(web_user, remember=True)
 
-        next_url = form.get("next")
-        return flask.redirect(next_url or flask.url_for("common.page_dashboard"))
+    next_url = form.get("next")
+    return flask.redirect(next_url or flask.url_for("common.page_dashboard"))
 
 
 def logout() -> str | werkzeug.Response:

@@ -7,11 +7,10 @@ from collections import defaultdict
 from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
-from nummus import web
+from nummus import sql, web
 from nummus.controllers import base
 from nummus.models.account import Account
 from nummus.models.asset import Asset, AssetSector
-from nummus.models.base import YIELD_PER
 from nummus.models.config import Config
 from nummus.models.currency import CURRENCY_FORMATS
 
@@ -19,7 +18,6 @@ if TYPE_CHECKING:
     import datetime
 
     import flask
-    from sqlalchemy import orm
 
     from nummus.models.asset import AssetCategory, USSector
     from nummus.models.currency import CurrencyFormat
@@ -76,19 +74,18 @@ def page() -> flask.Response:
 
     """
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         return base.page(
             "allocation/page.jinja",
             title="Asset allocation",
-            allocation=ctx_allocation(s, base.today_client()),
+            allocation=ctx_allocation(base.today_client()),
         )
 
 
-def ctx_allocation(s: orm.Session, today: datetime.date) -> AllocationContext:
+def ctx_allocation(today: datetime.date) -> AllocationContext:
     """Get the context to build the allocation chart.
 
     Args:
-        s: SQL session to use
         today: Today's date
 
     Returns:
@@ -98,7 +95,7 @@ def ctx_allocation(s: orm.Session, today: datetime.date) -> AllocationContext:
     today_ord = today.toordinal()
 
     asset_qtys: dict[int, Decimal] = defaultdict(Decimal)
-    acct_qtys = Account.get_asset_qty_all(s, today_ord, today_ord)
+    acct_qtys = Account.get_asset_qty_all(today_ord, today_ord)
     for acct_qty in acct_qtys.values():
         for a_id, values in acct_qty.items():
             asset_qtys[a_id] += values[0]
@@ -107,7 +104,6 @@ def ctx_allocation(s: orm.Session, today: datetime.date) -> AllocationContext:
     asset_prices = {
         a_id: values[0]
         for a_id, values in Asset.get_value_all(
-            s,
             today_ord,
             today_ord,
             ids=set(asset_qtys),
@@ -117,13 +113,13 @@ def ctx_allocation(s: orm.Session, today: datetime.date) -> AllocationContext:
     asset_values = {a_id: qty * asset_prices[a_id] for a_id, qty in asset_qtys.items()}
 
     asset_sectors: dict[int, dict[USSector, Decimal]] = defaultdict(dict)
-    for a_sector in s.query(AssetSector).yield_per(YIELD_PER):
+    for a_sector in sql.yield_(AssetSector.query()):
         asset_sectors[a_sector.asset_id][a_sector.sector] = a_sector.weight
 
     assets_by_category: dict[AssetCategory, list[AssetContext]] = defaultdict(list)
     assets_by_sector: dict[USSector, list[AssetContext]] = defaultdict(list)
-    query = s.query(Asset).where(Asset.id_.in_(asset_qtys)).order_by(Asset.name)
-    for asset in query.yield_per(YIELD_PER):
+    query = Asset.query().where(Asset.id_.in_(asset_qtys)).order_by(Asset.name)
+    for asset in sql.yield_(query):
         qty = asset_qtys[asset.id_]
         value = asset_values[asset.id_]
 
@@ -174,7 +170,7 @@ def ctx_allocation(s: orm.Session, today: datetime.date) -> AllocationContext:
             for a in assets
         ]
 
-    cf = CURRENCY_FORMATS[Config.base_currency(s)]
+    cf = CURRENCY_FORMATS[Config.base_currency()]
 
     return {
         "categories": sorted(categories, key=operator.itemgetter("name")),

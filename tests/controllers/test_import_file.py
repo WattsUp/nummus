@@ -48,7 +48,7 @@ def test_no_file(web_client: WebClient) -> None:
     ],
 )
 def test_error(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     web_client: WebClient,
     data_path: Path,
     file: str,
@@ -56,7 +56,6 @@ def test_error(
     traceback: bool,
     account: Account,
 ) -> None:
-    _ = account
     path = data_path / file
     result, _ = web_client.POST(
         "import_file.import_file",
@@ -78,8 +77,6 @@ def test_import_file(
     account: Account,
     account_investments: Account,
 ) -> None:
-    _ = account
-    _ = account_investments
     path = data_path / "transactions_required.csv"
     result, headers = web_client.POST(
         "import_file.import_file",
@@ -96,8 +93,6 @@ def test_duplicate(
     account: Account,
     account_investments: Account,
 ) -> None:
-    _ = account
-    _ = account_investments
     path = data_path / "transactions_required.csv"
     web_client.POST(
         "import_file.import_file",
@@ -120,8 +115,6 @@ def test_duplicate_force(
     account: Account,
     account_investments: Account,
 ) -> None:
-    _ = account
-    _ = account_investments
     path = data_path / "transactions_required.csv"
     web_client.POST(
         "import_file.import_file",

@@ -5,19 +5,15 @@ from __future__ import annotations
 import datetime
 import operator
 from collections import defaultdict
-from typing import TYPE_CHECKING, TypedDict
+from typing import TypedDict
 
 import flask
 
-from nummus import web
+from nummus import sql, web
 from nummus.controllers import base
 from nummus.health_checks.top import HEALTH_CHECKS
-from nummus.models.base import YIELD_PER
 from nummus.models.config import Config, ConfigKey
 from nummus.models.health_checks import HealthCheckIssue
-
-if TYPE_CHECKING:
-    from sqlalchemy import orm
 
 
 class HealthContext(TypedDict):
@@ -45,11 +41,11 @@ def page() -> flask.Response:
 
     """
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         return base.page(
             "health/page.jinja",
             title="Health",
-            ctx=ctx_checks(s, run=False),
+            ctx=ctx_checks(run=False),
         )
 
 
@@ -61,10 +57,10 @@ def refresh() -> str:
 
     """
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         return flask.render_template(
             "health/checks.jinja",
-            ctx=ctx_checks(s, run=True),
+            ctx=ctx_checks(run=True),
             include_oob=True,
         )
 
@@ -80,12 +76,12 @@ def ignore(uri: str) -> str:
 
     """
     p = web.portfolio
-    with p.begin_session() as s:
-        c = base.find(s, HealthCheckIssue, uri)
+    with p.begin_session():
+        c = base.find(HealthCheckIssue, uri)
         c.ignore = True
         name = c.check
 
-        checks = ctx_checks(s, run=False)["checks"]
+        checks = ctx_checks(run=False)["checks"]
 
     return flask.render_template(
         "health/check-row.jinja",
@@ -94,11 +90,10 @@ def ignore(uri: str) -> str:
     )
 
 
-def ctx_checks(s: orm.Session, *, run: bool) -> HealthContext:
+def ctx_checks(*, run: bool) -> HealthContext:
     """Get the context to build the health checks.
 
     Args:
-        s: SQL session to use
         run: True will rerun health checks
 
     Returns:
@@ -109,17 +104,17 @@ def ctx_checks(s: orm.Session, *, run: bool) -> HealthContext:
 
     issues: dict[str, dict[str, str]] = defaultdict(dict)
     if run:
-        Config.set_(s, ConfigKey.LAST_HEALTH_CHECK_TS, utc_now.isoformat())
+        Config.set_(ConfigKey.LAST_HEALTH_CHECK_TS, utc_now.isoformat())
         last_update = utc_now
     else:
-        last_update_str = Config.fetch(s, ConfigKey.LAST_HEALTH_CHECK_TS, no_raise=True)
+        last_update_str = Config.fetch(ConfigKey.LAST_HEALTH_CHECK_TS, no_raise=True)
         last_update = (
             None
             if last_update_str is None
             else datetime.datetime.fromisoformat(last_update_str)
         )
-        query = s.query(HealthCheckIssue).where(HealthCheckIssue.ignore.is_(False))
-        for i in query.yield_per(YIELD_PER):
+        query = HealthCheckIssue.query().where(HealthCheckIssue.ignore.is_(False))
+        for i in sql.yield_(query):
             issues[i.check][i.uri] = i.msg
 
     checks: list[HealthCheckContext] = []
@@ -128,7 +123,7 @@ def ctx_checks(s: orm.Session, *, run: bool) -> HealthContext:
 
         if run:
             c = check_type()
-            c.test(s)
+            c.test()
             c_issues = c.issues
         else:
             c_issues = issues[name]

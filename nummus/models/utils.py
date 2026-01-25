@@ -9,69 +9,25 @@ import sqlalchemy
 from sqlalchemy import (
     CheckConstraint,
     ForeignKeyConstraint,
-    func,
-    orm,
     UniqueConstraint,
 )
 
-from nummus import exceptions as exc
-from nummus.models.base import YIELD_PER
+from nummus import sql
 
 if TYPE_CHECKING:
     from sqlalchemy import (
         Constraint,
+        orm,
     )
 
     from nummus.models.base import Base
 
 
-def query_to_dict[K, V](query: orm.query.RowReturningQuery[tuple[K, V]]) -> dict[K, V]:
-    """Fetch results from query and return a dict.
-
-    Args:
-        query: Query that returns 2 columns
-
-    Returns:
-        dict{first column: second column}
-
-    """
-    # pyright is happier with comprehension
-    # ruff is happier with dict()
-    return dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
-
-
-def query_count(query: orm.Query) -> int:
-    """Count the number of result a query will return.
-
-    Args:
-        query: Session query to execute
-
-    Returns:
-        Number of instances query will return upon execution
-
-    Raises:
-        TypeError: if query.statement is not a Select
-
-    """
-    # From here:
-    # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
-    col_one = sqlalchemy.literal_column("1")
-    stmt = query.statement
-    if not isinstance(stmt, sqlalchemy.Select):
-        raise TypeError
-    counter = stmt.with_only_columns(
-        func.count(col_one),
-        maintain_column_froms=True,
-    )
-    counter = counter.order_by(None)
-    return query.session.execute(counter).scalar() or 0
-
-
-def paginate(
-    query: orm.Query[Base],
+def paginate[T: Base](
+    query: orm.Query[T],
     limit: int,
     offset: int,
-) -> tuple[list[Base], int, int | None]:
+) -> tuple[list[T], int, int | None]:
     """Paginate query response for smaller results.
 
     Args:
@@ -87,12 +43,12 @@ def paginate(
     offset = max(0, offset)
 
     # Get amount number from filters
-    count = query_count(query)
+    count = sql.count(query)
 
     # Apply limiting, and offset
     query = query.limit(limit).offset(offset)
 
-    results = query.all()
+    results = list(sql.yield_(query))
 
     # Compute next_offset
     n_current = len(results)
@@ -102,14 +58,10 @@ def paginate(
     return results, count, next_offset
 
 
-def dump_table_configs(
-    s: orm.Session,
-    model: type[Base],
-) -> list[str]:
+def dump_table_configs(model: type[Base]) -> list[str]:
     """Get the table configs (columns and constraints) and print.
 
     Args:
-        s: SQL session to use
         model: Filter to specific table
 
     Returns:
@@ -123,26 +75,26 @@ def dump_table_configs(
             type='table'
             AND name='{model.__tablename__}'
         """.strip()  # noqa: S608
-    result = s.execute(sqlalchemy.text(stmt)).one()[0]
-    result: str
+    query: orm.query.RowReturningQuery[tuple[str]] = model.session().execute(  # type: ignore[attr-defined]
+        sqlalchemy.text(stmt),
+    )
+    result: str = sql.one(query)
     return [s.replace("\t", "    ") for s in result.splitlines()]
 
 
 def get_constraints(
-    s: orm.Session,
     model: type[Base],
 ) -> list[tuple[type[Constraint], str]]:
     """Get constraints of a table.
 
     Args:
-        s: SQL session to use
         model: Filter to specific table
 
     Returns:
         list[(Constraint type, construction text)]
 
     """
-    config = "\n".join(dump_table_configs(s, model))
+    config = "\n".join(dump_table_configs(model))
     constraints: list[tuple[type[Constraint], str]] = []
 
     re_unique = re.compile(r"UNIQUE \(([^\)]+)\)")
@@ -163,36 +115,15 @@ def get_constraints(
     return constraints
 
 
-def obj_session(m: Base) -> orm.Session:
-    """Get the SQL session for an object.
-
-    Args:
-        m: Model to get from
-
-    Returns:
-        Session
-
-    Raises:
-        UnboundExecutionError: if model is unbound
-
-    """
-    s = orm.object_session(m)
-    if s is None:
-        raise exc.UnboundExecutionError
-    return s
-
-
-def update_rows(
-    s: orm.Session,
-    cls: type[Base],
-    query: orm.Query,
+def update_rows[T: Base](
+    cls: type[T],
+    query: orm.Query[T],
     id_key: str,
     updates: dict[object, dict[str, object]],
 ) -> None:
     """Update many rows, reusing leftovers when possible.
 
     Args:
-        s: SQL session to use
         cls: Type of model to update
         query: Query to fetch all applicable models
         id_key: Name of property used for identification
@@ -202,7 +133,7 @@ def update_rows(
     updates = updates.copy()
     leftovers: list[Base] = []
 
-    for m in query.yield_per(YIELD_PER):
+    for m in sql.yield_(query):
         update = updates.pop(getattr(m, id_key), None)
         if update is None:
             # No longer needed
@@ -210,6 +141,8 @@ def update_rows(
         else:
             for k, v in update.items():
                 setattr(m, k, v)
+
+    s = cls.session()
 
     # Add any missing ones
     for id_, update in updates.items():
@@ -219,24 +152,21 @@ def update_rows(
             for k, v in update.items():
                 setattr(m, k, v)
         else:
-            m = cls(**{id_key: id_, **update})
-            s.add(m)
+            cls.create(**{id_key: id_, **update})
 
     # Delete any leftovers
     for m in leftovers:
         s.delete(m)
 
 
-def update_rows_list(
-    s: orm.Session,
-    cls: type[Base],
-    query: orm.Query,
+def update_rows_list[T: Base](
+    cls: type[T],
+    query: orm.Query[T],
     updates: list[dict[str, object]],
 ) -> list[int]:
     """Update many rows, reusing leftovers when possible.
 
     Args:
-        s: SQL session to use
         cls: Type of model to update
         query: Query to fetch all applicable models
         updates: list[{parameter: value}]
@@ -250,7 +180,7 @@ def update_rows_list(
     updates = updates.copy()
     leftovers: list[Base] = []
 
-    for m in query.yield_per(YIELD_PER):
+    for m in sql.yield_(query):
         if len(updates) == 0:
             # No longer needed
             leftovers.append(m)
@@ -259,6 +189,8 @@ def update_rows_list(
             for k, v in update.items():
                 setattr(m, k, v)
             ids.append(m.id_)
+
+    s = cls.session()
 
     to_add = [cls(**update) for update in updates]
     s.add_all(to_add)
@@ -271,17 +203,3 @@ def update_rows_list(
     ids.extend(m.id_ for m in to_add)
 
     return ids
-
-
-def one_or_none[T](query: orm.Query[T]) -> T | None:
-    """Return one result.
-
-    Returns:
-        One result
-        If no results or multiple, return None
-
-    """
-    try:
-        return query.one_or_none()
-    except (exc.NoResultFound, exc.MultipleResultsFound):
-        return None

@@ -54,8 +54,8 @@ class Migrate(Command):
         # Back up Portfolio
         _, tar_ver = p.backup()
 
-        with p.begin_session() as s:
-            v_db = Config.db_version(s)
+        with p.begin_session():
+            v_db = Config.db_version()
 
         any_migrated = False
         try:
@@ -78,13 +78,13 @@ class Migrate(Command):
                 m.migrate(p)  # no comments
                 print(f"{Fore.GREEN}Portfolio model schemas updated")
 
-            with p.begin_session() as s:
+            with p.begin_session():
                 v = max(
                     Version(__version__),
                     *[m.min_version() for m in MIGRATORS],
                 )
 
-                Config.set_(s, ConfigKey.VERSION, str(v))
+                Config.set_(ConfigKey.VERSION, str(v))
         except Exception:  # pragma: no cover
             # No immediate exception thrown, can't easily test
             portfolio.Portfolio.restore(p, tar_ver=tar_ver)

@@ -10,12 +10,10 @@ from decimal import Decimal
 from typing import NamedTuple, NotRequired, TYPE_CHECKING, TypedDict
 
 import flask
-from sqlalchemy import sql
 
 from nummus import exceptions as exc
-from nummus import utils, web
+from nummus import sql, utils, web
 from nummus.controllers import base
-from nummus.models.base import YIELD_PER
 from nummus.models.budget import (
     BudgetAssignment,
     BudgetGroup,
@@ -29,11 +27,9 @@ from nummus.models.transaction_category import (
     TransactionCategory,
     TransactionCategoryGroup,
 )
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     import werkzeug.datastructures
-    from sqlalchemy import orm
 
     from nummus.models.budget import BudgetAvailableCategory
     from nummus.models.currency import CurrencyFormat
@@ -158,10 +154,9 @@ def page() -> flask.Response:
     )
     sidebar_uri = args.get("sidebar") or None
 
-    with p.begin_session() as s:
-        data = BudgetAssignment.get_monthly_available(s, month)
+    with p.begin_session():
+        data = BudgetAssignment.get_monthly_available(month)
         budget, title = ctx_budget(
-            s,
             today,
             month,
             data.categories,
@@ -169,7 +164,6 @@ def page() -> flask.Response:
             flask.session.get("groups_open", []),
         )
         sidebar = ctx_sidebar(
-            s,
             today,
             month,
             data.categories,
@@ -253,21 +247,21 @@ def assign(uri: str) -> str:
     form = flask.request.form
     amount = utils.evaluate_real_statement(form["amount"]) or Decimal()
 
-    with p.begin_session() as s:
-        cat = base.find(s, TransactionCategory, uri)
+    with p.begin_session():
+        cat = base.find(TransactionCategory, uri)
         group_uri = (
             None
             if cat.budget_group_id is None
             else BudgetGroup.id_to_uri(cat.budget_group_id)
         )
         if amount == 0:
-            s.query(BudgetAssignment).where(
+            BudgetAssignment.query().where(
                 BudgetAssignment.month_ord == month_ord,
                 BudgetAssignment.category_id == cat.id_,
             ).delete()
         else:
             a = (
-                s.query(BudgetAssignment)
+                BudgetAssignment.query()
                 .where(
                     BudgetAssignment.month_ord == month_ord,
                     BudgetAssignment.category_id == cat.id_,
@@ -275,18 +269,16 @@ def assign(uri: str) -> str:
                 .one_or_none()
             )
             if a is None:
-                a = BudgetAssignment(
+                a = BudgetAssignment.create(
                     month_ord=month_ord,
                     category_id=cat.id_,
                     amount=amount,
                 )
-                s.add(a)
             else:
                 a.amount = amount
 
-        data = BudgetAssignment.get_monthly_available(s, month)
+        data = BudgetAssignment.get_monthly_available(month)
         budget, _ = ctx_budget(
-            s,
             today,
             month,
             data.categories,
@@ -295,7 +287,6 @@ def assign(uri: str) -> str:
         )
         sidebar_uri = form.get("sidebar") or None
         sidebar = ctx_sidebar(
-            s,
             today,
             month,
             data.categories,
@@ -328,15 +319,15 @@ def move(uri: str) -> str | flask.Response:
     month = datetime.date.fromisoformat(month_str + "-01")
     month_ord = month.toordinal()
 
-    with p.begin_session() as s:
-        cf = CURRENCY_FORMATS[Config.base_currency(s)]
-        data = BudgetAssignment.get_monthly_available(s, month)
+    with p.begin_session():
+        cf = CURRENCY_FORMATS[Config.base_currency()]
+        data = BudgetAssignment.get_monthly_available(month)
         if uri == "income":
             src_cat = None
             src_cat_id = None
             src_available = data.assignable
         else:
-            src_cat = base.find(s, TransactionCategory, uri)
+            src_cat = base.find(TransactionCategory, uri)
             src_cat_id = src_cat.id_
             src_available = data.categories[src_cat_id].available
 
@@ -358,7 +349,7 @@ def move(uri: str) -> str | flask.Response:
                 # Max of the negative number is min of the positive/abs
                 to_move = max(src_available, -dest_available)
 
-            BudgetAssignment.move(s, month_ord, src_cat_id, dest_cat_id, to_move)
+            BudgetAssignment.move(month_ord, src_cat_id, dest_cat_id, to_move)
 
             return base.dialog_swap(
                 event="budget",
@@ -373,8 +364,7 @@ def move(uri: str) -> str | flask.Response:
 
         destination = args.get("destination")
         query = (
-            s.query(TransactionCategory)
-            .with_entities(
+            TransactionCategory.query(
                 TransactionCategory.id_,
                 TransactionCategory.emoji_name,
                 TransactionCategory.group,
@@ -386,11 +376,7 @@ def move(uri: str) -> str | flask.Response:
             )
             .order_by(TransactionCategory.group, TransactionCategory.name)
         )
-        for t_cat_id, name, group in query.yield_per(YIELD_PER):
-            t_cat_id: int
-            name: str
-            group: TransactionCategoryGroup
-
+        for t_cat_id, name, group in sql.yield_(query):
             t_cat_uri = TransactionCategory.id_to_uri(t_cat_id)
             available = data.categories[t_cat_id].available
             if destination or src_available > 0 or available > 0:
@@ -425,7 +411,7 @@ def reorder() -> str:
     t_cat_uris = form.getlist("category-uri")
     groups = form.getlist("group")
 
-    with p.begin_session() as s:
+    with p.begin_session():
         g_positions = {
             BudgetGroup.uri_to_id(g_uri): i for i, g_uri in enumerate(group_uris)
         }
@@ -452,7 +438,7 @@ def reorder() -> str:
             last_group = g_uri
 
         # Set all to None first so swapping can occur without unique violations
-        s.query(TransactionCategory).update(
+        TransactionCategory.query().update(
             {
                 TransactionCategory.budget_group_id: None,
                 TransactionCategory.budget_position: None,
@@ -460,11 +446,11 @@ def reorder() -> str:
         )
 
         # Delete any groups
-        s.query(BudgetGroup).where(BudgetGroup.id_.not_in(g_positions)).delete()
+        BudgetGroup.query().where(BudgetGroup.id_.not_in(g_positions)).delete()
 
         if g_positions:
             # Set all to -index first so swapping can occur without unique violations
-            s.query(BudgetGroup).update(
+            BudgetGroup.query().update(
                 {
                     BudgetGroup.position: sql.case(
                         {g_id: -i - 1 for i, g_id in enumerate(g_positions)},
@@ -474,7 +460,7 @@ def reorder() -> str:
             )
 
             # Set new group positions
-            s.query(BudgetGroup).update(
+            BudgetGroup.query().update(
                 {
                     BudgetGroup.position: sql.case(
                         g_positions,
@@ -485,7 +471,7 @@ def reorder() -> str:
 
         if t_cat_positions:
             # Set new category positions
-            s.query(TransactionCategory).update(
+            TransactionCategory.query().update(
                 {
                     TransactionCategory.budget_group_id: sql.case(
                         t_cat_groups,
@@ -525,8 +511,8 @@ def group(uri: str) -> str:
         flask.session["groups_open"] = groups_open
     elif uri != "ungrouped":
         try:
-            with p.begin_session() as s:
-                g = base.find(s, BudgetGroup, uri)
+            with p.begin_session():
+                g = base.find(BudgetGroup, uri)
                 g.name = name
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return base.error(e)
@@ -547,27 +533,26 @@ def new_group() -> str:
     """
     p = web.portfolio
     name = "New group"
-    with p.begin_session() as s:
-        cf = CURRENCY_FORMATS[Config.base_currency(s)]
+    with p.begin_session():
+        cf = CURRENCY_FORMATS[Config.base_currency()]
         # Ensure the name isn't a duplicate
         i = 1
-        n = query_count(s.query(BudgetGroup).where(BudgetGroup.name == name))
-        while n != 0:
+
+        query = BudgetGroup.query().where(BudgetGroup.name == name)
+        while sql.any_(query):
             i += 1
             name = f"New group {i}"
-            n = query_count(s.query(BudgetGroup).where(BudgetGroup.name == name))
+            query = BudgetGroup.query().where(BudgetGroup.name == name)
 
         # Move existing groups down one
-        n = query_count(s.query(BudgetGroup))
+        n = sql.count(BudgetGroup.query())
         for i in range(n, -1, -1):
             # Do one at a time in reverse order to prevent duplicate value
-            s.query(BudgetGroup).where(BudgetGroup.position == i).update(
+            BudgetGroup.query().where(BudgetGroup.position == i).update(
                 {BudgetGroup.position: i + 1},
             )
 
-        g = BudgetGroup(name=name, position=0)
-        s.add(g)
-        s.flush()
+        g = BudgetGroup.create(name=name, position=0)
         g_uri = g.uri
     ctx: GroupContext = {
         "position": 0,
@@ -607,17 +592,16 @@ def target(uri: str) -> str | flask.Response:
 
     with p.begin_session() as s:
         try:
-            tar = base.find(s, Target, uri)
+            tar = base.find(Target, uri)
             t_cat_id = tar.category_id
         except exc.http.BadRequest:
             t_cat_id = TransactionCategory.uri_to_id(uri)
-            tar = s.query(Target).where(Target.category_id == t_cat_id).one_or_none()
+            tar = Target.query().where(Target.category_id == t_cat_id).one_or_none()
 
-        emoji_name = (
-            s.query(TransactionCategory.emoji_name)
-            .where(TransactionCategory.id_ == t_cat_id)
-            .one()[0]
+        query = TransactionCategory.query(TransactionCategory.emoji_name).where(
+            TransactionCategory.id_ == t_cat_id,
         )
+        emoji_name = sql.one(query)
 
         new_target = tar is None
         if tar is None:
@@ -631,7 +615,7 @@ def target(uri: str) -> str | flask.Response:
                 repeat_every=1,
             )
         elif flask.request.method == "DELETE":
-            s.delete(tar)
+            tar.delete()
             return base.dialog_swap(
                 event="budget",
                 snackbar=f"{emoji_name} target deleted",
@@ -679,7 +663,7 @@ def target(uri: str) -> str | flask.Response:
             "from_amount": (
                 flask.request.headers.get("HX-Trigger") == "budgeting-amount"
             ),
-            "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
+            "currency_format": CURRENCY_FORMATS[Config.base_currency()],
         }
         # Don't make the changes
         s.rollback()
@@ -775,13 +759,9 @@ def sidebar() -> flask.Response:
     )
     uri = args.get("uri")
 
-    with p.begin_session() as s:
-        data = BudgetAssignment.get_monthly_available(
-            s,
-            month,
-        )
+    with p.begin_session():
+        data = BudgetAssignment.get_monthly_available(month)
         sidebar = ctx_sidebar(
-            s,
             today,
             month,
             data.categories,
@@ -792,7 +772,7 @@ def sidebar() -> flask.Response:
             "budgeting/sidebar.jinja",
             ctx={
                 "month": month_str,
-                "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
+                "currency_format": CURRENCY_FORMATS[Config.base_currency()],
             },
             budget_sidebar=sidebar,
         )
@@ -810,7 +790,6 @@ def sidebar() -> flask.Response:
 
 
 def ctx_sidebar(
-    s: orm.Session,
     today: datetime.date,
     month: datetime.date,
     categories: dict[int, BudgetAvailableCategory],
@@ -820,7 +799,6 @@ def ctx_sidebar(
     """Get the context to build the budgeting sidebar.
 
     Args:
-        s: SQL session to use
         today: Today's date
         month: Month of table
         categories: Dict of categories from Budget.get_monthly_available
@@ -839,13 +817,13 @@ def ctx_sidebar(
         total_assigned = Decimal()
         total_activity = Decimal()
 
-        query = s.query(TransactionCategory.id_).where(
+        query = TransactionCategory.query(TransactionCategory.id_).where(
             TransactionCategory.group == TransactionCategoryGroup.INCOME,
         )
-        income_ids = {row[0] for row in query.all()}
+        income_ids = set(sql.col0(query))
 
         targets: dict[int, Target] = {
-            t.category_id: t for t in s.query(Target).yield_per(YIELD_PER)
+            t.category_id: t for t in sql.yield_(Target.query())
         }
         no_target: set[int] = set()
 
@@ -873,8 +851,7 @@ def ctx_sidebar(
                 total_to_go += target_ctx["to_go"]
 
         query = (
-            s.query(TransactionCategory)
-            .with_entities(
+            TransactionCategory.query(
                 TransactionCategory.id_,
                 TransactionCategory.emoji_name,
             )
@@ -883,7 +860,7 @@ def ctx_sidebar(
         )
         no_target_names: dict[str, str] = {
             TransactionCategory.id_to_uri(t_cat_id): name
-            for t_cat_id, name in query.all()
+            for t_cat_id, name in sql.yield_(query)
         }
 
         return {
@@ -901,11 +878,11 @@ def ctx_sidebar(
             "no_target": no_target_names,
             "target": None,
         }
-    t_cat = base.find(s, TransactionCategory, uri)
+    t_cat = base.find(TransactionCategory, uri)
     t_cat_id = t_cat.id_
     assigned, activity, available, leftover = categories[t_cat_id]
 
-    tar = s.query(Target).where(Target.category_id == t_cat_id).one_or_none()
+    tar = Target.query().where(Target.category_id == t_cat_id).one_or_none()
     if tar is None:
         return {
             "uri": uri,
@@ -1082,7 +1059,6 @@ def ctx_target(
 
 
 def ctx_budget(
-    s: orm.Session,
     today: datetime.date,
     month: datetime.date,
     categories: dict[int, BudgetAvailableCategory],
@@ -1092,7 +1068,6 @@ def ctx_budget(
     """Get the context to build the budgeting table.
 
     Args:
-        s: SQL session to use
         today: Today's date
         month: Month of table
         categories: Dict of categories from Budget.get_monthly_available
@@ -1105,13 +1080,10 @@ def ctx_budget(
     """
     n_overspent = 0
 
-    targets: dict[int, Target] = {
-        t.category_id: t for t in s.query(Target).yield_per(YIELD_PER)
-    }
+    targets: dict[int, Target] = {t.category_id: t for t in sql.yield_(Target.query())}
 
     groups: dict[int | None, GroupContext] = {}
-    query = s.query(BudgetGroup)
-    for g in query.all():
+    for g in sql.yield_(BudgetGroup.query()):
         groups[g.id_] = {
             "position": g.position,
             "name": g.name,
@@ -1135,8 +1107,7 @@ def ctx_budget(
         "has_error": False,
     }
 
-    query = s.query(TransactionCategory)
-    for t_cat in query.yield_per(YIELD_PER):
+    for t_cat in sql.yield_(TransactionCategory.query()):
         assigned, activity, available, leftover = categories[t_cat.id_]
         tar = targets.get(t_cat.id_)
         # Skip category if all numbers are 0 and not grouped
@@ -1209,7 +1180,7 @@ def ctx_budget(
             "assignable": assignable,
             "groups": groups_list,
             "n_overspent": n_overspent,
-            "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
+            "currency_format": CURRENCY_FORMATS[Config.base_currency()],
         },
         title,
     )

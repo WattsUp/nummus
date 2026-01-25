@@ -17,7 +17,6 @@ def test_page(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     result, _ = web_client.GET(("income.page", {"period": "all"}))
     assert "Income" in result
     assert account.name in result
@@ -30,7 +29,6 @@ def test_chart(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     result, _ = web_client.GET(("income.chart", {"period": "all"}))
     assert "Income" in result
     assert account.name in result
@@ -45,9 +43,9 @@ def test_dashboard(
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    transactions[0].date = today
-    transactions[0].splits[0].parent = transactions[0]
-    session.commit()
+    with session.begin_nested():
+        transactions[0].date = today
+        transactions[0].splits[0].parent = transactions[0]
 
     result, _ = web_client.GET("income.dashboard")
     assert "Income" in result

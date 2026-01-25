@@ -9,7 +9,7 @@ from typing import NamedTuple
 
 from sqlalchemy import CheckConstraint, ForeignKey, func, Index, orm, UniqueConstraint
 
-from nummus import utils
+from nummus import sql, utils
 from nummus.models.account import Account
 from nummus.models.base import (
     Base,
@@ -21,14 +21,12 @@ from nummus.models.base import (
     ORMStr,
     SQLEnum,
     string_column_args,
-    YIELD_PER,
 )
 from nummus.models.transaction import TransactionSplit
 from nummus.models.transaction_category import (
     TransactionCategory,
     TransactionCategoryGroup,
 )
-from nummus.models.utils import query_to_dict
 
 
 class BudgetAvailableCategory(NamedTuple):
@@ -129,13 +127,11 @@ class BudgetAssignment(Base):
     @classmethod
     def get_monthly_available(
         cls,
-        s: orm.Session,
         month: datetime.date,
     ) -> BudgetAvailable:
         """Get available budget for a month.
 
         Args:
-            s: SQL session to use
             month: Month to compute budget during
 
         Returns:
@@ -147,44 +143,37 @@ class BudgetAssignment(Base):
 
         """
         month_ord = month.toordinal()
-        query = s.query(Account).where(Account.budgeted)
+        query = Account.query().where(Account.budgeted)
 
         accounts = {
-            acct.id_: acct.name for acct in query.all() if acct.do_include(month_ord)
+            acct.id_: acct.name
+            for acct in sql.yield_(query)
+            if acct.do_include(month_ord)
         }
 
         # Starting balance
-        query = (
-            s.query(TransactionSplit)
-            .with_entities(
-                func.sum(TransactionSplit.amount),
-            )
-            .where(
-                TransactionSplit.account_id.in_(accounts),
-                TransactionSplit.date_ord < month_ord,
-            )
+        query = TransactionSplit.query(
+            func.sum(TransactionSplit.amount),
+        ).where(
+            TransactionSplit.account_id.in_(accounts),
+            TransactionSplit.date_ord < month_ord,
         )
-        starting_balance = query.scalar() or Decimal()
+        starting_balance = sql.scalar(query) or Decimal()
         ending_balance = starting_balance
         total_available = Decimal()
 
         # Check all categories not INCOME
-        budget_categories = {
-            t_cat_id
-            for t_cat_id, in (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.group != TransactionCategoryGroup.INCOME)
-                .all()
-            )
-        }
+        query = TransactionCategory.query(TransactionCategory.id_).where(
+            TransactionCategory.group != TransactionCategoryGroup.INCOME,
+        )
+        budget_categories = {t_cat_id for t_cat_id, in sql.yield_(query)}
 
         # Current month's assignment
-        query = (
-            s.query(BudgetAssignment)
-            .with_entities(BudgetAssignment.category_id, BudgetAssignment.amount)
-            .where(BudgetAssignment.month_ord == month_ord)
-        )
-        categories_assigned: dict[int, Decimal] = query_to_dict(query)
+        query = BudgetAssignment.query(
+            BudgetAssignment.category_id,
+            BudgetAssignment.amount,
+        ).where(BudgetAssignment.month_ord == month_ord)
+        categories_assigned: dict[int, Decimal] = sql.to_dict(query)
 
         # Prior months' assignment
         min_month_ord = month_ord
@@ -192,8 +181,7 @@ class BudgetAssignment(Base):
             t_cat_id: {} for t_cat_id in budget_categories
         }
         query = (
-            s.query(BudgetAssignment)
-            .with_entities(
+            BudgetAssignment.query(
                 BudgetAssignment.category_id,
                 BudgetAssignment.amount,
                 BudgetAssignment.month_ord,
@@ -201,7 +189,7 @@ class BudgetAssignment(Base):
             .where(BudgetAssignment.month_ord < month_ord)
             .order_by(BudgetAssignment.month_ord)
         )
-        for cat_id, amount, m_ord in query.yield_per(YIELD_PER):
+        for cat_id, amount, m_ord in sql.yield_(query):
             prior_assigned[cat_id][m_ord] = amount
             min_month_ord = min(min_month_ord, m_ord)
 
@@ -210,8 +198,7 @@ class BudgetAssignment(Base):
             t_cat_id: {} for t_cat_id in budget_categories
         }
         query = (
-            s.query(TransactionSplit)
-            .with_entities(
+            TransactionSplit.query(
                 TransactionSplit.category_id,
                 func.sum(TransactionSplit.amount),
                 TransactionSplit.month_ord,
@@ -227,7 +214,7 @@ class BudgetAssignment(Base):
                 TransactionSplit.month_ord,
             )
         )
-        for cat_id, amount, m_ord in query.yield_per(YIELD_PER):
+        for cat_id, amount, m_ord in sql.yield_(query):
             prior_activity[cat_id][m_ord] = amount
 
         # Carry over leftover to next months to get current month's leftover amounts
@@ -246,17 +233,14 @@ class BudgetAssignment(Base):
             date = utils.date_add_months(date, 1)
 
         # Future months' assignment
-        query = (
-            s.query(BudgetAssignment)
-            .with_entities(func.sum(BudgetAssignment.amount))
-            .where(BudgetAssignment.month_ord > month_ord)
+        query = BudgetAssignment.query(func.sum(BudgetAssignment.amount)).where(
+            BudgetAssignment.month_ord > month_ord,
         )
-        future_assigned = query.scalar() or Decimal()
+        future_assigned = sql.scalar(query) or Decimal()
 
         # Current month's activity
         query = (
-            s.query(TransactionSplit)
-            .with_entities(
+            TransactionSplit.query(
                 TransactionSplit.category_id,
                 func.sum(TransactionSplit.amount),
             )
@@ -266,14 +250,14 @@ class BudgetAssignment(Base):
             )
             .group_by(TransactionSplit.category_id)
         )
-        categories_activity: dict[int, Decimal] = query_to_dict(query)
+        categories_activity: dict[int, Decimal] = sql.to_dict(query)
 
         categories: dict[int, BudgetAvailableCategory] = {}
-        query = s.query(TransactionCategory).with_entities(
+        query = TransactionCategory.query(
             TransactionCategory.id_,
             TransactionCategory.group,
         )
-        for t_cat_id, group in query.yield_per(YIELD_PER):
+        for t_cat_id, group in sql.yield_(query):
             activity = categories_activity.get(t_cat_id, Decimal())
             assigned = categories_assigned.get(t_cat_id, Decimal())
             leftover = categories_leftover.get(t_cat_id, Decimal())
@@ -299,7 +283,6 @@ class BudgetAssignment(Base):
     @classmethod
     def get_emergency_fund(
         cls,
-        s: orm.Session,
         start_ord: int,
         end_ord: int,
         n_lower: int,
@@ -308,7 +291,6 @@ class BudgetAssignment(Base):
         """Get the emergency fund target range and assigned balance.
 
         Args:
-            s: SQL session to use
             start_ord: First day of calculated range
             end_ord: Last day of calculated range
             n_lower: Number of days in sliding lower period
@@ -321,30 +303,21 @@ class BudgetAssignment(Base):
         n = end_ord - start_ord + 1
         n_smoothing = 15
 
-        query = (
-            s.query(Account)
-            .with_entities(Account.id_, Account.name)
-            .where(Account.budgeted)
-        )
-        accounts: dict[int, str] = query_to_dict(query)
+        query = Account.query(Account.id_, Account.name).where(Account.budgeted)
+        accounts: dict[int, str] = sql.to_dict(query)
 
-        t_cat_id, _ = TransactionCategory.emergency_fund(s)
+        t_cat_id, _ = TransactionCategory.emergency_fund()
 
-        balance = (
-            s.query(func.sum(BudgetAssignment.amount))
-            .where(
-                BudgetAssignment.category_id == t_cat_id,
-                BudgetAssignment.month_ord <= start_ord,
-            )
-            .scalar()
-            or Decimal()
+        query = BudgetAssignment.query(func.sum(BudgetAssignment.amount)).where(
+            BudgetAssignment.category_id == t_cat_id,
+            BudgetAssignment.month_ord <= start_ord,
         )
+        balance = sql.scalar(query) or Decimal()
 
         balances: list[Decimal] = []
 
         query = (
-            s.query(BudgetAssignment)
-            .with_entities(BudgetAssignment.month_ord, BudgetAssignment.amount)
+            BudgetAssignment.query(BudgetAssignment.month_ord, BudgetAssignment.amount)
             .where(
                 BudgetAssignment.category_id == t_cat_id,
                 BudgetAssignment.month_ord > start_ord,
@@ -353,7 +326,7 @@ class BudgetAssignment(Base):
             .order_by(BudgetAssignment.month_ord)
         )
         date_ord = start_ord
-        for b_ord, amount in query.all():
+        for b_ord, amount in sql.yield_(query):
             while date_ord < b_ord:
                 balances.append(balance)
                 date_ord += 1
@@ -368,23 +341,18 @@ class BudgetAssignment(Base):
         daily = Decimal()
         dailys: list[Decimal] = []
 
-        query = (
-            s.query(TransactionCategory)
-            .with_entities(
-                TransactionCategory.id_,
-                TransactionCategory.name,
-                TransactionCategory.emoji_name,
-            )
-            .where(TransactionCategory.essential_spending)
-        )
-        for t_cat_id, name, emoji_name in query.all():
+        query = TransactionCategory.query(
+            TransactionCategory.id_,
+            TransactionCategory.name,
+            TransactionCategory.emoji_name,
+        ).where(TransactionCategory.essential_spending)
+        for t_cat_id, name, emoji_name in sql.yield_(query):
             categories[t_cat_id] = name, emoji_name
             categories_total[t_cat_id] = Decimal()
 
         start_ord_dailys = start_ord - n_upper - n_smoothing
         query = (
-            s.query(TransactionSplit)
-            .with_entities(
+            TransactionSplit.query(
                 TransactionSplit.date_ord,
                 TransactionSplit.category_id,
                 func.sum(TransactionSplit.amount),
@@ -397,7 +365,7 @@ class BudgetAssignment(Base):
             .group_by(TransactionSplit.date_ord, TransactionSplit.category_id)
         )
         date_ord = start_ord_dailys
-        for t_ord, t_cat_id, amount in query.yield_per(YIELD_PER):
+        for t_ord, t_cat_id, amount in sql.yield_(query):
             while date_ord < t_ord:
                 dailys.append(daily)
                 date_ord += 1
@@ -438,7 +406,6 @@ class BudgetAssignment(Base):
     @classmethod
     def move(
         cls,
-        s: orm.Session,
         month_ord: int,
         src_cat_id: int | None,
         dest_cat_id: int | None,
@@ -447,7 +414,6 @@ class BudgetAssignment(Base):
         """Move funds between budget assignments.
 
         Args:
-            s: SQL session to use
             month_ord: Month of BudgetAssignment
             src_cat_id: Source category ID, or None
             dest_cat_id: Destination category ID, or None
@@ -457,7 +423,7 @@ class BudgetAssignment(Base):
         if src_cat_id is not None:
             # Remove to_move from src_cat_id
             a = (
-                s.query(BudgetAssignment)
+                BudgetAssignment.query()
                 .where(
                     BudgetAssignment.category_id == src_cat_id,
                     BudgetAssignment.month_ord == month_ord,
@@ -465,20 +431,19 @@ class BudgetAssignment(Base):
                 .one_or_none()
             )
             if a is None:
-                a = BudgetAssignment(
+                BudgetAssignment.create(
                     month_ord=month_ord,
                     amount=-to_move,
                     category_id=src_cat_id,
                 )
-                s.add(a)
             elif a.amount == to_move:
-                s.delete(a)
+                a.delete()
             else:
                 a.amount -= to_move
 
         if dest_cat_id is not None:
             a = (
-                s.query(BudgetAssignment)
+                BudgetAssignment.query()
                 .where(
                     BudgetAssignment.category_id == dest_cat_id,
                     BudgetAssignment.month_ord == month_ord,
@@ -486,12 +451,11 @@ class BudgetAssignment(Base):
                 .one_or_none()
             )
             if a is None:
-                a = BudgetAssignment(
+                BudgetAssignment.create(
                     month_ord=month_ord,
                     amount=to_move,
                     category_id=dest_cat_id,
                 )
-                s.add(a)
             else:
                 a.amount += to_move
 

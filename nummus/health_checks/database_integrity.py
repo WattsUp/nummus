@@ -6,7 +6,9 @@ from typing import override, TYPE_CHECKING
 
 import sqlalchemy
 
+from nummus import sql
 from nummus.health_checks.base import HealthCheck
+from nummus.models.base import Base
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -19,11 +21,13 @@ class DatabaseIntegrity(HealthCheck):
     _SEVERE = True
 
     @override
-    def test(self, s: orm.Session) -> None:
-        result = s.execute(sqlalchemy.text("PRAGMA integrity_check"))
-        rows = [row for row, in result.all()]
+    def test(self) -> None:
+        query: orm.query.RowReturningQuery[tuple[str]] = Base.session().execute(  # type: ignore[attr-defined]
+            sqlalchemy.text("PRAGMA integrity_check"),
+        )
+        rows = list(sql.col0(query))
         if len(rows) != 1 or rows[0] != "ok":
             issues = {str(i): row for i, row in enumerate(rows)}
         else:
             issues = {}
-        self._commit_issues(s, issues)
+        self._commit_issues(issues)

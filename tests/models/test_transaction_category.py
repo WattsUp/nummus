@@ -11,13 +11,10 @@ from nummus.models.transaction_category import (
 )
 
 if TYPE_CHECKING:
-    from sqlalchemy import orm
-
     from nummus.models.budget import BudgetGroup
 
 
 def test_init_properties(
-    session: orm.Session,
     rand_str: str,
     budget_group: BudgetGroup,
 ) -> None:
@@ -32,9 +29,7 @@ def test_init_properties(
         "budget_position": 0,
     }
 
-    t_cat = TransactionCategory(**d)
-    session.add(t_cat)
-    session.commit()
+    t_cat = TransactionCategory.create(**d)
 
     assert t_cat.name == rand_str.lower()
     assert t_cat.emoji_name == d["emoji_name"]
@@ -62,16 +57,16 @@ def test_name_direct() -> None:
         TransactionCategory(name="a")
 
 
-def test_name_no_position(session: orm.Session, budget_group: BudgetGroup) -> None:
+def test_name_no_position(budget_group: BudgetGroup) -> None:
     with pytest.raises(exc.IntegrityError):
-        session.query(TransactionCategory).where(
+        TransactionCategory.query().where(
             TransactionCategory.name == "transfers",
         ).update({TransactionCategory.budget_group_id: budget_group.id_})
 
 
-def test_name_no_group(session: orm.Session) -> None:
+def test_name_no_group() -> None:
     with pytest.raises(exc.IntegrityError):
-        session.query(TransactionCategory).where(
+        TransactionCategory.query().where(
             TransactionCategory.name == "transfers",
         ).update({TransactionCategory.budget_position: 0})
 
@@ -84,18 +79,17 @@ def test_essential_income() -> None:
         )
 
 
-def test_essential_income_update(session: orm.Session) -> None:
+def test_essential_income_update() -> None:
     with pytest.raises(exc.IntegrityError):
-        session.query(TransactionCategory).where(
+        TransactionCategory.query().where(
             TransactionCategory.name == "other income",
         ).update({TransactionCategory.essential_spending: True})
 
 
-def test_essential_expense(session: orm.Session) -> None:
-    session.query(TransactionCategory).where(
+def test_essential_expense() -> None:
+    TransactionCategory.query().where(
         TransactionCategory.name == "groceries",
     ).update({TransactionCategory.essential_spending: True})
-    session.commit()
 
 
 def test_essential_none() -> None:
@@ -103,71 +97,67 @@ def test_essential_none() -> None:
         TransactionCategory(essential_spending=None)
 
 
-def test_emergency_fund_missing(session: orm.Session) -> None:
-    session.query(TransactionCategory).delete()
+def test_emergency_fund_missing() -> None:
+    TransactionCategory.query().delete()
     with pytest.raises(exc.ProtectedObjectNotFoundError):
-        TransactionCategory.emergency_fund(session)
+        TransactionCategory.emergency_fund()
 
 
-def test_emergency_fund(session: orm.Session, categories: dict[str, int]) -> None:
-    result = TransactionCategory.emergency_fund(session)
+def test_emergency_fund(categories: dict[str, int]) -> None:
+    result = TransactionCategory.emergency_fund()
     t_cat_id = categories["emergency fund"]
     assert result == (t_cat_id, TransactionCategory.id_to_uri(t_cat_id))
 
 
-def test_uncategorized(session: orm.Session, categories: dict[str, int]) -> None:
-    result = TransactionCategory.uncategorized(session)
+def test_uncategorized(categories: dict[str, int]) -> None:
+    result = TransactionCategory.uncategorized()
     t_cat_id = categories["uncategorized"]
     assert result == (t_cat_id, TransactionCategory.id_to_uri(t_cat_id))
 
 
-def test_securities_traded(session: orm.Session, categories: dict[str, int]) -> None:
-    result = TransactionCategory.securities_traded(session)
+def test_securities_traded(categories: dict[str, int]) -> None:
+    result = TransactionCategory.securities_traded()
     t_cat_id = categories["securities traded"]
     assert result == (t_cat_id, TransactionCategory.id_to_uri(t_cat_id))
 
 
 def test_map_name(
-    session: orm.Session,
     categories: dict[str, int],
 ) -> None:
-    result = TransactionCategory.map_name(session)
+    result = TransactionCategory.map_name()
     assert result[categories["uncategorized"]] == "uncategorized"
     assert result[categories["securities traded"]] == "securities traded"
 
 
 def test_map_name_no_asset_linked(
-    session: orm.Session,
     categories: dict[str, int],
 ) -> None:
-    result = TransactionCategory.map_name(session, no_asset_linked=True)
+    result = TransactionCategory.map_name(no_asset_linked=True)
     assert result[categories["uncategorized"]] == "uncategorized"
     assert categories["securities traded"] not in result
 
 
 def test_map_name_emoji(
-    session: orm.Session,
     categories: dict[str, int],
 ) -> None:
-    session.query(TransactionCategory).where(
+    TransactionCategory.query().where(
         TransactionCategory.name == "uncategorized",
     ).update(
         {TransactionCategory.emoji_name: "🤷 Uncategorized 🤷"},
     )
-    result = TransactionCategory.map_name_emoji(session)
+    result = TransactionCategory.map_name_emoji()
     assert result[categories["uncategorized"]] == "🤷 Uncategorized 🤷"
     assert result[categories["securities traded"]] == "Securities Traded"
 
 
 def test_map_name_emoji_no_asset_linked(
-    session: orm.Session,
     categories: dict[str, int],
 ) -> None:
-    session.query(TransactionCategory).where(
+    TransactionCategory.query().where(
         TransactionCategory.name == "uncategorized",
     ).update(
         {TransactionCategory.emoji_name: "🤷 Uncategorized 🤷"},
     )
-    result = TransactionCategory.map_name_emoji(session, no_asset_linked=True)
+    result = TransactionCategory.map_name_emoji(no_asset_linked=True)
     assert result[categories["uncategorized"]] == "🤷 Uncategorized 🤷"
     assert categories["securities traded"] not in result

@@ -15,11 +15,6 @@ if TYPE_CHECKING:
     import argparse
     import io
 
-    from sqlalchemy import orm
-
-    from nummus.models.currency import Currency
-    from nummus.models.transaction import TransactionSplit
-
 
 class Export(Command):
     """Export transactions."""
@@ -85,35 +80,20 @@ class Export(Command):
 
     @override
     def run(self) -> int:
-        # Defer for faster time to main
-        from nummus.models.transaction import TransactionSplit
 
-        with self._p.begin_session() as s:
-            query = (
-                s.query(TransactionSplit)
-                .where(
-                    TransactionSplit.asset_id.is_(None),
-                )
-                .with_entities(TransactionSplit.amount)
-            )
-            if self._start is not None:
-                query = query.where(
-                    TransactionSplit.date_ord >= self._start.toordinal(),
-                )
-            if self._end is not None:
-                query = query.where(
-                    TransactionSplit.date_ord <= self._end.toordinal(),
-                )
-
-            with self._csv_path.open("w", encoding="utf-8") as file:
-                n = write_csv(file, query, no_bars=self._no_bars)
+        with (
+            self._p.begin_session(),
+            self._csv_path.open("w", encoding="utf-8") as file,
+        ):
+            n = write_csv(file, self._start, self._end, no_bars=self._no_bars)
         print(f"{Fore.GREEN}{n} transactions exported to {self._csv_path}")
         return 0
 
 
 def write_csv(
     file: io.TextIOBase,
-    transactions_query: orm.Query[TransactionSplit],
+    start: datetime.date | None,
+    end: datetime.date | None,
     *,
     no_bars: bool,
 ) -> int:
@@ -121,7 +101,8 @@ def write_csv(
 
     Args:
         file: Destination file to write to
-        transactions_query: ORM query to obtain TransactionSplits
+        start: Start date to filter transactions
+        end: End date to filter transactions
         no_bars: True will disable progress bars
 
     Returns:
@@ -131,34 +112,43 @@ def write_csv(
     # Defer for faster time to main
     import tqdm
 
+    from nummus import sql
     from nummus.models.account import Account
-    from nummus.models.base import YIELD_PER
     from nummus.models.currency import CURRENCY_FORMATS
     from nummus.models.transaction import TransactionCategory, TransactionSplit
-    from nummus.models.utils import query_count
 
-    s = transactions_query.session
-
-    query = s.query(Account).with_entities(
+    query = Account.query(
         Account.id_,
         Account.name,
         Account.currency,
     )
-    accounts: dict[int, tuple[str, Currency]] = {
-        r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
-    }
+    accounts = sql.to_dict_tuple(query)
 
-    categories = TransactionCategory.map_name_emoji(s)
+    categories = TransactionCategory.map_name_emoji()
 
-    query = transactions_query.with_entities(
-        TransactionSplit.date_ord,
-        TransactionSplit.account_id,
-        TransactionSplit.payee,
-        TransactionSplit.memo,
-        TransactionSplit.category_id,
-        TransactionSplit.amount,
-    ).order_by(TransactionSplit.date_ord)
-    n = query_count(query)
+    query = (
+        TransactionSplit.query(
+            TransactionSplit.date_ord,
+            TransactionSplit.account_id,
+            TransactionSplit.payee,
+            TransactionSplit.memo,
+            TransactionSplit.category_id,
+            TransactionSplit.amount,
+        )
+        .order_by(TransactionSplit.date_ord)
+        .where(
+            TransactionSplit.asset_id.is_(None),
+        )
+    )
+    if start is not None:
+        query = query.where(
+            TransactionSplit.date_ord >= start.toordinal(),
+        )
+    if end is not None:
+        query = query.where(
+            TransactionSplit.date_ord <= end.toordinal(),
+        )
+    n = sql.count(query)
 
     header = [
         "Date",
@@ -177,7 +167,7 @@ def write_csv(
         t_cat_id,
         amount,
     ) in tqdm.tqdm(
-        query.yield_per(YIELD_PER),
+        sql.yield_(query),
         total=n,
         desc="Exporting",
         disable=no_bars,
@@ -189,8 +179,8 @@ def write_csv(
             [
                 datetime.date.fromordinal(date).isoformat(),
                 acct_name,
-                payee,
-                memo,
+                payee or "",
+                memo or "",
                 categories[t_cat_id],
                 cf(amount),
             ],

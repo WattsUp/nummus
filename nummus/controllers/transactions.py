@@ -6,17 +6,17 @@ import datetime
 import operator
 from collections import defaultdict
 from decimal import Decimal
+from itertools import starmap
 from typing import NamedTuple, NotRequired, TYPE_CHECKING, TypedDict
 
 import flask
 from sqlalchemy import func
 
 from nummus import exceptions as exc
-from nummus import utils, web
+from nummus import sql, utils, web
 from nummus.controllers import base
 from nummus.models.account import Account
 from nummus.models.asset import Asset
-from nummus.models.base import YIELD_PER
 from nummus.models.config import Config
 from nummus.models.currency import (
     Currency,
@@ -25,15 +25,9 @@ from nummus.models.currency import (
 from nummus.models.label import Label, LabelLink
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
-from nummus.models.utils import (
-    obj_session,
-    query_count,
-    query_to_dict,
-    update_rows_list,
-)
+from nummus.models.utils import update_rows_list
 
 if TYPE_CHECKING:
-    import sqlalchemy
     from sqlalchemy import orm
 
     from nummus.models.currency import Currency, CurrencyFormat
@@ -122,7 +116,7 @@ class TableQuery(NamedTuple):
     """Type definition for result of table_query()."""
 
     query: orm.Query[TransactionSplit]
-    clauses: dict[str, sqlalchemy.ColumnElement]
+    clauses: dict[str, sql.ColumnClause]
     any_filters: bool
 
     @property
@@ -130,7 +124,7 @@ class TableQuery(NamedTuple):
         """Build the final query with clauses."""
         return self.query.where(*self.clauses.values())
 
-    def where(self, **clauses: sqlalchemy.ColumnElement) -> TableQuery:
+    def where(self, **clauses: sql.ColumnClause) -> TableQuery:
         """Add clauses to query.
 
         Args:
@@ -155,9 +149,8 @@ def page_all() -> flask.Response:
     args = flask.request.args
 
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         txn_table, title = ctx_table(
-            s,
             base.today_client(),
             args.get("search"),
             args.get("account"),
@@ -186,9 +179,8 @@ def table() -> str | flask.Response:
     args = flask.request.args
     first_page = "page" not in args
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         txn_table, title = ctx_table(
-            s,
             base.today_client(),
             args.get("search"),
             args.get("account"),
@@ -229,8 +221,8 @@ def table_options() -> str:
 
     """
     p = web.portfolio
-    with p.begin_session() as s:
-        accounts = Account.map_name(s)
+    with p.begin_session():
+        accounts = Account.map_name()
 
         args = flask.request.args
         uncleared = "uncleared" in args
@@ -241,7 +233,6 @@ def table_options() -> str:
         selected_end = args.get("end")
 
         tbl_query = table_query(
-            s,
             None,
             selected_account,
             selected_period,
@@ -254,7 +245,7 @@ def table_options() -> str:
             tbl_query,
             base.today_client(),
             accounts,
-            base.tranaction_category_groups(s),
+            base.tranaction_category_groups(),
             selected_account,
             selected_category,
         )
@@ -287,25 +278,27 @@ def new() -> str | flask.Response:
 
     with p.begin_session() as s:
         query = (
-            s.query(Account)
-            .with_entities(Account.id_, Account.name, Account.currency)
+            Account.query(Account.id_, Account.name, Account.currency)
             .where(Account.closed.is_(False))
             .order_by(Account.name)
         )
         accounts: dict[int, tuple[str, Currency]] = {
-            r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
+            r[0]: (r[1], r[2]) for r in sql.yield_(query)
         }
 
-        uncategorized_id, uncategorized_uri = TransactionCategory.uncategorized(s)
+        uncategorized_id, uncategorized_uri = TransactionCategory.uncategorized()
 
-        query = s.query(Transaction.payee)
+        query = Transaction.query(Transaction.payee).distinct()
         payees = sorted(
-            filter(None, (item for item, in query.distinct())),
+            filter(None, (item for item, in sql.yield_(query))),
             key=lambda item: item.lower(),
         )
 
-        query = s.query(Label.name)
-        labels = sorted(item for item, in query.distinct())
+        query = Label.query(Label.name).distinct()
+        labels = sorted(
+            filter(None, (item for item, in sql.yield_(query))),
+            key=lambda item: item.lower(),
+        )
 
         acct_uri = (
             flask.request.form.get("account") or flask.request.args.get("account") or ""
@@ -313,7 +306,7 @@ def new() -> str | flask.Response:
         if acct_uri:
             cf = CURRENCY_FORMATS[accounts[Account.uri_to_id(acct_uri)][1]]
         else:
-            cf = CURRENCY_FORMATS[Config.base_currency(s)]
+            cf = CURRENCY_FORMATS[Config.base_currency()]
 
         empty_split: SplitContext = {
             "parent_uri": "",
@@ -340,7 +333,7 @@ def new() -> str | flask.Response:
             "statement": "Manually created",
             "payee": None,
             "splits": [empty_split],
-            "category_groups": base.tranaction_category_groups(s),
+            "category_groups": base.tranaction_category_groups(),
             "payees": payees,
             "labels": labels,
             "similar_uri": None,
@@ -427,7 +420,7 @@ def new() -> str | flask.Response:
                     return base.error(err)
                 s.add(txn)
                 s.flush()
-                if err := _transaction_split_edit(s, txn):
+                if err := _transaction_split_edit(txn):
                     return base.error(err)
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return base.error(e)
@@ -452,7 +445,7 @@ def transaction(uri: str) -> str | flask.Response:
     p = web.portfolio
     today = base.today_client()
     with p.begin_session() as s:
-        txn = base.find(s, Transaction, uri)
+        txn = base.find(Transaction, uri)
 
         if flask.request.method == "GET":
             return flask.render_template(
@@ -461,7 +454,7 @@ def transaction(uri: str) -> str | flask.Response:
             )
         if flask.request.method == "PATCH":
             txn.cleared = True
-            s.query(TransactionSplit).where(
+            TransactionSplit.query().where(
                 TransactionSplit.parent_id == txn.id_,
             ).update({"cleared": True})
             return base.dialog_swap(
@@ -472,15 +465,15 @@ def transaction(uri: str) -> str | flask.Response:
             if txn.cleared:
                 return base.error("Cannot delete cleared transaction")
             date = txn.date
-            query = s.query(TransactionSplit.id_).where(
+            query = TransactionSplit.query(TransactionSplit.id_).where(
                 TransactionSplit.parent_id == txn.id_,
             )
-            t_split_ids = {r[0] for r in query.yield_per(YIELD_PER)}
-            s.query(LabelLink).where(LabelLink.t_split_id.in_(t_split_ids)).delete()
-            s.query(TransactionSplit).where(
+            t_split_ids = set(sql.col0(query))
+            LabelLink.query().where(LabelLink.t_split_id.in_(t_split_ids)).delete()
+            TransactionSplit.query().where(
                 TransactionSplit.id_.in_(t_split_ids),
             ).delete()
-            s.delete(txn)
+            txn.delete()
             return base.dialog_swap(
                 # update-account since transaction was deleted
                 event="account",
@@ -493,7 +486,7 @@ def transaction(uri: str) -> str | flask.Response:
                 if err := _transaction_edit(txn, today):
                     return base.error(err)
                 s.flush()
-                if err := _transaction_split_edit(s, txn):
+                if err := _transaction_split_edit(txn):
                     return base.error(err)
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return base.error(e)
@@ -536,11 +529,10 @@ def _transaction_edit(txn: Transaction, today: datetime.date) -> str:
     return ""
 
 
-def _transaction_split_edit(s: orm.Session, txn: Transaction) -> str:
+def _transaction_split_edit(txn: Transaction) -> str:
     """Edit transaction from form.
 
     Args:
-        s: SQL session to use
         txn: Transaction to edit
 
     Returns:
@@ -564,16 +556,15 @@ def _transaction_split_edit(s: orm.Session, txn: Transaction) -> str:
 
     remaining = txn.amount - sum(filter(None, split_amounts))
     if remaining != 0:
-        currency = (
-            s.query(Account.currency).where(Account.id_ == txn.account_id).one()[0]
-        )
+        query = Account.query(Account.currency).where(Account.id_ == txn.account_id)
+        currency = sql.one(query)
         cf = CURRENCY_FORMATS[currency]
 
         if remaining < 0:
             return f"Remove {cf(-remaining)} from splits"
         return f"Assign {cf(remaining)} to splits"
 
-    splits = [
+    splits: list[dict[str, object]] = [
         {
             "parent": txn,
             "category_id": cat_id,
@@ -589,19 +580,16 @@ def _transaction_split_edit(s: orm.Session, txn: Transaction) -> str:
         if amount
     ]
     query = (
-        s.query(TransactionSplit)
+        TransactionSplit.query()
         .where(TransactionSplit.parent_id == txn.id_)
         .order_by(TransactionSplit.id_)
     )
     t_split_ids = update_rows_list(
-        s,
         TransactionSplit,
         query,
         splits,
     )
-    s.flush()
     LabelLink.add_links(
-        s,
         {
             t_split_id: set(form.getlist(f"label-{i}"))
             for i, t_split_id in enumerate(t_split_ids)
@@ -624,12 +612,13 @@ def split(uri: str) -> str:
     p = web.portfolio
     form = flask.request.form
 
-    with p.begin_session() as s:
-        txn = base.find(s, Transaction, uri)
+    with p.begin_session():
+        txn = base.find(Transaction, uri)
 
         parent_amount = utils.parse_real(form["amount"]) or Decimal()
         account_id = Account.uri_to_id(form["account"])
-        currency = s.query(Account.currency).where(Account.id_ == account_id).one()[0]
+        query = Account.query(Account.currency).where(Account.id_ == account_id)
+        currency = sql.one(query)
         payee = form["payee"]
         date = utils.parse_date(form["date"])
 
@@ -650,7 +639,7 @@ def split(uri: str) -> str:
             split_labels.append(set())
             split_amounts.append(None)
 
-        _, uncategorized_uri = TransactionCategory.uncategorized(s)
+        _, uncategorized_uri = TransactionCategory.uncategorized()
 
         cf = CURRENCY_FORMATS[currency]
 
@@ -781,14 +770,14 @@ def _validate_splits() -> str:
         else:
             uri = args.get("account")
             p = web.portfolio
-            with p.begin_session() as s:
-                currency = (
-                    s.query(Account.currency)
-                    .where(Account.id_ == Account.uri_to_id(uri))
-                    .one()[0]
-                    if uri
-                    else Config.base_currency(s)
-                )
+            with p.begin_session():
+                if uri:
+                    query = Account.query(Account.currency).where(
+                        Account.id_ == Account.uri_to_id(uri),
+                    )
+                    currency = sql.one(query)
+                else:
+                    currency = Config.base_currency()
             cf = CURRENCY_FORMATS[currency]
             msg = (
                 f"Assign {cf(remaining)} to splits"
@@ -805,7 +794,6 @@ def _validate_splits() -> str:
 
 
 def table_query(
-    s: orm.Session,
     acct_uri: str | None = None,
     selected_account: str | None = None,
     selected_period: str | None = None,
@@ -818,7 +806,6 @@ def table_query(
     """Create transactions table query.
 
     Args:
-        s: SQL session to use
         acct_uri: Account URI to filter to
         selected_account: URI of account from args
         selected_period: Name of period from args
@@ -832,14 +819,14 @@ def table_query(
 
     """
     selected_account = acct_uri or selected_account
-    query = s.query(TransactionSplit).order_by(
+    query = TransactionSplit.query().order_by(
         TransactionSplit.date_ord.desc(),
         TransactionSplit.account_id,
         TransactionSplit.payee,
         TransactionSplit.category_id,
         TransactionSplit.memo,
     )
-    clauses: dict[str, sqlalchemy.ColumnElement] = {}
+    clauses: dict[str, sql.ColumnClause] = {}
 
     any_filters = False
 
@@ -906,38 +893,26 @@ def ctx_txn(
         Dictionary HTML context
 
     """
-    s = obj_session(txn)
-
     account_id = txn.account_id if account_id is None else account_id
 
-    query = (
-        s.query(Account)
-        .with_entities(
-            Account.id_,
-            Account.name,
-            Account.closed,
-            Account.currency,
-        )
-        .order_by(Account.name)
-    )
-    accounts: dict[int, tuple[str, bool, Currency]] = {
-        r[0]: (r[1], r[2], r[3]) for r in query.yield_per(YIELD_PER)
-    }
-    query = s.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
-    assets: dict[int, tuple[str, str | None]] = {
-        r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
-    }
-    query = s.query(Label.id_, Label.name)
-    labels: dict[int, str] = query_to_dict(query)
+    query = Account.query(
+        Account.id_,
+        Account.name,
+        Account.closed,
+        Account.currency,
+    ).order_by(Account.name)
+    accounts: dict[int, tuple[str, bool, Currency]] = sql.to_dict_tuple(query)
+    query = Asset.query(Asset.id_, Asset.name, Asset.ticker)
+    assets = sql.to_dict_tuple(query)
+    query = Label.query(Label.id_, Label.name)
+    labels: dict[int, str] = sql.to_dict(query)
     cf = CURRENCY_FORMATS[accounts[account_id][2]]
 
-    query = (
-        s.query(LabelLink)
-        .with_entities(LabelLink.t_split_id, LabelLink.label_id)
-        .where(LabelLink.t_split_id.in_(t_split.id_ for t_split in txn.splits))
+    query = LabelLink.query(LabelLink.t_split_id, LabelLink.label_id).where(
+        LabelLink.t_split_id.in_(t_split.id_ for t_split in txn.splits),
     )
     label_links: dict[int, set[int]] = defaultdict(set)
-    for t_split_id, label_id in query.yield_per(YIELD_PER):
+    for t_split_id, label_id in sql.yield_(query):
         label_links[t_split_id].add(label_id)
 
     ctx_splits: list[SplitContext] = (
@@ -955,9 +930,9 @@ def ctx_txn(
     )
     any_asset_splits = any(split.get("asset_name") for split in ctx_splits)
 
-    query = s.query(Transaction.payee)
+    query = Transaction.query(Transaction.payee).distinct()
     payees = sorted(
-        filter(None, (item for item, in query.distinct())),
+        filter(None, sql.col0(query)),
         key=lambda item: item.lower(),
     )
 
@@ -980,7 +955,7 @@ def ctx_txn(
         "statement": txn.statement,
         "payee": txn.payee if payee is None else payee,
         "splits": ctx_splits,
-        "category_groups": base.tranaction_category_groups(s),
+        "category_groups": base.tranaction_category_groups(),
         "payees": payees,
         "labels": sorted(labels.values()),
         "similar_uri": similar_uri,
@@ -1105,14 +1080,14 @@ def ctx_options(
     clauses = tbl_query.clauses.copy()
     clauses.pop("account", None)
     query_options = (
-        query.with_entities(TransactionSplit.account_id)
+        query.with_entities(TransactionSplit.account_id)  # nummus: ignore
         .where(*clauses.values())
         .distinct()
     )
     options_account = sorted(
         [
             base.NamePair(Account.id_to_uri(acct_id), accounts[acct_id])
-            for acct_id, in query_options.yield_per(YIELD_PER)
+            for acct_id, in sql.yield_(query_options)
         ],
         key=operator.itemgetter(0),
     )
@@ -1123,13 +1098,13 @@ def ctx_options(
     clauses = tbl_query.clauses.copy()
     clauses.pop("category", None)
     query_options = (
-        query.with_entities(TransactionSplit.category_id)
+        query.with_entities(TransactionSplit.category_id)  # nummus: ignore
         .where(*clauses.values())
         .distinct()
     )
-    options_uris = {
-        TransactionCategory.id_to_uri(r[0]) for r in query_options.yield_per(YIELD_PER)
-    }
+    options_uris = set(
+        starmap(TransactionCategory.id_to_uri, sql.yield_(query_options)),
+    )
     if selected_category:
         options_uris.add(selected_category)
     options_category = {
@@ -1150,7 +1125,6 @@ def ctx_options(
 
 
 def ctx_table(
-    s: orm.Session,
     today: datetime.date,
     search_str: str | None,
     selected_account: str | None,
@@ -1166,7 +1140,6 @@ def ctx_table(
     """Get the context to build the transaction table.
 
     Args:
-        s: SQL session to use
         today: Today's date
         search_str: String to search for
         selected_account: Selected account for filtering
@@ -1182,24 +1155,22 @@ def ctx_table(
         tuple(TableContext, title)
 
     """
-    query = s.query(Account).with_entities(Account.id_, Account.name, Account.currency)
+    query = Account.query(Account.id_, Account.name, Account.currency)
     accounts: dict[int, str] = {}
     currency_formats: dict[int, CurrencyFormat] = {}
-    for acct_id, name, currency in query.yield_per(YIELD_PER):
+    for acct_id, name, currency in sql.yield_(query):
         accounts[acct_id] = name
         currency_formats[acct_id] = CURRENCY_FORMATS[currency]
 
-    categories_emoji = TransactionCategory.map_name_emoji(s)
+    categories_emoji = TransactionCategory.map_name_emoji()
     categories = {
         cat_id: TransactionCategory.clean_emoji_name(name)
         for cat_id, name in categories_emoji.items()
     }
 
-    query = s.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
-    assets: dict[int, tuple[str, str | None]] = {
-        r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
-    }
-    labels = Label.map_name(s)
+    query = Asset.query(Asset.id_, Asset.name, Asset.ticker)
+    assets = sql.to_dict_tuple(query)
+    labels = Label.map_name()
 
     if page_start is None:
         page_start_int = None
@@ -1210,7 +1181,6 @@ def ctx_table(
             page_start_int = datetime.date.fromisoformat(page_start).toordinal()
 
     tbl_query = table_query(
-        s,
         acct_uri,
         selected_account,
         selected_period,
@@ -1223,7 +1193,7 @@ def ctx_table(
         tbl_query,
         today,
         accounts,
-        base.tranaction_category_groups(s),
+        base.tranaction_category_groups(),
         selected_account,
         selected_category,
     )
@@ -1245,7 +1215,9 @@ def ctx_table(
         t_split_order = {}
 
     final_query = tbl_query.final_query
-    query_total = final_query.with_entities(func.sum(TransactionSplit.amount))
+    query_total = final_query.with_entities(  # nummus: ignore
+        func.sum(TransactionSplit.amount),
+    )
 
     if matches is not None:
         i_start = page_start_int or 0
@@ -1256,7 +1228,7 @@ def ctx_table(
         # Find the fewest dates to include that will make page at least
         # PAGE_LEN long
         included_date_ords: set[int] = set()
-        query_page_count = final_query.with_entities(
+        query_page_count = final_query.with_entities(  # nummus: ignore
             TransactionSplit.date_ord,
             func.count(),
         ).group_by(TransactionSplit.date_ord)
@@ -1266,9 +1238,7 @@ def ctx_table(
             )
         page_count = 0
         # Limit to PAGE_LEN since at most there is one txn per day
-        for date_ord, count in query_page_count.limit(PAGE_LEN).yield_per(
-            YIELD_PER,
-        ):
+        for date_ord, count in sql.yield_(query_page_count.limit(PAGE_LEN)):
             included_date_ords.add(date_ord)
             page_count += count
             if page_count >= PAGE_LEN:
@@ -1284,7 +1254,7 @@ def ctx_table(
             else datetime.date.fromordinal(min(included_date_ords) - 1)
         )
 
-    n_matches = query_count(final_query)
+    n_matches = sql.count(final_query)
     groups = _table_results(
         final_query,
         assets,
@@ -1306,7 +1276,7 @@ def ctx_table(
     return {
         "uri": acct_uri,
         "transactions": groups,
-        "query_total": query_total.scalar() or Decimal(),
+        "query_total": sql.scalar(query_total) or Decimal(),
         "no_matches": n_matches == 0 and page_start_int is None,
         "next_page": None if n_matches < PAGE_LEN else str(next_page),
         "any_filters": tbl_query.any_filters,
@@ -1318,7 +1288,7 @@ def ctx_table(
         "uncleared": uncleared,
         "start": selected_start,
         "end": selected_end,
-        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
+        "currency_format": CURRENCY_FORMATS[Config.base_currency()],
     }, title
 
 
@@ -1350,19 +1320,17 @@ def _table_results(
         )]
 
     """
-    s = query.session
-
     # Iterate first to get required second query
     t_splits: list[TransactionSplit] = []
     parent_ids: set[int] = set()
-    for t_split in query.yield_per(YIELD_PER):
+    for t_split in sql.yield_(query):
         t_splits.append(t_split)
         parent_ids.add(t_split.parent_id)
 
     # There are no more if there wasn't enough for a full page
 
     query_has_splits = (
-        s.query(Transaction.id_)
+        Transaction.query(Transaction.id_)
         .join(TransactionSplit)
         .where(
             Transaction.id_.in_(parent_ids),
@@ -1370,15 +1338,13 @@ def _table_results(
         .group_by(Transaction.id_)
         .having(func.count() > 1)
     )
-    has_splits = {r[0] for r in query_has_splits.yield_per(YIELD_PER)}
+    has_splits = set(sql.col0(query_has_splits))
 
-    query_labels = (
-        s.query(LabelLink)
-        .with_entities(LabelLink.t_split_id, LabelLink.label_id)
-        .where(LabelLink.t_split_id.in_(t_split.id_ for t_split in t_splits))
+    query_labels = LabelLink.query(LabelLink.t_split_id, LabelLink.label_id).where(
+        LabelLink.t_split_id.in_(t_split.id_ for t_split in t_splits),
     )
     label_links: dict[int, set[int]] = defaultdict(set)
-    for t_split_id, label_id in query_labels.yield_per(YIELD_PER):
+    for t_split_id, label_id in sql.yield_(query_labels):
         label_links[t_split_id].add(label_id)
 
     t_splits_flat: list[tuple[RowContext, int]] = []

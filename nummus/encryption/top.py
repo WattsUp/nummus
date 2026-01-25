@@ -14,7 +14,8 @@ except ImportError:
     logger.warning("Install libsqlcipher: apt install libsqlcipher-dev")
     logger.warning("Install encrypt extra: pip install nummus[encrypt]")
     Encryption = NoEncryption
-    ENCRYPTION_AVAILABLE = False
+    encryption_available = False
 else:
     Encryption = EncryptionAES
-    ENCRYPTION_AVAILABLE = True
+    encryption_available = True
+ENCRYPTION_AVAILABLE = encryption_available

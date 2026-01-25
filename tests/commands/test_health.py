@@ -9,7 +9,6 @@ from nummus.commands.health import Health
 from nummus.health_checks.top import HEALTH_CHECKS
 from nummus.models.config import Config, ConfigKey
 from nummus.models.health_checks import HealthCheckIssue
-from nummus.models.utils import query_count
 from nummus.portfolio import Portfolio
 
 if TYPE_CHECKING:
@@ -20,7 +19,7 @@ if TYPE_CHECKING:
 
 
 def test_issues(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
     utc_frozen: datetime.datetime,
 ) -> None:
@@ -47,13 +46,13 @@ def test_issues(
     assert f"{Fore.MAGENTA}Use web interface to fix issues" in captured.out
     assert not captured.err
 
-    with empty_portfolio.begin_session() as s:
-        v = Config.fetch(s, ConfigKey.LAST_HEALTH_CHECK_TS)
+    with empty_portfolio.begin_session():
+        v = Config.fetch(ConfigKey.LAST_HEALTH_CHECK_TS)
         assert v == utc_frozen.isoformat()
 
 
 def test_no_limit_severe(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
     empty_portfolio: Portfolio,
     utc_frozen: datetime.datetime,
@@ -85,25 +84,24 @@ def test_no_limit_severe(
     assert f"{Fore.MAGENTA}Use web interface to fix issues" in captured.out
     assert not captured.err
 
-    with empty_portfolio.begin_session() as s:
-        v = Config.fetch(s, ConfigKey.LAST_HEALTH_CHECK_TS)
+    with empty_portfolio.begin_session():
+        v = Config.fetch(ConfigKey.LAST_HEALTH_CHECK_TS)
         assert v == utc_frozen.isoformat()
 
 
 def test_ignore_all(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
     utc_frozen: datetime.datetime,
 ) -> None:
     ignores: list[str] = []
     for check_type in HEALTH_CHECKS:
         c = check_type()
-        with empty_portfolio.begin_session() as s:
-            c.test(s)
+        with empty_portfolio.begin_session():
+            c.test()
         ignores.extend(c.issues.keys())
-    with empty_portfolio.begin_session() as s:
+    with empty_portfolio.begin_session():
         Config.set_(
-            s,
             ConfigKey.LAST_HEALTH_CHECK_TS,
             (utc_frozen - datetime.timedelta(days=1)).isoformat(),
         )
@@ -131,22 +129,22 @@ def test_ignore_all(
     assert f"{Fore.MAGENTA}Use web interface to fix issues" not in captured.out
     assert not captured.err
 
-    with empty_portfolio.begin_session() as s:
-        v = Config.fetch(s, ConfigKey.LAST_HEALTH_CHECK_TS)
+    with empty_portfolio.begin_session():
+        v = Config.fetch(ConfigKey.LAST_HEALTH_CHECK_TS)
         assert v == utc_frozen.isoformat()
 
-        assert query_count(s.query(HealthCheckIssue)) == len(ignores)
+        assert HealthCheckIssue.count() == len(ignores)
 
 
 def test_clear_ignores(
-    capsys: pytest.CaptureFixture,
+    capsys: pytest.CaptureFixture[str],
     empty_portfolio: Portfolio,
 ) -> None:
     ignores: list[str] = []
     for check_type in HEALTH_CHECKS:
         c = check_type()
-        with empty_portfolio.begin_session() as s:
-            c.test(s)
+        with empty_portfolio.begin_session():
+            c.test()
         ignores.extend(c.issues.keys())
 
     c = Health(
@@ -168,5 +166,5 @@ def test_clear_ignores(
     assert "has no transactions nor budget assignments" in captured.out
     assert not captured.err
 
-    with empty_portfolio.begin_session() as s:
-        assert query_count(s.query(HealthCheckIssue)) == len(ignores)
+    with empty_portfolio.begin_session():
+        assert HealthCheckIssue.count() == len(ignores)

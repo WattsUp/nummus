@@ -23,7 +23,7 @@ def test_migrate(tmp_path: Path, data_path: Path) -> None:
     target = []
     assert result == target
 
-    with p.begin_session() as s:
-        result = "\n".join(dump_table_configs(s, TransactionCategory))
+    with p.begin_session():
+        result = "\n".join(dump_table_configs(TransactionCategory))
         assert "essential_spending" in result
         assert TransactionCategory in m.pending_schema_updates

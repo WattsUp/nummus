@@ -2,23 +2,23 @@
 
 from __future__ import annotations
 
+import contextlib
 import enum
 from decimal import Decimal
-from typing import ClassVar, override, TYPE_CHECKING
+from typing import ClassVar, NamedTuple, overload, override, Self, TYPE_CHECKING
 
 import sqlalchemy
-from sqlalchemy import CheckConstraint, orm, sql, types
+from sqlalchemy import CheckConstraint, orm, types
 
 from nummus import exceptions as exc
-from nummus import utils
+from nummus import sql, utils
 from nummus.models import base_uri
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Generator, Iterable, Mapping
 
+    import sqlalchemy.sql.roles as sql_roles
 
-# Yield per instead of fetch all is faster
-YIELD_PER = 100
 
 ORMBool = orm.Mapped[bool]
 ORMBoolOpt = orm.Mapped[bool | None]
@@ -30,7 +30,202 @@ ORMReal = orm.Mapped[Decimal]
 ORMRealOpt = orm.Mapped[Decimal | None]
 
 
-class Base(orm.DeclarativeBase):
+class NamePair(NamedTuple):
+    """ID & name pair."""
+
+    id_: int
+    name: str | None
+
+
+class SessionMixIn:
+    """Mix-in that provides a session reference to the type."""
+
+    _sessions: ClassVar[list[orm.Session]] = []
+
+    @classmethod
+    @contextlib.contextmanager
+    def set_session(cls, s: orm.Session) -> Generator[None]:
+        """Set session used by active record.
+
+        Yields:
+            SQL session
+
+        """
+        cls._sessions.append(s)
+        try:
+            yield
+        finally:
+            cls._sessions.pop()
+
+    @classmethod
+    def session(cls) -> orm.Session:
+        """Get scoped session.
+
+        Returns:
+            SQL session
+
+        Raises:
+            UnboundExecutionError: set_session has not been called yet
+
+        """
+        if not cls._sessions:
+            raise exc.UnboundExecutionError
+        return cls._sessions[-1]
+
+
+class QueryMixIn(SessionMixIn):
+    """Mix-in that provides a query interface to the type."""
+
+    @classmethod
+    def create(cls, **kwargs: object) -> Self:
+        """Create a new instance.
+
+        Args:
+            kwargs: Passed to init
+
+        Returns:
+            New instance
+
+        """
+        i = cls(**kwargs)
+        s = cls.session()
+        s.add(i)  # nummus: ignore
+        s.flush()
+        return i
+
+    def delete(self) -> None:
+        """Delete an instance."""
+        self.session().delete(self)
+
+    def refresh(self) -> None:
+        """Refresh an instance."""
+        self.session().refresh(self)
+
+    @overload
+    @classmethod
+    def query(cls) -> orm.Query[Self]: ...
+
+    @overload
+    @classmethod
+    def query[T0](
+        cls,
+        c0: sql_roles.TypedColumnsClauseRole[T0],
+    ) -> orm.query.RowReturningQuery[tuple[T0]]: ...
+
+    @overload
+    @classmethod
+    def query[T0, T1](
+        cls,
+        c0: sql_roles.TypedColumnsClauseRole[T0],
+        c1: sql_roles.TypedColumnsClauseRole[T1],
+    ) -> orm.query.RowReturningQuery[tuple[T0, T1]]: ...
+
+    @overload
+    @classmethod
+    def query[T0, T1, T2](
+        cls,
+        c0: sql_roles.TypedColumnsClauseRole[T0],
+        c1: sql_roles.TypedColumnsClauseRole[T1],
+        c2: sql_roles.TypedColumnsClauseRole[T2],
+    ) -> orm.query.RowReturningQuery[tuple[T0, T1, T2]]: ...
+
+    @overload
+    @classmethod
+    def query[T0, T1, T2, T3](
+        cls,
+        c0: sql_roles.TypedColumnsClauseRole[T0],
+        c1: sql_roles.TypedColumnsClauseRole[T1],
+        c2: sql_roles.TypedColumnsClauseRole[T2],
+        c3: sql_roles.TypedColumnsClauseRole[T3],
+    ) -> orm.query.RowReturningQuery[tuple[T0, T1, T2, T3]]: ...
+
+    @overload
+    @classmethod
+    def query[T0, T1, T2, T3, T4](
+        cls,
+        c0: sql_roles.TypedColumnsClauseRole[T0],
+        c1: sql_roles.TypedColumnsClauseRole[T1],
+        c2: sql_roles.TypedColumnsClauseRole[T2],
+        c3: sql_roles.TypedColumnsClauseRole[T3],
+        c4: sql_roles.TypedColumnsClauseRole[T4],
+    ) -> orm.query.RowReturningQuery[tuple[T0, T1, T2, T3, T4]]: ...
+
+    @overload
+    @classmethod
+    def query[T0, T1, T2, T3, T4, T5](
+        cls,
+        c0: sql_roles.TypedColumnsClauseRole[T0],
+        c1: sql_roles.TypedColumnsClauseRole[T1],
+        c2: sql_roles.TypedColumnsClauseRole[T2],
+        c3: sql_roles.TypedColumnsClauseRole[T3],
+        c4: sql_roles.TypedColumnsClauseRole[T4],
+        c5: sql_roles.TypedColumnsClauseRole[T5],
+    ) -> orm.query.RowReturningQuery[tuple[T0, T1, T2, T3, T4, T5]]: ...
+
+    @classmethod
+    def query[T](
+        cls,
+        *columns: sql_roles.TypedColumnsClauseRole[object],
+        **kwargs: T,
+    ) -> orm.Query[Self] | orm.Query[T]:
+        """Create a new query.
+
+        Returns:
+            Query of table
+
+        Raises:
+            NoKeywordArgumentsError: if kwargs are provided
+
+        """
+        if kwargs:
+            raise exc.NoKeywordArgumentsError
+        query: orm.Query[Self] = cls.session().query(cls)
+        if columns:
+            return query.with_entities(*columns)  # nummus: ignore
+        return query
+
+    @classmethod
+    def all(cls) -> list[Self]:
+        """Fetch all rows.
+
+        Returns:
+            List of each row object
+
+        """
+        return list(sql.yield_(cls.query()))
+
+    @classmethod
+    def one(cls) -> Self:
+        """Fetch one rows.
+
+        Returns:
+            Only row
+
+        """
+        return sql.one(cls.query())
+
+    @classmethod
+    def first(cls) -> Self | None:
+        """Fetch first rows.
+
+        Returns:
+            First row
+
+        """
+        return cls.query().first()
+
+    @classmethod
+    def count(cls) -> int:
+        """Count number of rows.
+
+        Returns:
+            Number of rows
+
+        """
+        return sql.count(cls.query())
+
+
+class Base(orm.DeclarativeBase, QueryMixIn):
     """Base ORM model.
 
     Attributes:
@@ -42,6 +237,10 @@ class Base(orm.DeclarativeBase):
     _MODELS: ClassVar[set[type[Base]]] = set()
 
     __table_id__: int | None
+
+    id_: ORMInt = orm.mapped_column(primary_key=True, autoincrement=True)
+
+    _SEARCH_PROPERTIES: tuple[str, ...] = ()
 
     @override
     def __init_subclass__(cls, *, skip_register: bool = False, **kw: object) -> None:
@@ -61,15 +260,13 @@ class Base(orm.DeclarativeBase):
             i += 1
 
     @classmethod
-    def metadata_create_all(cls, s: orm.Session) -> None:
+    def metadata_create_all(cls) -> None:
         """Create all tables for nummus models.
 
         Creates tables then commits
 
-        Args:
-            s: Session to create tables for
-
         """
+        s = cls.session()
         cls.metadata.create_all(s.get_bind(), [m.sql_table() for m in cls._MODELS])
         s.commit()
 
@@ -87,8 +284,6 @@ class Base(orm.DeclarativeBase):
         if isinstance(cls.__table__, sqlalchemy.Table):
             return cls.__table__
         raise TypeError
-
-    id_: ORMInt = orm.mapped_column(primary_key=True, autoincrement=True)
 
     @classmethod
     def id_to_uri(cls, id_: int) -> str:
@@ -132,15 +327,7 @@ class Base(orm.DeclarativeBase):
 
     @property
     def uri(self) -> str:
-        """Uniform Resource Identifier derived from id_ and __table_id__.
-
-        Raises:
-            NoIDError: If object does not have id_
-
-        """
-        if self.id_ is None:
-            msg = f"{self.__class__.__name__} does not have an id_, maybe flush"
-            raise exc.NoIDError(msg)
+        """Uniform Resource Identifier derived from id_ and __table_id__."""
         return self.id_to_uri(self.id_)
 
     @override
@@ -163,11 +350,8 @@ class Base(orm.DeclarativeBase):
         return not isinstance(other, Base) or self.uri != other.uri
 
     @classmethod
-    def map_name(cls, s: orm.Session) -> dict[int, str]:
+    def map_name(cls) -> dict[int, str]:
         """Get mapping between id and names.
-
-        Args:
-            s: SQL session to use
 
         Returns:
             Dictionary {id: name}
@@ -176,13 +360,12 @@ class Base(orm.DeclarativeBase):
             KeyError: if model does not have name property
 
         """
-        attr = getattr(cls, "name", None)
+        attr: orm.QueryableAttribute[str] | None = getattr(cls, "name", None)
         if not attr:
             msg = f"{cls.__name__} does not have name column"
             raise KeyError(msg)
 
-        query = s.query(cls).with_entities(cls.id_, attr)
-        return dict(query.all())
+        return sql.to_dict(cls.query(cls.id_, attr))
 
     @classmethod
     def clean_strings(
@@ -246,6 +429,66 @@ class Base(orm.DeclarativeBase):
         """
         return utils.strip_emojis(s).strip().lower()
 
+    @classmethod
+    def find(
+        cls,
+        search: str,
+        cache: dict[str, NamePair],
+    ) -> NamePair:
+        """Find a matching object by  uri, or field value.
+
+        Args:
+            search: Search query
+            cache: Cache results to speed up look ups
+
+        Returns:
+            tuple(id_, name)
+
+        Raises:
+            NoResultFound: if object not found
+
+        """
+        pair = cache.get(search)
+        if pair is not None:
+            return pair
+
+        def cache_and_return(m: Self) -> NamePair:
+            id_ = m.id_
+            name: str | None = getattr(m, "name", None)
+            pair = NamePair(id_, name)
+            cache[search] = pair
+            return pair
+
+        try:
+            # See if query is an URI
+            id_ = cls.uri_to_id(search)
+        except (exc.InvalidURIError, exc.WrongURITypeError):
+            pass
+        else:
+            query = cls.query().where(cls.id_ == id_)
+            if m := sql.scalar(query):
+                return cache_and_return(m)
+
+        for name in cls._SEARCH_PROPERTIES:
+            prop: sql.Column = getattr(cls, name)
+            # Exact?
+            query = cls.query().where(prop == search)
+            if m := sql.scalar(query):
+                return cache_and_return(m)
+
+            # Exact lower case?
+            query = cls.query().where(prop.ilike(search))
+            if m := sql.scalar(query):
+                return cache_and_return(m)
+
+            # For account number, see if there is one ending in the search
+            query = cls.query().where(prop.ilike(f"%{search}"))
+            if name == "number" and (m := sql.scalar(query)):
+                return cache_and_return(m)
+
+        msg = f"{cls.__name__} matching '{search}' could not be found"
+        raise exc.NoResultFound(msg)
+
 
 class BaseEnum(enum.IntEnum):
     """Enum class with a parser."""
@@ -295,7 +538,7 @@ class BaseEnum(enum.IntEnum):
         return self.name.replace("_", " ").title()
 
 
-class SQLEnum(types.TypeDecorator):
+class SQLEnum(types.TypeDecorator[BaseEnum]):
     """SQL type for enumeration, stores as integer."""
 
     impl = types.Integer
@@ -361,7 +604,7 @@ class SQLEnum(types.TypeDecorator):
         return self._enum_type(value)
 
 
-class Decimal6(types.TypeDecorator):
+class Decimal6(types.TypeDecorator[Decimal]):
     """SQL type for fixed point numbers, stores as micro-integer."""
 
     impl = types.BigInteger
@@ -453,7 +696,7 @@ def string_column_args(
         Tuple of constraints
 
     """
-    name_col = f"`{name}`" if name in sql.compiler.RESERVED_WORDS else name
+    name_col = sql.escape(name)
     checks = [
         (
             CheckConstraint(

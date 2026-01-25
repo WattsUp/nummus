@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from nummus.health_checks.unused_categories import UnusedCategories
 from nummus.models.health_checks import HealthCheckIssue
 from nummus.models.transaction_category import TransactionCategory
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -13,13 +12,12 @@ if TYPE_CHECKING:
     from nummus.models.transaction import Transaction
 
 
-def test_empty(session: orm.Session) -> None:
+def test_empty() -> None:
     # Mark all locked since those are excluded
-    session.query(TransactionCategory).update({"locked": True})
-    session.commit()
+    TransactionCategory.query().update({"locked": True})
 
     c = UnusedCategories()
-    c.test(session)
+    c.test()
     assert c.issues == {}
 
 
@@ -28,18 +26,16 @@ def test_one(
     transactions: list[Transaction],
     categories: dict[str, int],
 ) -> None:
-    _ = transactions
     # Mark all but groceries and other income locked since those are excluded
-    session.query(TransactionCategory).where(
+    TransactionCategory.query().where(
         TransactionCategory.name.not_in({"groceries", "other income"}),
     ).update({"locked": True})
-    session.commit()
 
     c = UnusedCategories()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 1
+    c.test()
+    assert HealthCheckIssue.count() == 1
 
-    i = session.query(HealthCheckIssue).one()
+    i = HealthCheckIssue.one()
     assert i.check == c.name()
     assert i.value == TransactionCategory.id_to_uri(categories["groceries"])
     uri = i.uri

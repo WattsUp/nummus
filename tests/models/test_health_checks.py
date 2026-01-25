@@ -8,13 +8,10 @@ from nummus import exceptions as exc
 from nummus.models.health_checks import HealthCheckIssue
 
 if TYPE_CHECKING:
-    from sqlalchemy import orm
-
     from tests.conftest import RandomStringGenerator
 
 
 def test_init_properties(
-    session: orm.Session,
     rand_str_generator: RandomStringGenerator,
 ) -> None:
     d = {
@@ -24,9 +21,7 @@ def test_init_properties(
         "ignore": False,
     }
 
-    i = HealthCheckIssue(**d)
-    session.add(i)
-    session.commit()
+    i = HealthCheckIssue.create(**d)
 
     assert i.check == d["check"]
     assert i.value == d["value"]
@@ -35,7 +30,6 @@ def test_init_properties(
 
 
 def test_duplicate_keys(
-    session: orm.Session,
     rand_str_generator: RandomStringGenerator,
 ) -> None:
     d = {
@@ -44,12 +38,9 @@ def test_duplicate_keys(
         "msg": rand_str_generator(),
         "ignore": False,
     }
-    i = HealthCheckIssue(**d)
-    session.add(i)
-    i = HealthCheckIssue(**d)
-    session.add(i)
+    HealthCheckIssue.create(**d)
     with pytest.raises(exc.IntegrityError):
-        session.commit()
+        HealthCheckIssue.create(**d)
 
 
 def test_short_check(rand_str_generator: RandomStringGenerator) -> None:
@@ -64,7 +55,6 @@ def test_short_check(rand_str_generator: RandomStringGenerator) -> None:
 
 
 def test_short_value(
-    session: orm.Session,
     rand_str_generator: RandomStringGenerator,
 ) -> None:
     d = {
@@ -73,6 +63,4 @@ def test_short_value(
         "msg": rand_str_generator(),
         "ignore": False,
     }
-    i = HealthCheckIssue(**d)
-    session.add(i)
-    session.commit()
+    HealthCheckIssue.create(**d)

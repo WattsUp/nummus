@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from nummus import sql
 from nummus.health_checks.category_direction import CategoryDirection
 from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 from nummus.models.health_checks import HealthCheckIssue
 from nummus.models.transaction import Transaction, TransactionSplit
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     import datetime
@@ -19,9 +19,9 @@ if TYPE_CHECKING:
     from nummus.models.account import Account
 
 
-def test_empty(session: orm.Session) -> None:
+def test_empty() -> None:
     c = CategoryDirection()
-    c.test(session)
+    c.test()
     assert c.issues == {}
 
 
@@ -42,27 +42,26 @@ def test_check(
     amount: Decimal,
     rand_str: str,
 ) -> None:
-    txn = Transaction(
-        account_id=account.id_,
-        date=today,
-        amount=amount,
-        statement=rand_str,
-    )
-    t_split = TransactionSplit(
-        parent=txn,
-        amount=txn.amount,
-        category_id=categories[category],
-    )
-    session.add_all((txn, t_split))
-    session.commit()
+    with session.begin_nested():
+        txn = Transaction.create(
+            account_id=account.id_,
+            date=today,
+            amount=amount,
+            statement=rand_str,
+        )
+        t_split = TransactionSplit.create(
+            parent=txn,
+            amount=txn.amount,
+            category_id=categories[category],
+        )
     t_uri = t_split.uri
 
     c = CategoryDirection()
-    c.test(session)
+    c.test()
 
-    assert query_count(session.query(HealthCheckIssue)) == 1
+    assert sql.count(HealthCheckIssue.query()) == 1
 
-    i = session.query(HealthCheckIssue).one()
+    i = HealthCheckIssue.one()
     assert i.check == c.name()
     assert i.value == t_uri
     uri = i.uri

@@ -8,28 +8,22 @@ import re
 import textwrap
 from decimal import Decimal
 from pathlib import Path
-from typing import NamedTuple, overload, TYPE_CHECKING, TypedDict
+from typing import NamedTuple, overload, TypedDict
 
 import flask
 import flask.typing
 
 from nummus import exceptions as exc
-from nummus import utils, web
+from nummus import sql, utils, web
 from nummus.models.base import (
     Base,
     BaseEnum,
-    YIELD_PER,
 )
 from nummus.models.transaction_category import (
     TransactionCategory,
     TransactionCategoryGroup,
 )
-from nummus.models.utils import query_count
 from nummus.version import __version__
-
-if TYPE_CHECKING:
-    import sqlalchemy
-    from sqlalchemy import orm
 
 type Routes = dict[str, tuple[flask.typing.RouteCallable, list[str]]]
 
@@ -445,11 +439,10 @@ def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
     return response
 
 
-def find[T: Base](s: orm.Session, cls: type[T], uri: str) -> T:
+def find[T: Base](cls: type[T], uri: str) -> T:
     """Find the matching object by URI.
 
     Args:
-        s: SQL session to search
         cls: Type of object to find
         uri: URI to find
 
@@ -466,7 +459,7 @@ def find[T: Base](s: orm.Session, cls: type[T], uri: str) -> T:
     except (exc.InvalidURIError, exc.WrongURITypeError) as e:
         raise exc.http.BadRequest(str(e)) from e
     try:
-        obj = s.query(cls).where(cls.id_ == id_).one()
+        obj = sql.one(cls.query().where(cls.id_ == id_))
     except exc.NoResultFound as e:
         msg = f"{cls.__name__} {uri} not found in Portfolio"
         raise exc.http.NotFound(msg) from e
@@ -558,9 +551,9 @@ def validate_string(
     *,
     is_required: bool = False,
     check_length: bool = True,
-    session: orm.Session | None = None,
-    no_duplicates: orm.QueryableAttribute | None = None,
-    no_duplicate_wheres: list[sqlalchemy.ColumnExpressionArgument] | None = None,
+    cls: type[Base] | None = None,
+    no_duplicates: sql.Column | None = None,
+    no_duplicate_wheres: list[sql.ColumnClause] | None = None,
 ) -> str:
     """Validate a string matches requirements.
 
@@ -568,7 +561,7 @@ def validate_string(
         value: String to test
         is_required: True will require the value be non-empty
         check_length: True will require value to be MIN_STR_LEN long
-        session: SQL session to use for no_duplicates
+        cls: Model class to test for duplicate values
         no_duplicates: Property to test for duplicate values
         no_duplicate_wheres: Additional where clauses to add to no_duplicates
 
@@ -582,11 +575,11 @@ def validate_string(
     if check_length and len(value) < utils.MIN_STR_LEN:
         # Ticker can be short
         return f"{utils.MIN_STR_LEN} characters required"
-    if no_duplicates is None:
+    if no_duplicates is None or cls is None:
         return ""
     return _test_duplicates(
         value,
-        session,
+        cls,
         no_duplicates,
         no_duplicate_wheres,
     )
@@ -594,19 +587,15 @@ def validate_string(
 
 def _test_duplicates(
     value: object,
-    session: orm.Session | None,
-    no_duplicates: orm.QueryableAttribute,
-    no_duplicate_wheres: list[sqlalchemy.ColumnExpressionArgument] | None,
+    cls: type[Base],
+    no_duplicates: sql.Column,
+    no_duplicate_wheres: list[sql.ColumnClause] | None,
 ) -> str:
-    if session is None:
-        msg = "Cannot test no_duplicates without a session"
-        raise TypeError(msg)
-    query = session.query(no_duplicates.parent).where(
+    query = cls.query().where(
         no_duplicates == value,
         *(no_duplicate_wheres or []),
     )
-    n = query_count(query)
-    if n != 0:
+    if sql.any_(query):
         return "Must be unique"
     return ""
 
@@ -617,9 +606,9 @@ def validate_date(
     *,
     is_required: bool = False,
     max_future: int | None = utils.DAYS_IN_WEEK,
-    session: orm.Session | None = None,
-    no_duplicates: orm.QueryableAttribute | None = None,
-    no_duplicate_wheres: list[sqlalchemy.ColumnExpressionArgument] | None = None,
+    cls: type[Base] | None = None,
+    no_duplicates: sql.Column | None = None,
+    no_duplicate_wheres: list[sql.ColumnClause] | None = None,
 ) -> str:
     """Validate a date string matches requirements.
 
@@ -628,7 +617,7 @@ def validate_date(
         today: Today's date
         is_required: True will require the value be non-empty
         max_future: Maximum number of days date is allowed in the future
-        session: SQL session to use for no_duplicates
+        cls: Model class to test for duplicate values
         no_duplicates: Property to test for duplicate values
         no_duplicate_wheres: Additional where clauses to add to no_duplicates
 
@@ -652,11 +641,11 @@ def validate_date(
     ):
         return f"Only up to {utils.format_days(max_future)} in advance"
 
-    if no_duplicates is None:
+    if no_duplicates is None or cls is None:
         return ""
     return _test_duplicates(
         date.toordinal(),
-        session,
+        cls,
         no_duplicates,
         no_duplicate_wheres,
     )
@@ -760,34 +749,27 @@ def parse_date(
     return date
 
 
-def tranaction_category_groups(s: orm.Session) -> CategoryGroups:
+def tranaction_category_groups() -> CategoryGroups:
     """Get TransactionCategory by groups.
-
-    Args:
-        s: SQL session to use
 
     Returns:
         dict{group: list[CategoryContext]}
 
     """
-    query = (
-        s.query(TransactionCategory)
-        .with_entities(
-            TransactionCategory.id_,
-            TransactionCategory.name,
-            TransactionCategory.emoji_name,
-            TransactionCategory.asset_linked,
-            TransactionCategory.group,
-        )
-        .order_by(TransactionCategory.name)
-    )
+    query = TransactionCategory.query(
+        TransactionCategory.id_,
+        TransactionCategory.name,
+        TransactionCategory.emoji_name,
+        TransactionCategory.asset_linked,
+        TransactionCategory.group,
+    ).order_by(TransactionCategory.name)
     category_groups: CategoryGroups = {
         TransactionCategoryGroup.INCOME: [],
         TransactionCategoryGroup.EXPENSE: [],
         TransactionCategoryGroup.TRANSFER: [],
         TransactionCategoryGroup.OTHER: [],
     }
-    for t_cat_id, name, emoji_name, asset_linked, group in query.yield_per(YIELD_PER):
+    for t_cat_id, name, emoji_name, asset_linked, group in sql.yield_(query):
         category_groups[group].append(
             CategoryContext(
                 TransactionCategory.id_to_uri(t_cat_id),

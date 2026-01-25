@@ -6,12 +6,11 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from nummus import utils
+from nummus import sql, utils
 from nummus.controllers import base
 from nummus.controllers import transactions as txn_controller
 from nummus.models.account import Account
 from nummus.models.asset import Asset
-from nummus.models.base import YIELD_PER
 from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 from nummus.models.label import Label, LabelLink
 from nummus.models.transaction import TransactionSplit
@@ -19,7 +18,6 @@ from nummus.models.transaction_category import (
     TransactionCategory,
     TransactionCategoryGroup,
 )
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -43,7 +41,6 @@ if TYPE_CHECKING:
     ],
 )
 def test_table_query(
-    session: orm.Session,
     account: Account,
     transactions: list[Transaction],
     categories: dict[str, int],
@@ -55,9 +52,7 @@ def test_table_query(
     uncleared: bool,
     target: tuple[int, bool],
 ) -> None:
-    _ = transactions
     tbl_query = txn_controller.table_query(
-        session,
         None,
         account.uri if include_account else None,
         period,
@@ -67,7 +62,7 @@ def test_table_query(
         uncleared=uncleared,
     )
     assert tbl_query.any_filters == target[1]
-    assert query_count(tbl_query.final_query) == target[0]
+    assert sql.count(tbl_query.final_query) == target[0]
 
 
 def test_ctx_txn(
@@ -91,14 +86,11 @@ def test_ctx_txn(
 
 
 def test_ctx_split(
-    session: orm.Session,
     transactions: list[Transaction],
     labels: dict[str, int],
 ) -> None:
-    query = session.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
-    assets: dict[int, tuple[str, str | None]] = {
-        r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
-    }
+    query = Asset.query(Asset.id_, Asset.name, Asset.ticker)
+    assets = sql.to_dict_tuple(query)
     txn = transactions[0]
     t_split = txn.splits[0]
 
@@ -123,15 +115,12 @@ def test_ctx_split(
 
 
 def test_ctx_split_asset(
-    session: orm.Session,
     asset: Asset,
     transactions: list[Transaction],
     labels: dict[str, int],
 ) -> None:
-    query = session.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
-    assets: dict[int, tuple[str, str | None]] = {
-        r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
-    }
+    query = Asset.query(Asset.id_, Asset.name, Asset.ticker)
+    assets = sql.to_dict_tuple(query)
     txn = transactions[1]
     t_split = txn.splits[0]
 
@@ -156,23 +145,20 @@ def test_ctx_split_asset(
 
 
 def test_ctx_row(
-    session: orm.Session,
     account: Account,
     transactions: list[Transaction],
     labels: dict[str, int],
 ) -> None:
-    query = session.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
-    assets: dict[int, tuple[str, str | None]] = {
-        r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
-    }
+    query = Asset.query(Asset.id_, Asset.name, Asset.ticker)
+    assets = sql.to_dict_tuple(query)
     txn = transactions[0]
     t_split = txn.splits[0]
 
     ctx = txn_controller.ctx_row(
         t_split,
         assets,
-        Account.map_name(session),
-        TransactionCategory.map_name_emoji(session),
+        Account.map_name(),
+        TransactionCategory.map_name_emoji(),
         {labels["engineer"]: "engineer"},
         set(),
         CURRENCY_FORMATS[DEFAULT_CURRENCY],
@@ -199,14 +185,12 @@ def test_ctx_row(
 
 def test_ctx_options(
     today: datetime.date,
-    session: orm.Session,
     account: Account,
     transactions: list[Transaction],
     categories: dict[str, int],
 ) -> None:
-    _ = transactions
     tbl_query = txn_controller.TableQuery(
-        session.query(TransactionSplit),
+        TransactionSplit.query(),
         {},
         any_filters=False,
     )
@@ -214,8 +198,8 @@ def test_ctx_options(
     ctx = txn_controller.ctx_options(
         tbl_query,
         today,
-        Account.map_name(session),
-        base.tranaction_category_groups(session),
+        Account.map_name(),
+        base.tranaction_category_groups(),
         None,
         None,
     )
@@ -251,7 +235,7 @@ def test_ctx_options_selected(
     categories: dict[str, int],
 ) -> None:
     tbl_query = txn_controller.TableQuery(
-        session.query(TransactionSplit),
+        TransactionSplit.query(),
         {},
         any_filters=False,
     )
@@ -259,8 +243,8 @@ def test_ctx_options_selected(
     ctx = txn_controller.ctx_options(
         tbl_query,
         today,
-        Account.map_name(session),
-        base.tranaction_category_groups(session),
+        Account.map_name(),
+        base.tranaction_category_groups(),
         account.uri,
         TransactionCategory.id_to_uri(categories["other income"]),
     )
@@ -332,21 +316,17 @@ def test_table_title(
     assert title == target
 
 
-def test_table_results_empty(
-    session: orm.Session,
-) -> None:
-    query = session.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
-    assets: dict[int, tuple[str, str | None]] = {
-        r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
-    }
+def test_table_results_empty() -> None:
+    query = Asset.query(Asset.id_, Asset.name, Asset.ticker)
+    assets = sql.to_dict_tuple(query)
 
-    accounts = Account.map_name(session)
+    accounts = Account.map_name()
     result = txn_controller._table_results(
-        session.query(TransactionSplit),
+        TransactionSplit.query(),
         assets,
         accounts,
-        TransactionCategory.map_name_emoji(session),
-        Label.map_name(session),
+        TransactionCategory.map_name_emoji(),
+        Label.map_name(),
         {},
         dict.fromkeys(accounts, CURRENCY_FORMATS[DEFAULT_CURRENCY]),
     )
@@ -357,16 +337,14 @@ def test_table_results(
     session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
-    query = session.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
-    assets: dict[int, tuple[str, str | None]] = {
-        r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
-    }
-    accounts = Account.map_name(session)
-    labels = Label.map_name(session)
-    categories = TransactionCategory.map_name_emoji(session)
+    query = Asset.query(Asset.id_, Asset.name, Asset.ticker)
+    assets = sql.to_dict_tuple(query)
+    accounts = Account.map_name()
+    labels = Label.map_name()
+    categories = TransactionCategory.map_name_emoji()
 
     result = txn_controller._table_results(
-        session.query(TransactionSplit).order_by(TransactionSplit.date_ord),
+        TransactionSplit.query().order_by(TransactionSplit.date_ord),
         assets,
         accounts,
         categories,
@@ -385,7 +363,7 @@ def test_table_results(
                     categories,
                     {
                         label_id: labels[label_id]
-                        for label_id, in session.query(LabelLink.label_id).where(
+                        for label_id, in LabelLink.query(LabelLink.label_id).where(
                             LabelLink.t_split_id == txn.splits[0].id_,
                         )
                     },
@@ -399,9 +377,8 @@ def test_table_results(
     assert result == target
 
 
-def test_ctx_table_empty(today: datetime.date, session: orm.Session) -> None:
+def test_ctx_table_empty(today: datetime.date) -> None:
     ctx, title = txn_controller.ctx_table(
-        session,
         today,
         None,
         None,
@@ -431,11 +408,9 @@ def test_ctx_table_empty(today: datetime.date, session: orm.Session) -> None:
 
 def test_ctx_table(
     today: datetime.date,
-    session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
     ctx, title = txn_controller.ctx_table(
-        session,
         today,
         None,
         None,
@@ -466,12 +441,10 @@ def test_ctx_table(
 def test_ctx_table_paging(
     today: datetime.date,
     monkeypatch: pytest.MonkeyPatch,
-    session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
     monkeypatch.setattr(txn_controller, "PAGE_LEN", 2)
     ctx, _ = txn_controller.ctx_table(
-        session,
         today,
         None,
         None,
@@ -489,12 +462,9 @@ def test_ctx_table_paging(
 
 def test_ctx_table_search(
     today: datetime.date,
-    session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     ctx, _ = txn_controller.ctx_table(
-        session,
         today,
         "rent",
         None,
@@ -512,12 +482,9 @@ def test_ctx_table_search(
 
 def test_ctx_table_search_paging(
     today: datetime.date,
-    session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     ctx, _ = txn_controller.ctx_table(
-        session,
         today,
         "rent",
         None,

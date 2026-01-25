@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from nummus import sql
 from nummus.controllers import base
 from nummus.models.asset import (
     Asset,
@@ -11,7 +12,6 @@ from nummus.models.asset import (
     AssetValuation,
 )
 from nummus.models.currency import Currency, CURRENCY_FORMATS, DEFAULT_CURRENCY
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     import datetime
@@ -56,8 +56,8 @@ def test_new(
     web_client: WebClient,
     session: orm.Session,
 ) -> None:
-    session.query(Asset).delete()
-    session.commit()
+    with session.begin_nested():
+        Asset.query().delete()
 
     result, headers = web_client.POST(
         "assets.new",
@@ -73,7 +73,7 @@ def test_new(
     assert "All changes saved" in result
     assert "asset" in headers["HX-Trigger"]
 
-    a = session.query(Asset).one()
+    a = Asset.one()
     assert a.name == "New name"
     assert a.category == AssetCategory.STOCKS
     assert a.currency == Currency.USD
@@ -112,7 +112,6 @@ def test_asset_get(
     asset: Asset,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     result, _ = web_client.GET(("assets.asset", {"uri": asset.uri}))
     assert asset.name in result
     assert asset.ticker is not None
@@ -124,7 +123,7 @@ def test_asset_get(
     assert "Delete" not in result
 
 
-def test_asset_edit(web_client: WebClient, session: orm.Session, asset: Asset) -> None:
+def test_asset_edit(web_client: WebClient, asset: Asset) -> None:
     result, headers = web_client.PUT(
         ("assets.asset", {"uri": asset.uri}),
         data={
@@ -139,7 +138,7 @@ def test_asset_edit(web_client: WebClient, session: orm.Session, asset: Asset) -
     assert "All changes saved" in result
     assert "asset" in headers["HX-Trigger"]
 
-    session.refresh(asset)
+    asset.refresh()
     assert asset.name == "New name"
     assert asset.category == AssetCategory.BONDS
     assert asset.currency == Currency.EUR
@@ -166,7 +165,6 @@ def test_account_delete(
     asset: Asset,
     asset_valuation: AssetValuation,
 ) -> None:
-    _ = asset_valuation
     result, headers = web_client.DELETE(("assets.asset", {"uri": asset.uri}))
     assert not result
     assert headers["HX-Redirect"] == web_client.url_for("assets.page_all")
@@ -225,7 +223,6 @@ def test_validation(
     value: str,
     target: str,
 ) -> None:
-    _ = asset_etf
     args = {prop: value}
     if include_asset:
         args["uri"] = asset.uri
@@ -247,7 +244,6 @@ def test_new_valuation_get(
 
 def test_new_valuation(
     today: datetime.date,
-    session: orm.Session,
     web_client: WebClient,
     asset: Asset,
     rand_real: Decimal,
@@ -263,7 +259,7 @@ def test_new_valuation(
     assert "All changes saved" in result
     assert "valuation" in headers["HX-Trigger"]
 
-    v = session.query(AssetValuation).one()
+    v = AssetValuation.one()
     assert v.asset_id == asset.id_
     assert v.date == today
     assert v.value == rand_real
@@ -323,7 +319,6 @@ def test_valuation_get(
 
 
 def test_valuation_delete(
-    session: orm.Session,
     web_client: WebClient,
     asset_valuation: AssetValuation,
 ) -> None:
@@ -334,13 +329,12 @@ def test_valuation_delete(
     assert f"{asset_valuation.date} valuation deleted" in result
     assert "valuation" in headers["HX-Trigger"]
 
-    v = session.query(AssetValuation).one_or_none()
+    v = AssetValuation.query().one_or_none()
     assert v is None
 
 
 def test_valuation_edit(
     tomorrow: datetime.date,
-    session: orm.Session,
     web_client: WebClient,
     asset_valuation: AssetValuation,
     rand_real: Decimal,
@@ -356,7 +350,7 @@ def test_valuation_edit(
     assert "All changes saved" in result
     assert "valuation" in headers["HX-Trigger"]
 
-    session.refresh(asset_valuation)
+    asset_valuation.refresh()
     assert asset_valuation.date == tomorrow
     assert asset_valuation.value == rand_real
 
@@ -396,13 +390,12 @@ def test_valuation_duplicate(
     asset: Asset,
     asset_valuation: AssetValuation,
 ) -> None:
-    v = AssetValuation(
-        asset_id=asset.id_,
-        date_ord=tomorrow.toordinal(),
-        value=asset_valuation.value,
-    )
-    session.add(v)
-    session.commit()
+    with session.begin_nested():
+        AssetValuation.create(
+            asset_id=asset.id_,
+            date_ord=tomorrow.toordinal(),
+            value=asset_valuation.value,
+        )
 
     result, _ = web_client.PUT(
         ("assets.valuation", {"uri": asset_valuation.uri}),
@@ -415,8 +408,8 @@ def test_valuation_duplicate(
 
 
 def test_update_get_empty(session: orm.Session, web_client: WebClient) -> None:
-    session.query(Asset).delete()
-    session.commit()
+    with session.begin_nested():
+        Asset.query().delete()
 
     result, _ = web_client.GET("assets.update")
     assert "Update assets" in result
@@ -428,17 +421,16 @@ def test_update_get_one(
     web_client: WebClient,
     asset: Asset,
 ) -> None:
-    _ = asset
-    session.query(Asset).where(Asset.category == AssetCategory.INDEX).delete()
-    session.commit()
+    with session.begin_nested():
+        Asset.query().where(Asset.category == AssetCategory.INDEX).delete()
 
     result, _ = web_client.GET("assets.update")
     assert "Update assets" in result
     assert "There is one asset with ticker to update" in result
 
 
-def test_update_get(session: orm.Session, web_client: WebClient) -> None:
-    n = query_count(session.query(Asset))
+def test_update_get(web_client: WebClient) -> None:
+    n = sql.count(Asset.query())
 
     result, _ = web_client.GET("assets.update")
     assert "Update assets" in result
@@ -456,10 +448,8 @@ def test_update(
     asset: Asset,
     transactions: list[Transaction],
 ) -> None:
-    _ = asset
-    _ = transactions
-    session.query(Asset).where(Asset.category == AssetCategory.INDEX).delete()
-    session.commit()
+    with session.begin_nested():
+        Asset.query().where(Asset.category == AssetCategory.INDEX).delete()
 
     result, headers = web_client.POST("assets.update")
     assert "snackbar.show" in result
@@ -471,6 +461,5 @@ def test_update_error(
     web_client: WebClient,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     result, _ = web_client.POST("assets.update")
     assert "No timezone found, symbol may be delisted" in result

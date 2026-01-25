@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from nummus import sql
 from nummus.health_checks.missing_valuations import MissingAssetValuations
 from nummus.models.health_checks import HealthCheckIssue
-from nummus.models.utils import (
-    query_count,
-)
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -18,9 +16,9 @@ if TYPE_CHECKING:
     from nummus.models.transaction import Transaction
 
 
-def test_empty(session: orm.Session) -> None:
+def test_empty() -> None:
     c = MissingAssetValuations()
-    c.test(session)
+    c.test()
     assert c.issues == {}
 
 
@@ -29,25 +27,23 @@ def test_no_issues(
     transactions: list[Transaction],
     asset_valuation: AssetValuation,
 ) -> None:
-    txn = transactions[1]
-    asset_valuation.date_ord = txn.date_ord
-    session.commit()
+    with session.begin_nested():
+        txn = transactions[1]
+        asset_valuation.date_ord = txn.date_ord
     c = MissingAssetValuations()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 0
+    c.test()
+    assert not sql.any_(HealthCheckIssue.query())
 
 
 def test_no_valuations(
-    session: orm.Session,
     asset: Asset,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     c = MissingAssetValuations()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 1
+    c.test()
+    assert HealthCheckIssue.count() == 1
 
-    i = session.query(HealthCheckIssue).one()
+    i = HealthCheckIssue.one()
     assert i.check == c.name()
     assert i.value == asset.uri
     uri = i.uri
@@ -57,17 +53,16 @@ def test_no_valuations(
 
 
 def test_no_valuations_before_txn(
-    session: orm.Session,
     asset: Asset,
     transactions: list[Transaction],
     asset_valuation: AssetValuation,
 ) -> None:
     txn = transactions[1]
     c = MissingAssetValuations()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 1
+    c.test()
+    assert HealthCheckIssue.count() == 1
 
-    i = session.query(HealthCheckIssue).one()
+    i = HealthCheckIssue.one()
     assert i.check == c.name()
     assert i.value == asset.uri
     uri = i.uri

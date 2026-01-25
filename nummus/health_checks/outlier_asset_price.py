@@ -9,17 +9,14 @@ from typing import override, TYPE_CHECKING
 
 from sqlalchemy import func
 
-from nummus import utils
+from nummus import sql, utils
 from nummus.health_checks.base import HealthCheck
 from nummus.models.account import Account
 from nummus.models.asset import Asset
-from nummus.models.base import YIELD_PER
 from nummus.models.currency import CURRENCY_FORMATS
 from nummus.models.transaction import TransactionSplit
-from nummus.models.utils import query_to_dict
 
 if TYPE_CHECKING:
-    from sqlalchemy import orm
 
     from nummus.models.currency import Currency
 
@@ -38,39 +35,37 @@ class OutlierAssetPrice(HealthCheck):
     _RANGE = Decimal("0.4")
 
     @override
-    def test(self, s: orm.Session) -> None:
+    def test(self) -> None:
         today = datetime.datetime.now(datetime.UTC).date()
         today_ord = today.toordinal()
-        start_ord = (
-            s.query(func.min(TransactionSplit.date_ord))
-            .where(TransactionSplit.asset_id.isnot(None))
-            .scalar()
+        start_ord = sql.scalar(
+            TransactionSplit.query(func.min(TransactionSplit.date_ord)).where(
+                TransactionSplit.asset_id.isnot(None),
+            ),
         )
         if start_ord is None:
             # No asset transactions at all
-            self._commit_issues(s, {})
+            self._commit_issues({})
             return
 
         # List of (uri, source, field)
         issues: list[tuple[str, str, str]] = []
 
-        assets = Asset.map_name(s)
+        assets = Asset.map_name()
 
         asset_valuations = Asset.get_value_all(
-            s,
             start_ord,
             today_ord + utils.DAYS_IN_WEEK,
         )
 
-        query = s.query(Account).with_entities(
+        query = Account.query(
             Account.id_,
             Account.currency,
         )
-        accounts: dict[int, Currency] = query_to_dict(query)
+        accounts: dict[int, Currency] = sql.to_dict(query)
 
         query = (
-            s.query(TransactionSplit)
-            .with_entities(
+            TransactionSplit.query(
                 TransactionSplit.id_,
                 TransactionSplit.account_id,
                 TransactionSplit.date_ord,
@@ -84,19 +79,14 @@ class OutlierAssetPrice(HealthCheck):
             )
             .where(TransactionSplit.asset_id.isnot(None))
         )
-        for t_id, acct_id, date_ord, a_id, amount, qty in query.yield_per(
-            YIELD_PER,
-        ):
-            t_id: int
-            acct_id: int
-            date_ord: int
-            a_id: int
-            amount: Decimal
-            qty: Decimal
+        for t_id, acct_id, date_ord, a_id, amount, qty in sql.yield_(query):
             uri = TransactionSplit.id_to_uri(t_id)
 
-            if qty == 0:
+            if not qty:
                 continue
+            if TYPE_CHECKING:
+                # Enforced by query and SQL constraints
+                assert a_id is not None
 
             # Transaction asset price
             t_price = -amount / qty
@@ -131,6 +121,5 @@ class OutlierAssetPrice(HealthCheck):
         source_len = max(len(item[1]) for item in issues) if issues else 0
 
         self._commit_issues(
-            s,
             {uri: f"{source:{source_len}} {field}" for uri, source, field in issues},
         )

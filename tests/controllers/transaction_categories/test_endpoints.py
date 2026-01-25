@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from nummus import sql
 from nummus.controllers import base
 from nummus.models.transaction import TransactionSplit
 from nummus.models.transaction_category import (
@@ -12,7 +13,6 @@ from nummus.models.transaction_category import (
 )
 
 if TYPE_CHECKING:
-    from sqlalchemy import orm
 
     from nummus.models.transaction import Transaction
     from tests.controllers.conftest import WebClient
@@ -62,7 +62,6 @@ def test_new_get(web_client: WebClient) -> None:
 def test_new(
     web_client: WebClient,
     rand_str: str,
-    session: orm.Session,
 ) -> None:
     form = {
         "name": rand_str,
@@ -75,11 +74,10 @@ def test_new(
     assert f"Created category {rand_str}" in result
     assert "category" in headers["HX-Trigger"]
 
-    t_cat = (
-        session.query(TransactionCategory)
-        .where(TransactionCategory.emoji_name == rand_str)
-        .one()
+    query = TransactionCategory.query().where(
+        TransactionCategory.emoji_name == rand_str,
     )
+    t_cat = sql.one(query)
     assert t_cat.group == TransactionCategoryGroup.EXPENSE
     assert t_cat.is_profit_loss
     assert t_cat.essential_spending
@@ -133,12 +131,10 @@ def test_category_delete_locked(
 def test_category_delete_unlocked(
     web_client: WebClient,
     categories: dict[str, int],
-    session: orm.Session,
     transactions_spending: list[Transaction],
 ) -> None:
-    _ = transactions_spending
     t_split = (
-        session.query(TransactionSplit)
+        TransactionSplit.query()
         .where(TransactionSplit.category_id == categories["groceries"])
         .first()
     )
@@ -153,20 +149,19 @@ def test_category_delete_unlocked(
     assert "category" in headers["HX-Trigger"]
 
     t_cat = (
-        session.query(TransactionCategory)
+        TransactionCategory.query()
         .where(TransactionCategory.name == "groceries")
         .one_or_none()
     )
     assert t_cat is None
 
-    session.refresh(t_split)
+    t_split.refresh()
     assert t_split.category_id == categories["uncategorized"]
 
 
 def test_category_edit_unlocked(
     web_client: WebClient,
     categories: dict[str, int],
-    session: orm.Session,
 ) -> None:
     uri = TransactionCategory.id_to_uri(categories["groceries"])
 
@@ -178,11 +173,8 @@ def test_category_edit_unlocked(
     assert "All changes saved" in result
     assert "category" in headers["HX-Trigger"]
 
-    t_cat = (
-        session.query(TransactionCategory)
-        .where(TransactionCategory.name == "food")
-        .one()
-    )
+    query = TransactionCategory.query().where(TransactionCategory.name == "food")
+    t_cat = sql.one(query)
     assert t_cat.emoji_name == "Food"
     assert t_cat.group == TransactionCategoryGroup.EXPENSE
     assert not t_cat.is_profit_loss
@@ -192,7 +184,6 @@ def test_category_edit_unlocked(
 def test_category_edit_locked(
     web_client: WebClient,
     categories: dict[str, int],
-    session: orm.Session,
 ) -> None:
     uri = TransactionCategory.id_to_uri(categories["uncategorized"])
 
@@ -204,11 +195,10 @@ def test_category_edit_locked(
     assert "All changes saved" in result
     assert "category" in headers["HX-Trigger"]
 
-    t_cat = (
-        session.query(TransactionCategory)
-        .where(TransactionCategory.name == "uncategorized")
-        .one()
+    query = TransactionCategory.query().where(
+        TransactionCategory.name == "uncategorized",
     )
+    t_cat = sql.one(query)
     assert t_cat.emoji_name == "Uncategorized 🤷"
     assert t_cat.group == TransactionCategoryGroup.OTHER
     assert not t_cat.is_profit_loss

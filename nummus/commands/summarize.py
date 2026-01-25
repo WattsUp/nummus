@@ -108,41 +108,33 @@ class Summarize(Command):
         # Defer for faster time to main
         from sqlalchemy import func
 
-        from nummus import utils
+        from nummus import sql, utils
         from nummus.models.account import Account
         from nummus.models.asset import Asset, AssetCategory, AssetValuation
         from nummus.models.config import Config
         from nummus.models.currency import CURRENCY_FORMATS
         from nummus.models.transaction import TransactionSplit
-        from nummus.models.utils import query_count
 
         today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
-        with self._p.begin_session() as s:
-            accts = {acct.id_: acct for acct in s.query(Account).all()}
-            assets = {
-                a.id_: a
-                for a in (
-                    s.query(Asset).where(Asset.category != AssetCategory.INDEX).all()
-                )
-            }
+        with self._p.begin_session():
+            accts = {acct.id_: acct for acct in Account.all()}
+            query = Asset.query().where(Asset.category != AssetCategory.INDEX)
+            assets = {a.id_: a for a in sql.yield_(query)}
 
             # Get the inception date
-            start_date_ord: int = (
-                s.query(
-                    func.min(TransactionSplit.date_ord),
-                ).scalar()
-                or datetime.date(1970, 1, 1).toordinal()
+            query = TransactionSplit.query(
+                func.min(TransactionSplit.date_ord),
             )
+            start_date_ord = sql.scalar(query) or datetime.date(1970, 1, 1).toordinal()
 
             n_accounts = len(accts)
-            n_transactions = query_count(s.query(TransactionSplit))
+            n_transactions = TransactionSplit.count()
             n_assets = len(assets)
-            n_valuations = query_count(s.query(AssetValuation))
+            n_valuations = AssetValuation.count()
 
             value_accts, profit_accts, value_assets = Account.get_value_all(
-                s,
                 start_date_ord,
                 today_ord,
             )
@@ -180,7 +172,6 @@ class Summarize(Command):
             )
 
             profit_assets = Account.get_profit_by_asset_all(
-                s,
                 start_date_ord,
                 today_ord,
             )
@@ -224,7 +215,7 @@ class Summarize(Command):
                 "total_asset_value": total_asset_value,
                 "assets": summary_assets,
                 "db_size": self._p.path.stat().st_size,
-                "cf": CURRENCY_FORMATS[Config.base_currency(s)],
+                "cf": CURRENCY_FORMATS[Config.base_currency()],
             }
 
     @classmethod

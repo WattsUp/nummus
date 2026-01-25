@@ -9,19 +9,17 @@ from collections import defaultdict
 from decimal import Decimal
 from typing import override, TYPE_CHECKING
 
+from nummus import sql
 from nummus.health_checks.base import HealthCheck
 from nummus.models.account import Account
-from nummus.models.base import YIELD_PER
 from nummus.models.currency import CURRENCY_FORMATS
 from nummus.models.transaction import TransactionSplit
 from nummus.models.transaction_category import (
     TransactionCategory,
     TransactionCategoryGroup,
 )
-from nummus.models.utils import query_to_dict
 
 if TYPE_CHECKING:
-    from sqlalchemy import orm
 
     from nummus.models.currency import Currency
 
@@ -37,28 +35,25 @@ class UnbalancedTransfers(HealthCheck):
     _SEVERE = True
 
     @override
-    def test(self, s: orm.Session) -> None:
+    def test(self) -> None:
         issues: dict[str, str] = {}
-        query = s.query(
+        query = TransactionCategory.query(
             TransactionCategory.id_,
             TransactionCategory.emoji_name,
         ).where(
             TransactionCategory.group == TransactionCategoryGroup.TRANSFER,
         )
-        cat_transfers_ids: dict[int, str] = query_to_dict(query)
+        cat_transfers_ids = sql.to_dict(query)
 
-        query = s.query(Account).with_entities(
+        query = Account.query(
             Account.id_,
             Account.name,
             Account.currency,
         )
-        accounts: dict[int, tuple[str, Currency]] = {
-            r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
-        }
+        accounts = sql.to_dict_tuple(query)
 
         query = (
-            s.query(TransactionSplit)
-            .with_entities(
+            TransactionSplit.query(
                 TransactionSplit.account_id,
                 TransactionSplit.date_ord,
                 TransactionSplit.amount,
@@ -68,12 +63,9 @@ class UnbalancedTransfers(HealthCheck):
             .order_by(TransactionSplit.date_ord, TransactionSplit.amount)
         )
         current_date_ord: int | None = None
-        total = defaultdict(Decimal)
+        total: dict[int, Decimal] = defaultdict(Decimal)
         current_splits: dict[int, list[tuple[int, Decimal]]] = defaultdict(list)
-        for acct_id, date_ord, amount, t_cat_id in query.yield_per(YIELD_PER):
-            acct_id: int
-            date_ord: int
-            amount: Decimal
+        for acct_id, date_ord, amount, t_cat_id in sql.yield_(query):
             if current_date_ord is None:
                 current_date_ord = date_ord
             if date_ord != current_date_ord:
@@ -101,7 +93,7 @@ class UnbalancedTransfers(HealthCheck):
             )
             issues[uri] = msg
 
-        self._commit_issues(s, issues)
+        self._commit_issues(issues)
 
     @classmethod
     def _create_issue(

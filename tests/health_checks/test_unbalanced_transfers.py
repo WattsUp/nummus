@@ -4,10 +4,10 @@ import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from nummus import sql
 from nummus.health_checks.unbalanced_transfers import UnbalancedTransfers
 from nummus.models.currency import CURRENCY_FORMATS, DEFAULT_CURRENCY
 from nummus.models.health_checks import HealthCheckIssue
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -16,20 +16,18 @@ if TYPE_CHECKING:
     from nummus.models.transaction import Transaction
 
 
-def test_empty(session: orm.Session) -> None:
+def test_empty() -> None:
     c = UnbalancedTransfers()
-    c.test(session)
+    c.test()
     assert c.issues == {}
 
 
 def test_no_transfers(
-    session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     c = UnbalancedTransfers()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 0
+    c.test()
+    assert not sql.any_(HealthCheckIssue.query())
 
 
 def test_no_issues(
@@ -38,25 +36,25 @@ def test_no_issues(
     transactions_spending: list[Transaction],
     categories: dict[str, int],
 ) -> None:
-    amount = Decimal(100)
-    spec = [
-        (0, amount),
-        (0, -amount),
-        (1, amount),
-        (1, -amount),
-    ]
-    for i, (dt, a) in enumerate(spec):
-        txn = transactions_spending[i]
-        txn.date = today + datetime.timedelta(days=dt)
-        t_split = txn.splits[0]
-        t_split.category_id = categories["transfers"]
-        t_split.amount = a
-        t_split.parent = txn
-    session.commit()
+    with session.begin_nested():
+        amount = Decimal(100)
+        spec = [
+            (0, amount),
+            (0, -amount),
+            (1, amount),
+            (1, -amount),
+        ]
+        for i, (dt, a) in enumerate(spec):
+            txn = transactions_spending[i]
+            txn.date = today + datetime.timedelta(days=dt)
+            t_split = txn.splits[0]
+            t_split.category_id = categories["transfers"]
+            t_split.amount = a
+            t_split.parent = txn
 
     c = UnbalancedTransfers()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 0
+    c.test()
+    assert not sql.any_(HealthCheckIssue.query())
 
 
 def test_wrong_amount(
@@ -66,19 +64,19 @@ def test_wrong_amount(
     transactions_spending: list[Transaction],
     categories: dict[str, int],
 ) -> None:
-    amount = Decimal(100)
-    spec = [amount, -amount * 2]
-    for i, a in enumerate(spec):
-        t_split = transactions_spending[i].splits[0]
-        t_split.category_id = categories["transfers"]
-        t_split.amount = a
-    session.commit()
+    with session.begin_nested():
+        amount = Decimal(100)
+        spec = [amount, -amount * 2]
+        for i, a in enumerate(spec):
+            t_split = transactions_spending[i].splits[0]
+            t_split.category_id = categories["transfers"]
+            t_split.amount = a
 
     c = UnbalancedTransfers()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 1
+    c.test()
+    assert HealthCheckIssue.count() == 1
 
-    i = session.query(HealthCheckIssue).one()
+    i = HealthCheckIssue.one()
     assert i.check == c.name()
     assert i.value == today.isoformat()
     uri = i.uri
@@ -99,19 +97,19 @@ def test_one_pair(
     transactions_spending: list[Transaction],
     categories: dict[str, int],
 ) -> None:
-    amount = Decimal(100)
-    spec = [amount, -amount, -amount]
-    for i, a in enumerate(spec):
-        t_split = transactions_spending[i].splits[0]
-        t_split.category_id = categories["transfers"]
-        t_split.amount = a
-    session.commit()
+    with session.begin_nested():
+        amount = Decimal(100)
+        spec = [amount, -amount, -amount]
+        for i, a in enumerate(spec):
+            t_split = transactions_spending[i].splits[0]
+            t_split.category_id = categories["transfers"]
+            t_split.amount = a
 
     c = UnbalancedTransfers()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 1
+    c.test()
+    assert HealthCheckIssue.count() == 1
 
-    i = session.query(HealthCheckIssue).one()
+    i = HealthCheckIssue.one()
     assert i.check == c.name()
     assert i.value == today.isoformat()
     uri = i.uri
@@ -131,33 +129,30 @@ def test_wrong_date(
     transactions_spending: list[Transaction],
     categories: dict[str, int],
 ) -> None:
-    amount = Decimal(100)
-    spec = [
-        (0, amount),
-        (0, -amount),
-        (0, amount),
-        (1, -amount),
-    ]
-    for i, (dt, a) in enumerate(spec):
-        txn = transactions_spending[i]
-        txn.date = today + datetime.timedelta(days=dt)
-        t_split = txn.splits[0]
-        t_split.category_id = categories["transfers"]
-        t_split.amount = a
-        t_split.parent = txn
-    amount = Decimal(100)
-    session.commit()
+    with session.begin_nested():
+        amount = Decimal(100)
+        spec = [
+            (0, amount),
+            (0, -amount),
+            (0, amount),
+            (1, -amount),
+        ]
+        for i, (dt, a) in enumerate(spec):
+            txn = transactions_spending[i]
+            txn.date = today + datetime.timedelta(days=dt)
+            t_split = txn.splits[0]
+            t_split.category_id = categories["transfers"]
+            t_split.amount = a
+            t_split.parent = txn
+        amount = Decimal(100)
     tomorrow = today + datetime.timedelta(days=1)
 
     c = UnbalancedTransfers()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 2
+    c.test()
+    assert HealthCheckIssue.count() == 2
 
-    i = (
-        session.query(HealthCheckIssue)
-        .where(HealthCheckIssue.value == today.isoformat())
-        .one()
-    )
+    query = HealthCheckIssue.query().where(HealthCheckIssue.value == today.isoformat())
+    i = sql.one(query)
     assert i.check == c.name()
     cf = CURRENCY_FORMATS[DEFAULT_CURRENCY]
     lines = (
@@ -166,11 +161,10 @@ def test_wrong_date(
     )
     assert i.msg == "\n".join(lines)
 
-    i = (
-        session.query(HealthCheckIssue)
-        .where(HealthCheckIssue.value == tomorrow.isoformat())
-        .one()
+    query = HealthCheckIssue.query().where(
+        HealthCheckIssue.value == tomorrow.isoformat(),
     )
+    i = sql.one(query)
     assert i.check == c.name()
     assert i.value == tomorrow.isoformat()
     lines = (

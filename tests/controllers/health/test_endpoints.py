@@ -35,9 +35,9 @@ def test_refresh(web_client: WebClient, n_runs: int) -> None:
 
 
 def test_ignore(web_client: WebClient, session: orm.Session) -> None:
-    c = UnusedCategories()
-    c.test(session)
-    session.commit()
+    with session.begin_nested():
+        c = UnusedCategories()
+        c.test()
 
     uri = next(iter(c.issues.keys()))
 

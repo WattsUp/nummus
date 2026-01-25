@@ -40,15 +40,13 @@ class MigratorV0_13(Migrator):
             for t_split_id, name in s.execute(sqlalchemy.text(stmt)):
                 tag_mapping[name].add(t_split_id)
 
-            labels = [Label(name=name) for name in tag_mapping]
-            s.add_all(labels)
-            s.flush()
+            labels = [Label.create(name=name) for name in tag_mapping]
 
             for label in labels:
                 for t_split_id in tag_mapping[label.name]:
-                    s.add(LabelLink(label_id=label.id_, t_split_id=t_split_id))
+                    LabelLink.create(label_id=label.id_, t_split_id=t_split_id)
 
-        with p.begin_session() as s:
-            self.drop_column(s, TransactionSplit, "tag")
+        with p.begin_session():
+            self.drop_column(TransactionSplit, "tag")
 
         return comments

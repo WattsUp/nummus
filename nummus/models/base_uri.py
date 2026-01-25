@@ -22,7 +22,7 @@ _ORDER = "big"
 _ROUNDS = 3
 
 
-_CIPHER: Cipher
+_cipher: Cipher
 
 
 class Cipher:
@@ -203,7 +203,7 @@ class Cipher:
             msg = f"Buf is {len(buf)}B long, expected {n}B"
             raise ValueError(msg)
 
-        keys = []
+        keys: list[int] = []
         for _ in range(_ROUNDS):
             buf_next = buf[:ID_BYTES]
             buf = buf[ID_BYTES:]
@@ -216,14 +216,14 @@ class Cipher:
 
 
 def load_cipher(buf: bytes) -> None:
-    """Load a Cipher from bytes into _CIPHER.
+    """Load a Cipher from bytes into _cipher.
 
     Args:
         buf: Bytes to load
 
     """
-    global _CIPHER
-    _CIPHER = Cipher.from_bytes(buf)
+    global _cipher
+    _cipher = Cipher.from_bytes(buf)
 
 
 def id_to_uri(id_: int) -> str:
@@ -236,7 +236,7 @@ def id_to_uri(id_: int) -> str:
         URI, hex encoded, 1:1 mapping
 
     """
-    return _CIPHER.encode(id_).to_bytes(ID_BYTES, _ORDER).hex()
+    return _cipher.encode(id_).to_bytes(ID_BYTES, _ORDER).hex()
 
 
 def uri_to_id(uri: str) -> int:
@@ -261,4 +261,4 @@ def uri_to_id(uri: str) -> int:
         msg = f"URI is not a hex number: {uri}"
         raise exc.InvalidURIError(msg) from e
     else:
-        return _CIPHER.decode(uri_int)
+        return _cipher.decode(uri_int)

@@ -39,8 +39,8 @@ __all__ = [
     "MissingAssetError",
     "MultipleResultsFound",
     "NoAssetWebSourceError",
-    "NoIDError",
     "NoImporterBufferError",
+    "NoKeywordArgumentsError",
     "NoResultFound",
     "NoURIError",
     "NonAssetTransactionError",
@@ -175,10 +175,6 @@ class ProtectedObjectNotFoundError(Exception):
     """Error when a protected object (non-deletable) could not be found."""
 
 
-class NoIDError(Exception):
-    """Error when model does not have id_ yet, likely a flush is needed."""
-
-
 class NoURIError(Exception):
     """Error when a URI is requested for a model without one."""
 
@@ -260,3 +256,7 @@ class InvalidAssetTransactionCategoryError(Exception):
 
 class InvalidKeyError(Exception):
     """Error when a key does not meet minimum requirements."""
+
+
+class NoKeywordArgumentsError(Exception):
+    """Error when function is given kwargs when not expected."""

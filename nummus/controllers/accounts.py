@@ -11,11 +11,10 @@ import flask
 from sqlalchemy import func
 
 from nummus import exceptions as exc
-from nummus import utils, web
+from nummus import sql, utils, web
 from nummus.controllers import base, transactions
 from nummus.models.account import Account, AccountCategory
 from nummus.models.asset import Asset, AssetCategory
-from nummus.models.base import YIELD_PER
 from nummus.models.config import Config
 from nummus.models.currency import (
     Currency,
@@ -24,13 +23,11 @@ from nummus.models.currency import (
 )
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
-from nummus.models.utils import query_to_dict
 
 if TYPE_CHECKING:
     import datetime
 
     import werkzeug
-    from sqlalchemy import orm
 
     from nummus.models.currency import CurrencyFormat
 
@@ -123,12 +120,12 @@ def page_all() -> flask.Response:
 
     """
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         include_closed = "include-closed" in flask.request.args
         return base.page(
             "accounts/page-all.jinja",
             "Accounts",
-            ctx=ctx_accounts(s, base.today_client(), include_closed=include_closed),
+            ctx=ctx_accounts(base.today_client(), include_closed=include_closed),
         )
 
 
@@ -144,11 +141,10 @@ def page(uri: str) -> flask.Response:
     """
     p = web.portfolio
     today = base.today_client()
-    with p.begin_session() as s:
-        acct = base.find(s, Account, uri)
+    with p.begin_session():
+        acct = base.find(Account, uri)
         args = flask.request.args
         txn_table, title = transactions.ctx_table(
-            s,
             today,
             args.get("search"),
             args.get("account"),
@@ -163,16 +159,15 @@ def page(uri: str) -> flask.Response:
         title = title.removeprefix("Transactions").strip()
         title = f"{acct.name}, {title}" if title else f"{acct.name}"
 
-        ctx = ctx_account(s, acct, today)
+        ctx = ctx_account(acct, today)
         if acct.category == AccountCategory.INVESTMENT:
             ctx["performance"] = ctx_performance(
-                s,
                 acct,
                 today,
                 args.get("chart-period"),
                 CURRENCY_FORMATS[acct.currency],
             )
-        ctx["assets"] = ctx_assets(s, acct, today)
+        ctx["assets"] = ctx_assets(acct, today)
         return base.page(
             "accounts/page.jinja",
             title=title,
@@ -192,7 +187,7 @@ def new() -> str | flask.Response:
     """
     p = web.portfolio
     with p.begin_session() as s:
-        base_currency = Config.base_currency(s)
+        base_currency = Config.base_currency()
         if flask.request.method == "GET":
             ctx: AccountContext = {
                 "uri": None,
@@ -236,7 +231,7 @@ def new() -> str | flask.Response:
 
         try:
             with s.begin_nested():
-                acct = Account(
+                Account.create(
                     institution=institution,
                     name=name,
                     number=number,
@@ -245,7 +240,6 @@ def new() -> str | flask.Response:
                     budgeted=budgeted,
                     currency=currency,
                 )
-                s.add(acct)
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return base.error(e)
 
@@ -267,18 +261,18 @@ def account(uri: str) -> str | werkzeug.Response:
     today_ord = today.toordinal()
 
     with p.begin_session() as s:
-        base_currency = Config.base_currency(s)
+        base_currency = Config.base_currency()
 
-        acct = base.find(s, Account, uri)
+        acct = base.find(Account, uri)
 
         if flask.request.method == "GET":
             return flask.render_template(
                 "accounts/edit.jinja",
-                acct=ctx_account(s, acct, today),
+                acct=ctx_account(acct, today),
             )
         if flask.request.method == "DELETE":
             with s.begin_nested():
-                s.delete(acct)
+                acct.delete()
             return flask.redirect(flask.url_for("accounts.page_all"))
 
         values, _, _ = acct.get_value(today_ord, today_ord)
@@ -326,14 +320,13 @@ def performance(uri: str) -> flask.Response:
     """
     p = web.portfolio
     args = flask.request.args
-    with p.begin_session() as s:
-        acct = base.find(s, Account, uri)
+    with p.begin_session():
+        acct = base.find(Account, uri)
         html = flask.render_template(
             "accounts/performance.jinja",
             acct={
                 "uri": uri,
                 "performance": ctx_performance(
-                    s,
                     acct,
                     base.today_client(),
                     args.get("chart-period"),
@@ -365,13 +358,13 @@ def validation() -> str:
     p = web.portfolio
 
     # dict{key: (required, prop if unique required)}
-    properties: dict[str, tuple[bool, orm.QueryableAttribute | None]] = {
+    properties: dict[str, tuple[bool, sql.Column | None]] = {
         "name": (True, Account.name),
         "institution": (True, None),
         "number": (False, Account.number),
     }
 
-    with p.begin_session() as s:
+    with p.begin_session():
         args = flask.request.args
         uri = args.get("uri")
         for key, (required, prop) in properties.items():
@@ -380,7 +373,7 @@ def validation() -> str:
             return base.validate_string(
                 args[key],
                 is_required=required,
-                session=s,
+                cls=Account,
                 no_duplicates=prop,
                 no_duplicate_wheres=(
                     None if uri is None else [Account.id_ != Account.uri_to_id(uri)]
@@ -391,7 +384,6 @@ def validation() -> str:
 
 
 def ctx_account(
-    s: orm.Session,
     acct: Account,
     today: datetime.date,
     *,
@@ -400,7 +392,6 @@ def ctx_account(
     """Get the context to build the account details.
 
     Args:
-        s: SQL session to use
         acct: Account to generate context for
         today: Today's date
         skip_today: True will skip fetching today's value
@@ -423,32 +414,24 @@ def ctx_account(
             None if updated_on_ord is None else today_ord - updated_on_ord
         )
 
-        query = (
-            s.query(Transaction)
-            .with_entities(
-                func.count(Transaction.id_),
-                func.sum(Transaction.amount),
-            )
-            .where(
-                Transaction.date_ord == today_ord,
-                Transaction.account_id == acct.id_,
-            )
+        query = Transaction.query(
+            func.count(Transaction.id_),
+            func.sum(Transaction.amount),
+        ).where(
+            Transaction.date_ord == today_ord,
+            Transaction.account_id == acct.id_,
         )
-        n_today, change_today = query.one()
+        n_today, change_today = sql.one(query)
         change_today: Decimal = change_today or Decimal()
 
-        query = (
-            s.query(Transaction)
-            .with_entities(
-                func.count(Transaction.id_),
-                func.sum(Transaction.amount),
-            )
-            .where(
-                Transaction.date_ord > today_ord,
-                Transaction.account_id == acct.id_,
-            )
+        query = Transaction.query(
+            func.count(Transaction.id_),
+            func.sum(Transaction.amount),
+        ).where(
+            Transaction.date_ord > today_ord,
+            Transaction.account_id == acct.id_,
         )
-        n_future, change_future = query.one()
+        n_future, change_future = sql.one(query)
 
         values, _, _ = acct.get_value(today_ord, today_ord)
         current_value = values[0]
@@ -478,7 +461,6 @@ def ctx_account(
 
 
 def ctx_performance(
-    s: orm.Session,
     acct: Account,
     today: datetime.date,
     period: str | None,
@@ -487,7 +469,6 @@ def ctx_performance(
     """Get the context to build the account performance details.
 
     Args:
-        s: SQL session to use
         acct: Account to generate context for
         today: Today's date
         period: Period string to get data for
@@ -502,25 +483,30 @@ def ctx_performance(
     end_ord = end.toordinal()
     start_ord = acct.opened_on_ord or end_ord if start is None else start.toordinal()
 
-    query = s.query(TransactionCategory.id_, TransactionCategory.name).where(
+    query = TransactionCategory.query(
+        TransactionCategory.id_,
+        TransactionCategory.name,
+    ).where(
         TransactionCategory.is_profit_loss.is_(True),
     )
-    pnl_categories: dict[int, str] = query_to_dict(query)
+    pnl_categories: dict[int, str] = sql.to_dict(query)
 
     # Calculate total cost basis
     total_cost_basis = Decimal()
     dividends = Decimal()
     fees = Decimal()
     query = (
-        s.query(TransactionSplit)
-        .with_entities(TransactionSplit.category_id, func.sum(TransactionSplit.amount))
+        TransactionSplit.query(
+            TransactionSplit.category_id,
+            func.sum(TransactionSplit.amount),
+        )
         .where(
             TransactionSplit.date_ord <= end_ord,
             TransactionSplit.account_id == acct.id_,
         )
         .group_by(TransactionSplit.category_id)
     )
-    for cat_id, value in query.yield_per(YIELD_PER):
+    for cat_id, value in sql.yield_(query):
         name = pnl_categories.get(cat_id)
         if name is None:
             total_cost_basis += value
@@ -566,14 +552,12 @@ def ctx_performance(
 
 
 def ctx_assets(
-    s: orm.Session,
     acct: Account,
     today: datetime.date,
 ) -> list[AssetContext] | None:
     """Get the context to build the account assets.
 
     Args:
-        s: SQL session to use
         acct: Account to generate context for
         today: Today's date
 
@@ -591,32 +575,32 @@ def ctx_assets(
         return None  # Not an investment account
 
     # Include all assets every held
-    query = s.query(TransactionSplit.asset_id).where(
-        TransactionSplit.account_id == acct.id_,
-        TransactionSplit.asset_id.is_not(None),
+    query = (
+        TransactionSplit.query(TransactionSplit.asset_id)
+        .where(
+            TransactionSplit.account_id == acct.id_,
+            TransactionSplit.asset_id.is_not(None),
+        )
+        .distinct()
     )
-    a_ids = {a_id for a_id, in query.distinct()}
+    a_ids = {a_id for a_id in sql.col0(query) if a_id}
 
-    end_prices = Asset.get_value_all(s, today_ord, today_ord, ids=a_ids)
+    end_prices = Asset.get_value_all(today_ord, today_ord, ids=a_ids)
     asset_profits = acct.get_profit_by_asset(start_ord, today_ord)
 
     # Sum of profits should match final profit value, add any mismatch to cash
 
-    query = (
-        s.query(Asset)
-        .with_entities(
-            Asset.id_,
-            Asset.name,
-            Asset.ticker,
-            Asset.category,
-        )
-        .where(Asset.id_.in_(a_ids))
-    )
+    query = Asset.query(
+        Asset.id_,
+        Asset.name,
+        Asset.ticker,
+        Asset.category,
+    ).where(Asset.id_.in_(a_ids))
 
     assets: list[AssetContext] = []
     total_value = Decimal()
     total_profit = Decimal()
-    for a_id, name, ticker, category in query.yield_per(YIELD_PER):
+    for a_id, name, ticker, category in sql.yield_(query):
         end_qty = asset_qtys[a_id]
         end_price = end_prices[a_id][0]
         end_value = end_qty * end_price
@@ -639,12 +623,11 @@ def ctx_assets(
         assets.append(ctx_asset)
 
     # Add in cash too
-    cash: Decimal = (
-        s.query(func.sum(TransactionSplit.amount))
-        .where(TransactionSplit.account_id == acct.id_)
-        .where(TransactionSplit.date_ord <= today_ord)
-        .one()[0]
+    query = TransactionSplit.query(func.sum(TransactionSplit.amount)).where(
+        TransactionSplit.account_id == acct.id_,
+        TransactionSplit.date_ord <= today_ord,
     )
+    cash: Decimal = sql.one(query)
     total_value += cash
     ctx_asset = {
         "uri": None,
@@ -676,7 +659,6 @@ def ctx_assets(
 
 
 def ctx_accounts(
-    s: orm.Session,
     today: datetime.date,
     *,
     include_closed: bool = False,
@@ -684,7 +666,6 @@ def ctx_accounts(
     """Get the context to build the accounts table.
 
     Args:
-        s: SQL session to use
         today: Today's date
         include_closed: True will include Accounts marked closed, False will exclude
 
@@ -705,71 +686,59 @@ def ctx_accounts(
     # Get basic info
     accounts: dict[int, AccountContext] = {}
     currencies: dict[int, Currency] = {}
-    query = s.query(Account).order_by(Account.category)
+    query = Account.query().order_by(Account.category)
     if not include_closed:
         query = query.where(Account.closed.is_(False))
-    for acct in query.all():
-        accounts[acct.id_] = ctx_account(s, acct, today, skip_today=True)
+    for acct in sql.yield_(query):
+        accounts[acct.id_] = ctx_account(acct, today, skip_today=True)
         currencies[acct.id_] = acct.currency
         if acct.closed:
             n_closed += 1
 
     # Get updated_on
     query = (
-        s.query(Transaction)
-        .with_entities(
+        Transaction.query(
             Transaction.account_id,
             func.max(Transaction.date_ord),
         )
         .group_by(Transaction.account_id)
         .where(Transaction.account_id.in_(accounts))
     )
-    for acct_id, updated_on_ord in query.all():
+    for acct_id, updated_on_ord in sql.yield_(query):
         acct_id: int
         updated_on_ord: int
         accounts[acct_id]["updated_days_ago"] = today_ord - updated_on_ord
 
     # Get n_today
     query = (
-        s.query(Transaction)
-        .with_entities(
+        Transaction.query(
             Transaction.account_id,
             func.count(Transaction.id_),
             func.sum(Transaction.amount),
         )
-        .where(Transaction.date_ord == today_ord)
+        .where(Transaction.date_ord == today_ord, Transaction.account_id.in_(accounts))
         .group_by(Transaction.account_id)
-        .where(Transaction.account_id.in_(accounts))
     )
-    for acct_id, n_today, change_today in query.all():
-        acct_id: int
-        n_today: int
-        change_today: Decimal | None
+    for acct_id, n_today, change_today in sql.yield_(query):
         accounts[acct_id]["n_today"] = n_today
         accounts[acct_id]["change_today"] = change_today or Decimal()
 
     # Get n_future
     query = (
-        s.query(Transaction)
-        .with_entities(
+        Transaction.query(
             Transaction.account_id,
             func.count(Transaction.id_),
             func.sum(Transaction.amount),
         )
-        .where(Transaction.date_ord > today_ord)
+        .where(Transaction.date_ord > today_ord, Transaction.account_id.in_(accounts))
         .group_by(Transaction.account_id)
-        .where(Transaction.account_id.in_(accounts))
     )
-    for acct_id, n_future, change_future in query.all():
-        acct_id: int
-        n_future: int
-        change_future: Decimal
+    for acct_id, n_future, change_future in sql.yield_(query):
         accounts[acct_id]["n_future"] = n_future
         accounts[acct_id]["change_future"] = change_future
 
-    base_currency = Config.base_currency(s)
+    base_currency = Config.base_currency()
     forex = Asset.get_forex(
-        s,
         today_ord,
         today_ord,
         base_currency,
@@ -777,7 +746,7 @@ def ctx_accounts(
     )
 
     # Get all Account values
-    acct_values, _, _ = Account.get_value_all(s, today_ord, today_ord, ids=accounts)
+    acct_values, _, _ = Account.get_value_all(today_ord, today_ord, ids=accounts)
     for acct_id, ctx in accounts.items():
         v = acct_values[acct_id][0]
         ctx["value"] = v
@@ -822,7 +791,7 @@ def ctx_accounts(
         },
         "include_closed": include_closed,
         "n_closed": n_closed,
-        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)],
+        "currency_format": CURRENCY_FORMATS[Config.base_currency()],
     }
 
 
@@ -840,9 +809,8 @@ def txns(uri: str) -> str | flask.Response:
     args = flask.request.args
     first_page = "page" not in args
 
-    with p.begin_session() as s:
+    with p.begin_session():
         txn_table, title = transactions.ctx_table(
-            s,
             base.today_client(),
             args.get("search"),
             args.get("account"),
@@ -855,7 +823,7 @@ def txns(uri: str) -> str | flask.Response:
             acct_uri=uri,
         )
         title = title.removeprefix("Transactions").strip()
-        acct = base.find(s, Account, uri)
+        acct = base.find(Account, uri)
         title = f"{acct.name}, {title}" if title else f"{acct.name}"
     html_title = f"<title>{title} - nummus</title>\n"
     html = html_title + flask.render_template(
@@ -893,8 +861,8 @@ def txns_options(uri: str) -> str:
 
     """
     p = web.portfolio
-    with p.begin_session() as s:
-        accounts = Account.map_name(s)
+    with p.begin_session():
+        accounts = Account.map_name()
 
         args = flask.request.args
         uncleared = "uncleared" in args
@@ -905,7 +873,6 @@ def txns_options(uri: str) -> str:
         selected_end = args.get("end")
 
         tbl_query = transactions.table_query(
-            s,
             None,
             selected_account,
             selected_period,
@@ -918,7 +885,7 @@ def txns_options(uri: str) -> str:
             tbl_query,
             base.today_client(),
             accounts,
-            base.tranaction_category_groups(s),
+            base.tranaction_category_groups(),
             selected_account,
             selected_category,
         )

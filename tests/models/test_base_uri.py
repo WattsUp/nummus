@@ -86,7 +86,7 @@ def test_empty_uri() -> None:
 
 
 def test_symmetrical_unique() -> None:
-    uris = set()
+    uris: set[str] = set()
 
     n = 10000
     for i in range(n):
@@ -147,7 +147,8 @@ def test_table_ids_no_duplicates() -> None:
     table_ids: set[int] = set()
 
     for m in MODELS_URI:
-        t_id: int = m.__table_id__
+        t_id = m.__table_id__
+        assert t_id is not None
         assert t_id not in table_ids
         table_ids.add(t_id)
 

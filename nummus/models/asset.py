@@ -8,13 +8,12 @@ from collections import defaultdict
 from decimal import Decimal
 from typing import override, TYPE_CHECKING
 
-import pandas as pd
 import yfinance
 import yfinance.exceptions
 from sqlalchemy import CheckConstraint, ForeignKey, func, Index, orm, UniqueConstraint
 
 from nummus import exceptions as exc
-from nummus import utils
+from nummus import sql, utils
 from nummus.models.base import (
     Base,
     BaseEnum,
@@ -26,11 +25,10 @@ from nummus.models.base import (
     ORMStrOpt,
     SQLEnum,
     string_column_args,
-    YIELD_PER,
 )
 from nummus.models.currency import Currency, DEFAULT_CURRENCY
 from nummus.models.transaction import TransactionSplit
-from nummus.models.utils import obj_session, query_count, query_to_dict, update_rows
+from nummus.models.utils import update_rows
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -230,6 +228,8 @@ class Asset(Base):
         *string_column_args("ticker", short_check=False),
     )
 
+    _SEARCH_PROPERTIES = ("ticker", "name")
+
     @orm.validates("name", "description", "ticker")
     def validate_strings(self, key: str, field: str | None) -> str | None:
         """Validate string fields satisfy constraints.
@@ -247,7 +247,6 @@ class Asset(Base):
     @classmethod
     def get_value_all(
         cls,
-        s: orm.Session,
         start_ord: int,
         end_ord: int,
         ids: Iterable[int] | None = None,
@@ -255,7 +254,6 @@ class Asset(Base):
         """Get the value of all Assets from start to end date.
 
         Args:
-            s: SQL session to use
             start_ord: First date ordinal to evaluate
             end_ord: Last date ordinal to evaluate (inclusive)
             ids: Limit results to specific Assets by ID
@@ -269,15 +267,14 @@ class Asset(Base):
 
         # Get a list of valuations (date offset, value) for each Asset
         valuations_assets: dict[int, list[tuple[int, Decimal]]] = defaultdict(list)
-        query = s.query(Asset.id_).where(Asset.interpolate)
+        query = Asset.query(Asset.id_).where(Asset.interpolate)
         if ids is not None:
             query = query.where(Asset.id_.in_(ids))
-        interpolated_assets: set[int] = {r[0] for r in query.all()}
+        interpolated_assets: set[int] = {r[0] for r in sql.yield_(query)}
 
         # Get latest Valuation before or including start date
         query = (
-            s.query(AssetValuation)
-            .with_entities(
+            AssetValuation.query(
                 AssetValuation.asset_id,
                 func.max(AssetValuation.date_ord),
                 AssetValuation.value,
@@ -287,41 +284,30 @@ class Asset(Base):
         )
         if ids is not None:
             query = query.where(AssetValuation.asset_id.in_(ids))
-        for a_id, date_ord, v in query.all():
-            a_id: int
-            date_ord: int
-            v: Decimal
+        for a_id, date_ord, v in sql.yield_(query):
             i = date_ord - start_ord
             valuations_assets[a_id] = [(i, v)]
 
         if start_ord != end_ord:
             # Transactions between start and end
-            query = (
-                s.query(AssetValuation)
-                .with_entities(
-                    AssetValuation.asset_id,
-                    AssetValuation.date_ord,
-                    AssetValuation.value,
-                )
-                .where(
-                    AssetValuation.date_ord <= end_ord,
-                    AssetValuation.date_ord > start_ord,
-                )
+            query = AssetValuation.query(
+                AssetValuation.asset_id,
+                AssetValuation.date_ord,
+                AssetValuation.value,
+            ).where(
+                AssetValuation.date_ord <= end_ord,
+                AssetValuation.date_ord > start_ord,
             )
             if ids is not None:
                 query = query.where(AssetValuation.asset_id.in_(ids))
 
-            for a_id, date_ord, v in query.yield_per(YIELD_PER):
-                a_id: int
-                date_ord: int
-                v: Decimal
+            for a_id, date_ord, v in sql.yield_(query):
                 i = date_ord - start_ord
                 valuations_assets[a_id].append((i, v))
 
         # Get interpolation point for assets with interpolation
         query = (
-            s.query(AssetValuation)
-            .with_entities(
+            AssetValuation.query(
                 AssetValuation.asset_id,
                 func.min(AssetValuation.date_ord),
                 AssetValuation.value,
@@ -332,10 +318,7 @@ class Asset(Base):
             )
             .group_by(AssetValuation.asset_id)
         )
-        for a_id, date_ord, v in query.all():
-            a_id: int
-            date_ord: int
-            v: Decimal
+        for a_id, date_ord, v in sql.yield_(query):
             i = date_ord - start_ord
             valuations_assets[a_id].append((i, v))
 
@@ -360,12 +343,9 @@ class Asset(Base):
             list[values]
 
         """
-        s = obj_session(self)
-
         # Not reusing get_value_all is faster by ~2ms,
         # not worth maintaining two almost identical implementations
-
-        return self.get_value_all(s, start_ord, end_ord, [self.id_])[self.id_]
+        return self.get_value_all(start_ord, end_ord, [self.id_])[self.id_]
 
     def update_splits(self) -> None:
         """Recalculate adjusted TransactionSplit.asset_quantity based on all splits.
@@ -375,21 +355,16 @@ class Asset(Base):
         # This function is best here but need to avoid circular imports
         from nummus.models.transaction import TransactionSplit  # noqa: PLC0415
 
-        s = obj_session(self)
-
         multiplier = Decimal(1)
         splits: list[tuple[int, Decimal]] = []
 
         query = (
-            s.query(AssetSplit)
-            .with_entities(AssetSplit.date_ord, AssetSplit.multiplier)
+            AssetSplit.query(AssetSplit.date_ord, AssetSplit.multiplier)
             .where(AssetSplit.asset_id == self.id_)
             .order_by(AssetSplit.date_ord.desc())
         )
 
-        for s_date_ord, s_multiplier in query.yield_per(YIELD_PER):
-            s_date_ord: int
-            s_multiplier: Decimal
+        for s_date_ord, s_multiplier in sql.yield_(query):
             # Compound splits as we go
             multiplier *= s_multiplier
             splits.append((s_date_ord, multiplier))
@@ -400,7 +375,7 @@ class Asset(Base):
             multiplier = Decimal(1)
 
         query = (
-            s.query(TransactionSplit)
+            TransactionSplit.query()
             .where(
                 TransactionSplit.asset_id == self.id_,
                 TransactionSplit._asset_qty_unadjusted.isnot(None),  # noqa: SLF001
@@ -410,9 +385,7 @@ class Asset(Base):
 
         sum_unadjusted = Decimal()
         sum_adjusted = Decimal()
-        for t_split in query.yield_per(YIELD_PER):
-            # Query whole object okay, need to set things
-            t_split: TransactionSplit
+        for t_split in sql.yield_(query):
             # If txn is on/after the split, update the multiplier
             while len(splits) >= 1 and t_split.date_ord >= splits[0][0]:
                 splits.pop(0)
@@ -441,7 +414,6 @@ class Asset(Base):
         if self.category == AssetCategory.INDEX:
             # If asset is an INDEX, do not prune
             return 0
-        s = obj_session(self)
 
         # Date when quantity is zero
         date_ord_zero: int | None = None
@@ -451,26 +423,25 @@ class Asset(Base):
         periods_zero: list[tuple[int | None, int | None]] = []
 
         query = (
-            s.query(TransactionSplit)
-            .with_entities(
+            TransactionSplit.query(
                 TransactionSplit.date_ord,
                 TransactionSplit.asset_quantity,
             )
             .where(TransactionSplit.asset_id == self.id_)
             .order_by(TransactionSplit.date_ord)
         )
-        if query_count(query) == 0:
+        if not sql.any_(query):
             # No transactions, prune all
             return (
-                s.query(AssetValuation)
+                AssetValuation.query()
                 .where(AssetValuation.asset_id == self.id_)
                 .delete()
             )
 
-        for date_ord, qty in query.yield_per(YIELD_PER):
-            date_ord: int
-            qty: Decimal
-
+        for date_ord, qty in sql.yield_(query):
+            if TYPE_CHECKING:
+                # Ensured by query and constraints
+                assert qty is not None
             if current_qty == 0:
                 # Bought some, record the period when zero
                 date_ord_non_zero = date_ord
@@ -500,32 +471,31 @@ class Asset(Base):
             Number of valuations deleted
 
         """
-        s = obj_session(self)
         n_deleted = 0
         for date_ord_sell, date_ord_buy in periods_zero:
             trim_start: int | None = None
             trim_end: int | None = None
             if date_ord_sell is not None:
                 # Get date of oldest valuation after or on the sell
-                query = s.query(func.min(AssetValuation.date_ord)).where(
+                query = AssetValuation.query(func.min(AssetValuation.date_ord)).where(
                     AssetValuation.asset_id == self.id_,
                     AssetValuation.date_ord >= date_ord_sell,
                 )
-                trim_start = query.scalar()
+                trim_start = sql.scalar(query)
 
             if date_ord_buy is not None:
                 # Get date of most recent valuation or on before the buy
-                query = s.query(func.max(AssetValuation.date_ord)).where(
+                query = AssetValuation.query(func.max(AssetValuation.date_ord)).where(
                     AssetValuation.asset_id == self.id_,
                     AssetValuation.date_ord <= date_ord_buy,
                 )
-                trim_end = query.scalar()
+                trim_end = sql.scalar(query)
 
             if trim_start is None and trim_end is None:
                 # Can happen if no valuations exist before/after a transaction
                 continue
 
-            query = s.query(AssetValuation).where(AssetValuation.asset_id == self.id_)
+            query = AssetValuation.query().where(AssetValuation.asset_id == self.id_)
             if trim_start:
                 query = query.where(AssetValuation.date_ord > trim_start)
             if trim_end:
@@ -552,18 +522,15 @@ class Asset(Base):
         Raises:
             NoAssetWebSourceError: If Asset has no ticker
             AssetWebError: If failed to download data
-            TypeError: If returned DataFrame indices aren't Timestamps
 
         """
         if self.ticker is None:
             raise exc.NoAssetWebSourceError
 
-        s = obj_session(self)
-
         today = datetime.datetime.now(datetime.UTC).date()
         today_ord = today.toordinal()
 
-        query = s.query(TransactionSplit).with_entities(
+        query = TransactionSplit.query(
             func.min(TransactionSplit.date_ord),
             func.max(TransactionSplit.date_ord),
         )
@@ -575,10 +542,8 @@ class Asset(Base):
             through_today = True
         else:
             query = query.where(TransactionSplit.asset_id == self.id_)
-        start_ord, end_ord = query.one()
-        start_ord: int | None
-        end_ord: int | None
-        if start_ord is None or end_ord is None:
+        start_ord, end_ord = sql.one(query)
+        if not start_ord or not end_ord:
             return None, None
 
         start_ord -= utils.DAYS_IN_WEEK
@@ -601,15 +566,12 @@ class Asset(Base):
             # yfinance raises Exception if no data found
             raise exc.AssetWebError(e) from e
 
-        valuations: dict[int, float] = {}
-        for k, v in raw["Close"].items():
-            if not isinstance(k, pd.Timestamp):
-                raise TypeError
-            valuations[k.to_pydatetime().date().toordinal()] = float(v)
+        valuations: dict[int, float] = utils.pd_series_to_dict(
+            raw["Close"],  # type: ignore[attr-defined]
+        )
 
-        query = s.query(AssetValuation).where(AssetValuation.asset_id == self.id_)
+        query = AssetValuation.query().where(AssetValuation.asset_id == self.id_)
         update_rows(
-            s,
             AssetValuation,
             query,
             "date_ord",
@@ -620,13 +582,12 @@ class Asset(Base):
             },
         )
 
-        raw_splits = raw.loc[raw["Stock Splits"] != 0]["Stock Splits"]
-        splits: dict[int, float] = {
-            k.to_pydatetime().date().toordinal(): v for k, v in raw_splits.items()
-        }
-        query = s.query(AssetSplit).where(AssetSplit.asset_id == self.id_)
+        splits: dict[int, float] = utils.pd_series_to_dict(
+            raw.loc[raw["Stock Splits"] != 0]["Stock Splits"],  # type: ignore[attr-defined]
+        )
+
+        query = AssetSplit.query().where(AssetSplit.asset_id == self.id_)
         update_rows(
-            s,
             AssetSplit,
             query,
             "date_ord",
@@ -651,8 +612,6 @@ class Asset(Base):
         if self.ticker is None:
             raise exc.NoAssetWebSourceError
 
-        s = obj_session(self)
-
         yf_ticker = yfinance.Ticker(self.ticker)
         funds = yf_ticker.funds_data
         try:
@@ -665,13 +624,12 @@ class Asset(Base):
             # Not a fund
             sector = yf_ticker.info.get("sector")
             if sector is None:
-                s.query(AssetSector).where(AssetSector.asset_id == self.id_).delete()
+                AssetSector.query().where(AssetSector.asset_id == self.id_).delete()
                 return
             weights = {USSector(sector): Decimal(1)}
 
-        query = s.query(AssetSector).where(AssetSector.asset_id == self.id_)
+        query = AssetSector.query().where(AssetSector.asset_id == self.id_)
         update_rows(
-            s,
             AssetSector,
             query,
             "sector",
@@ -684,7 +642,6 @@ class Asset(Base):
     @classmethod
     def index_twrr(
         cls,
-        s: orm.Session,
         name: str,
         start_ord: int,
         end_ord: int,
@@ -692,7 +649,6 @@ class Asset(Base):
         """Get the TWRR for an index from start to end date.
 
         Args:
-            s: SQL session to use
             name: Name of index
             start_ord: First date ordinal to evaluate
             end_ord: Last date ordinal to evaluate (inclusive)
@@ -705,22 +661,17 @@ class Asset(Base):
 
         """
         try:
-            a_id = s.query(Asset.id_).where(Asset.name == name).one()[0]
+            a_id = sql.one(Asset.query(Asset.id_).where(Asset.name == name))
         except exc.NoResultFound as e:
             msg = f"Could not find asset index {name}"
             raise exc.ProtectedObjectNotFoundError(msg) from e
-        values = cls.get_value_all(s, start_ord, end_ord, ids=[a_id])[a_id]
+        values = cls.get_value_all(start_ord, end_ord, ids=[a_id])[a_id]
         cost_basis = values[0]
         return utils.twrr(values, [v - cost_basis for v in values])
 
     @classmethod
-    def add_indices(cls, s: orm.Session) -> None:
-        """Add Asset indices used for performance comparison.
-
-        Args:
-            s: SQL session to use
-
-        """
+    def add_indices(cls) -> None:
+        """Add Asset indices used for performance comparison."""
         indices: dict[str, dict[str, str]] = {
             "^GSPC": {
                 "name": "S&P 500",
@@ -766,7 +717,7 @@ class Asset(Base):
             },
         }
         for ticker, item in indices.items():
-            a = Asset(
+            cls.create(
                 name=item["name"],
                 description=item["description"],
                 category=AssetCategory.INDEX,
@@ -774,21 +725,18 @@ class Asset(Base):
                 ticker=ticker,
                 currency=DEFAULT_CURRENCY,
             )
-            s.add(a)
 
     def autodetect_interpolate(self) -> None:
         """Autodetect if Asset needs interpolation.
 
         Does not commit changes, call s.commit() afterwards.
         """
-        s = obj_session(self)
-
         query = (
-            s.query(AssetValuation.date_ord)
+            AssetValuation.query(AssetValuation.date_ord)
             .where(AssetValuation.asset_id == self.id_)
             .order_by(AssetValuation.date_ord)
         )
-        date_ords = [r[0] for r in query.yield_per(YIELD_PER)]
+        date_ords = [r[0] for r in sql.yield_(query)]
         has_dailys = any(
             (date_ords[i] - date_ords[i - 1]) == 1 for i in range(1, len(date_ords))
         )
@@ -798,14 +746,12 @@ class Asset(Base):
     @classmethod
     def create_forex(
         cls,
-        s: orm.Session,
         base: Currency,
         others: set[Currency],
     ) -> None:
         """Create foreign exchange rate assets.
 
         Args:
-            s: SQL session to use
             base: Base currency to get FOREX referenced to
             others: Other currencys to get
 
@@ -813,8 +759,16 @@ class Asset(Base):
         if base in others:
             others.discard(base)
 
-        query = s.query(Asset.ticker).where(Asset.category == AssetCategory.FOREX)
-        existing: set[str] = {r[0] for r in query.all()}
+        query = Asset.query(Asset.ticker).where(
+            Asset.category == AssetCategory.FOREX,
+            Asset.ticker.is_not(None),
+        )
+        existing: set[str] = set()
+        for (ticker,) in sql.yield_(query):
+            if TYPE_CHECKING:
+                # Ensured by query
+                assert ticker is not None
+            existing.add(ticker)
 
         for other in others:
             ticker = f"{other.name}{base.name}=X"
@@ -822,31 +776,28 @@ class Asset(Base):
                 existing.discard(ticker)
                 continue
 
-            asset = Asset(
+            cls.create(
                 name=f"{other.name} to {base.name}",
                 description=f"Exchange rate from {other.pretty} to {base.pretty}",
                 category=AssetCategory.FOREX,
                 ticker=ticker,
                 currency=base,
             )
-            s.add(asset)
 
             existing.discard(ticker)
 
         # existing has unused FOREX assets
         # TODO (WattsUp): #463 Handle when accounts hold FOREX
-        to_delete = {
-            r[0] for r in s.query(Asset.id_).where(Asset.ticker.in_(existing)).all()
-        }
-        s.query(AssetValuation).where(AssetValuation.asset_id.in_(to_delete)).delete()
-        s.query(AssetSplit).where(AssetSplit.asset_id.in_(to_delete)).delete()
-        s.query(AssetSector).where(AssetSector.asset_id.in_(to_delete)).delete()
-        s.query(Asset).where(Asset.id_.in_(to_delete)).delete()
+        query = Asset.query(Asset.id_).where(Asset.ticker.in_(existing))
+        to_delete = {r[0] for r in sql.yield_(query)}
+        AssetValuation.query().where(AssetValuation.asset_id.in_(to_delete)).delete()
+        AssetSplit.query().where(AssetSplit.asset_id.in_(to_delete)).delete()
+        AssetSector.query().where(AssetSector.asset_id.in_(to_delete)).delete()
+        Asset.query().where(Asset.id_.in_(to_delete)).delete()
 
     @classmethod
     def get_forex(
         cls,
-        s: orm.Session,
         start_ord: int,
         end_ord: int,
         base: Currency,
@@ -855,7 +806,6 @@ class Asset(Base):
         """Get foreign exchange rate over time.
 
         Args:
-            s: SQL session to use
             start_ord: First date ordinal to evaluate
             end_ord: Last date ordinal to evaluate (inclusive)
             base: Base currency to exchange to
@@ -875,14 +825,14 @@ class Asset(Base):
             f"{other.name}{base.name}=X": other for other in currencies
         }
         # null ticker filtered out by query
-        query = s.query(Asset.id_, Asset.ticker).where(
+        query = Asset.query(Asset.id_, Asset.ticker).where(
             Asset.category == AssetCategory.FOREX,
             Asset.currency == base,
         )
         query = query.where(Asset.ticker.in_(currencies_by_ticker))
-        assets = query_to_dict(query)
+        assets = sql.to_dict(query)
 
-        values = cls.get_value_all(s, start_ord, end_ord, assets.keys())
+        values = cls.get_value_all(start_ord, end_ord, assets.keys())
 
         forex: dict[Currency, list[Decimal]] = defaultdict(
             lambda: [Decimal(1)] * (end_ord - start_ord + 1),

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TypedDict
 
 import flask
 
@@ -10,9 +10,6 @@ from nummus import web
 from nummus.controllers import base
 from nummus.models.config import Config, ConfigKey
 from nummus.models.currency import Currency
-
-if TYPE_CHECKING:
-    from sqlalchemy import orm
 
 
 class SettingsContext(TypedDict):
@@ -30,11 +27,11 @@ def page() -> flask.Response:
 
     """
     p = web.portfolio
-    with p.begin_session() as s:
+    with p.begin_session():
         return base.page(
             "settings/page.jinja",
             "Settings",
-            ctx=ctx_settings(s),
+            ctx=ctx_settings(),
         )
 
 
@@ -48,26 +45,23 @@ def edit() -> flask.Response:
     p = web.portfolio
     currency = flask.request.form.get("currency", type=Currency)
     if currency:
-        with p.begin_session() as s:
-            Config.set_(s, ConfigKey.BASE_CURRENCY, str(currency.value))
+        with p.begin_session():
+            Config.set_(ConfigKey.BASE_CURRENCY, str(currency.value))
     else:
         raise NotImplementedError
 
     return base.dialog_swap(event="config", snackbar="All changes saved")
 
 
-def ctx_settings(s: orm.Session) -> SettingsContext:
+def ctx_settings() -> SettingsContext:
     """Get the context to build the settings page.
-
-    Args:
-        s: SQL session to use
 
     Returns:
         SettingsContext
 
     """
     return {
-        "currency": Config.base_currency(s),
+        "currency": Config.base_currency(),
         "currency_type": Currency,
     }
 

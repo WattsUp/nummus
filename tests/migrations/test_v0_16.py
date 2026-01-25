@@ -28,11 +28,11 @@ def test_migrate(tmp_path: Path, data_path: Path) -> None:
     ]
     assert result == target
 
-    with p.begin_session() as s:
-        result = "\n".join(dump_table_configs(s, Account))
+    with p.begin_session():
+        result = "\n".join(dump_table_configs(Account))
         assert "currency" in result
 
-        result = "\n".join(dump_table_configs(s, Asset))
+        result = "\n".join(dump_table_configs(Asset))
         assert "currency" in result
 
-        assert Config.base_currency(s) == Currency.USD
+        assert Config.base_currency() == Currency.USD

@@ -11,10 +11,10 @@ from typing import override, TYPE_CHECKING
 
 import sqlalchemy
 from rapidfuzz import process
-from sqlalchemy import CheckConstraint, event, ForeignKey, Index, orm
+from sqlalchemy import CheckConstraint, ForeignKey, Index, orm
 
 from nummus import exceptions as exc
-from nummus import utils
+from nummus import sql, utils
 from nummus.models.base import (
     Base,
     Decimal6,
@@ -27,11 +27,9 @@ from nummus.models.base import (
     ORMStr,
     ORMStrOpt,
     string_column_args,
-    YIELD_PER,
 )
 from nummus.models.label import Label, LabelLink
 from nummus.models.transaction_category import TransactionCategory
-from nummus.models.utils import obj_session
 
 if TYPE_CHECKING:
     from decimal import Decimal
@@ -91,6 +89,10 @@ class TransactionSplit(Base):
         CheckConstraint(
             "(asset_quantity IS NOT NULL) == (_asset_qty_unadjusted IS NOT NULL)",
             name="asset_quantity and unadjusted must be same null state",
+        ),
+        CheckConstraint(
+            "(asset_id IS NOT NULL) == (_asset_qty_unadjusted IS NOT NULL)",
+            name="asset_id and asset quantity must be same null state",
         ),
         CheckConstraint(
             "amount != 0",
@@ -225,15 +227,10 @@ class TransactionSplit(Base):
     @property
     def parent(self) -> Transaction:
         """Parent Transaction."""
-        s = obj_session(self)
-        query = s.query(Transaction).where(Transaction.id_ == self.parent_id)
-        return query.one()
+        return sql.one(Transaction.query().where(Transaction.id_ == self.parent_id))
 
     @parent.setter
     def parent(self, parent: Transaction) -> None:
-        if parent.id_ is None:
-            self.parent_tmp = parent
-            return
         super().__setattr__("parent_id", parent.id_)
         super().__setattr__("date_ord", parent.date_ord)
         super().__setattr__("month_ord", parent.month_ord)
@@ -270,9 +267,9 @@ class TransactionSplit(Base):
         query = query.join(LabelLink, full=True)
         tokens_must, tokens_can, tokens_not = utils.tokenize_search_str(search_str)
 
-        category_names = category_names or TransactionCategory.map_name(query.session)
+        category_names = category_names or TransactionCategory.map_name()
         category_names_rev = {v: k for k, v in category_names.items()}
-        label_names = label_names or Label.map_name(query.session)
+        label_names = label_names or Label.map_name()
         label_names_rev = {v.lower(): k for k, v in label_names.items()}
 
         query = cls._search_must(
@@ -283,17 +280,18 @@ class TransactionSplit(Base):
         )
         query = cls._search_not(query, tokens_not, category_names_rev, label_names_rev)
 
-        sub_query = query.with_entities(TransactionSplit.id_).scalar_subquery()
-        query_modified = (
-            query.session.query(LabelLink)
-            .with_entities(LabelLink.t_split_id, LabelLink.label_id)
-            .where(LabelLink.t_split_id.in_(sub_query))
-        )
+        sub_query = query.with_entities(  # nummus: ignore
+            TransactionSplit.id_,
+        ).scalar_subquery()
+        query_modified = LabelLink.query(
+            LabelLink.t_split_id,
+            LabelLink.label_id,
+        ).where(LabelLink.t_split_id.in_(sub_query))
         split_labels: dict[int, set[int]] = defaultdict(set)
-        for t_split_id, label_id in query_modified.yield_per(YIELD_PER):
+        for t_split_id, label_id in sql.yield_(query_modified):
             split_labels[t_split_id].add(label_id)
 
-        query_modified = query.with_entities(
+        query_modified = query.with_entities(  # nummus: ignore
             TransactionSplit.id_,
             TransactionSplit.date_ord,
             TransactionSplit.category_id,
@@ -306,12 +304,7 @@ class TransactionSplit(Base):
             date_ord,
             cat_id,
             text_fields,
-        ) in query_modified.yield_per(YIELD_PER):
-            t_id: int
-            date_ord: int
-            cat_id: int
-            text_fields: str | None
-
+        ) in sql.yield_(query_modified):
             full_text = f"{category_names[cat_id]} {text_fields or ''} " + " ".join(
                 label_names[label_id] for label_id in split_labels[t_id]
             )
@@ -356,7 +349,7 @@ class TransactionSplit(Base):
 
                 continue
 
-            clauses_or: list[sqlalchemy.ColumnExpressionArgument] = []
+            clauses_or: list[sql.ColumnClause] = []
             categories = {
                 cat_id
                 for cat_name, cat_id in category_names.items()
@@ -416,24 +409,6 @@ class TransactionSplit(Base):
                 )
             query = query.where(TransactionSplit.text_fields.not_ilike(f"%{token}%"))
         return query
-
-
-@event.listens_for(TransactionSplit, "before_insert")
-def before_insert_transaction_split(
-    _: orm.Mapper,
-    __: sqlalchemy.Connection,
-    target: TransactionSplit,
-) -> None:
-    """Handle event before insert of TransactionSplit.
-
-    Args:
-        target: TransactionSplit being inserted
-
-    """
-    # If TransactionSplit has parent_tmp set, move it to real parent
-    if hasattr(target, "parent_tmp"):
-        target.parent = target.parent_tmp
-        delattr(target, "parent_tmp")
 
 
 class Transaction(Base):
@@ -534,8 +509,6 @@ class Transaction(Base):
             Most similar Transaction.id_
 
         """
-        s = obj_session(self)
-
         if cache_ok and self.similar_txn_id is not None:
             return self.similar_txn_id
 
@@ -553,26 +526,21 @@ class Transaction(Base):
             id_ = matching_row if isinstance(matching_row, int) else matching_row[0]
             if set_property:
                 self.similar_txn_id = id_
-                s.flush()
             return id_
 
         # Convert txn.amount to the raw SQL value to make a raw query
         amount_raw = Transaction.amount.type.process_bind_param(self.amount, None)
         sort_closest_amount = sqlalchemy.text(f"abs({amount_raw} - amount)")
 
-        cat_asset_linked = {
-            t_cat_id
-            for t_cat_id, in (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.asset_linked.is_(True))
-                .all()
-            )
-        }
+        query = TransactionCategory.query(TransactionCategory.id_).where(
+            TransactionCategory.asset_linked.is_(True),
+        )
+        cat_asset_linked = {t_cat_id for t_cat_id, in sql.yield_(query)}
 
         # Check within Account first, exact matches
         # If this matches, great, no post filtering needed
         query = (
-            s.query(Transaction.id_)
+            Transaction.query(Transaction.id_)
             .where(
                 Transaction.account_id == self.account_id,
                 Transaction.id_ != self.id_,
@@ -588,7 +556,7 @@ class Transaction(Base):
 
         # Maybe exact statement but different account
         query = (
-            s.query(Transaction.id_)
+            Transaction.query(Transaction.id_)
             .where(
                 Transaction.id_ != self.id_,
                 Transaction.amount >= amount_min,
@@ -603,7 +571,7 @@ class Transaction(Base):
 
         # Maybe exact statement but different amount
         query = (
-            s.query(Transaction.id_)
+            Transaction.query(Transaction.id_)
             .where(
                 Transaction.id_ != self.id_,
                 Transaction.statement == self.statement,
@@ -616,8 +584,7 @@ class Transaction(Base):
 
         # No statements match, choose highest fuzzy matching statement
         query = (
-            s.query(Transaction)
-            .with_entities(
+            Transaction.query(
                 Transaction.id_,
                 Transaction.statement,
             )
@@ -630,22 +597,20 @@ class Transaction(Base):
         )
         statements: dict[int, str] = {
             t_id: re.sub(r"[0-9]+", "", statement).lower()
-            for t_id, statement in query.yield_per(YIELD_PER)
+            for t_id, statement in sql.yield_(query)
         }
         if len(statements) == 0:
             return None
         # Don't match a Transaction if it has a Securities Traded split
-        has_asset_linked = {
-            id_
-            for id_, in (
-                s.query(TransactionSplit.parent_id)
-                .where(
-                    TransactionSplit.parent_id.in_(statements),
-                    TransactionSplit.category_id.in_(cat_asset_linked),
-                )
-                .distinct()
+        query = (
+            Transaction.query(TransactionSplit.parent_id)
+            .where(
+                TransactionSplit.parent_id.in_(statements),
+                TransactionSplit.category_id.in_(cat_asset_linked),
             )
-        }
+            .distinct()
+        )
+        has_asset_linked = {id_ for id_, in sql.yield_(query)}
         statements = {
             t_id: statement
             for t_id, statement in statements.items()
@@ -669,17 +634,13 @@ class Transaction(Base):
         )
 
         # Add a bonuse points for closeness in price and same account
-        query = (
-            s.query(Transaction)
-            .with_entities(
-                Transaction.id_,
-                Transaction.account_id,
-                Transaction.amount,
-            )
-            .where(Transaction.id_.in_(matches))
-        )
+        query = Transaction.query(
+            Transaction.id_,
+            Transaction.account_id,
+            Transaction.amount,
+        ).where(Transaction.id_.in_(matches))
         matches_bonus: dict[int, float] = {}
-        for t_id, acct_id, amount in query.yield_per(YIELD_PER):
+        for t_id, acct_id, amount in sql.yield_(query):
             # 5% off will reduce score by 5%
             amount_diff_percent = abs(amount - self.amount) / self.amount
             # Extra 10 points for same account

@@ -13,7 +13,6 @@ def test_page(
     account: Account,
     transactions_spending: list[Transaction],
 ) -> None:
-    _ = transactions_spending
     result, _ = web_client.GET("spending.page")
     assert "Spending" in result
     assert account.name in result
@@ -27,7 +26,6 @@ def test_chart(
     account: Account,
     transactions_spending: list[Transaction],
 ) -> None:
-    _ = transactions_spending
     result, _ = web_client.GET("spending.chart")
     assert "Spending" in result
     assert account.name in result
@@ -41,7 +39,6 @@ def test_dashboard(
     account: Account,
     transactions_spending: list[Transaction],
 ) -> None:
-    _ = transactions_spending
     result, _ = web_client.GET("spending.dashboard")
     assert "Spending" in result
     assert account.name in result

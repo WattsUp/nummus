@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from nummus import sql
 from nummus.health_checks.duplicate_transactions import DuplicateTransactions
 from nummus.models.currency import (
     CURRENCY_FORMATS,
@@ -9,57 +10,51 @@ from nummus.models.currency import (
 )
 from nummus.models.health_checks import HealthCheckIssue
 from nummus.models.transaction import Transaction, TransactionSplit
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
 
     from sqlalchemy import orm
 
 
-def test_empty(session: orm.Session) -> None:
+def test_empty() -> None:
     c = DuplicateTransactions()
-    c.test(session)
+    c.test()
     assert c.issues == {}
 
 
 def test_no_issues(
-    session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
     c = DuplicateTransactions()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 0
+    c.test()
+    assert not sql.any_(HealthCheckIssue.query())
 
 
 def test_duplicate(
     session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
-    _ = transactions
-
     txn_to_copy = transactions[0]
 
     # Fund account on 3 days before today
-    txn = Transaction(
-        account_id=txn_to_copy.account_id,
-        date=txn_to_copy.date,
-        amount=txn_to_copy.amount,
-        statement=txn_to_copy.statement,
-    )
-    t_split = TransactionSplit(
-        parent=txn,
-        amount=txn.amount,
-        category_id=txn_to_copy.splits[0].category_id,
-    )
-    session.add_all((txn, t_split))
-    session.commit()
+    with session.begin_nested():
+        txn = Transaction.create(
+            account_id=txn_to_copy.account_id,
+            date=txn_to_copy.date,
+            amount=txn_to_copy.amount,
+            statement=txn_to_copy.statement,
+        )
+        TransactionSplit.create(
+            parent=txn,
+            amount=txn.amount,
+            category_id=txn_to_copy.splits[0].category_id,
+        )
 
     c = DuplicateTransactions()
-    c.test(session)
-    assert query_count(session.query(HealthCheckIssue)) == 1
+    c.test()
+    assert HealthCheckIssue.count() == 1
 
-    i = session.query(HealthCheckIssue).one()
+    i = HealthCheckIssue.one()
     assert i.check == c.name()
     amount_raw = Transaction.amount.type.process_bind_param(txn.amount, None)
     assert i.value == f"{txn.account_id}.{txn.date_ord}.{amount_raw}"

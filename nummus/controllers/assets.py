@@ -12,7 +12,7 @@ import flask
 from sqlalchemy import func
 
 from nummus import exceptions as exc
-from nummus import utils, web
+from nummus import sql, utils, web
 from nummus.controllers import base
 from nummus.models.account import Account
 from nummus.models.asset import (
@@ -22,19 +22,15 @@ from nummus.models.asset import (
     AssetSplit,
     AssetValuation,
 )
-from nummus.models.base import YIELD_PER
 from nummus.models.config import Config
 from nummus.models.currency import (
     Currency,
     CURRENCY_FORMATS,
 )
 from nummus.models.transaction import TransactionSplit
-from nummus.models.utils import query_count
 
 if TYPE_CHECKING:
-    import sqlalchemy
     import werkzeug
-    from sqlalchemy import orm
 
     from nummus.models.currency import CurrencyFormat
 
@@ -132,8 +128,8 @@ def page_all() -> flask.Response:
     p = web.portfolio
     include_unheld = "include-unheld" in flask.request.args
 
-    with p.begin_session() as s:
-        categories = ctx_rows(s, base.today_client(), include_unheld=include_unheld)
+    with p.begin_session():
+        categories = ctx_rows(base.today_client(), include_unheld=include_unheld)
 
     return base.page(
         "assets/page-all.jinja",
@@ -160,10 +156,9 @@ def page(uri: str) -> flask.Response:
     """
     p = web.portfolio
     args = flask.request.args
-    with p.begin_session() as s:
-        a = base.find(s, Asset, uri)
+    with p.begin_session():
+        a = base.find(Asset, uri)
         ctx = ctx_asset(
-            s,
             a,
             base.today_client(),
             args.get("period"),
@@ -190,7 +185,7 @@ def new() -> str | flask.Response:
 
     with p.begin_session() as s:
         if flask.request.method == "GET":
-            currency = Config.base_currency(s)
+            currency = Config.base_currency()
             ctx: AssetContext = {
                 "uri": None,
                 "name": "",
@@ -222,14 +217,13 @@ def new() -> str | flask.Response:
 
         try:
             with s.begin_nested():
-                a = Asset(
+                Asset.create(
                     name=name,
                     description=description,
                     category=category,
                     ticker=ticker,
                     currency=currency,
                 )
-                s.add(a)
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return base.error(e)
 
@@ -248,14 +242,13 @@ def asset(uri: str) -> str | werkzeug.Response:
     """
     p = web.portfolio
     with p.begin_session() as s:
-        a = base.find(s, Asset, uri)
+        a = base.find(Asset, uri)
 
         if flask.request.method == "GET":
             args = flask.request.args
             return flask.render_template(
                 "assets/edit.jinja",
                 asset=ctx_asset(
-                    s,
                     a,
                     base.today_client(),
                     args.get("period"),
@@ -267,10 +260,10 @@ def asset(uri: str) -> str | werkzeug.Response:
             )
         if flask.request.method == "DELETE":
             with s.begin_nested():
-                s.query(AssetSector).where(AssetSector.asset_id == a.id_).delete()
-                s.query(AssetSplit).where(AssetSplit.asset_id == a.id_).delete()
-                s.query(AssetValuation).where(AssetValuation.asset_id == a.id_).delete()
-                s.delete(a)
+                AssetSector.query().where(AssetSector.asset_id == a.id_).delete()
+                AssetSplit.query().where(AssetSplit.asset_id == a.id_).delete()
+                AssetValuation.query().where(AssetValuation.asset_id == a.id_).delete()
+                a.delete()
             return flask.redirect(flask.url_for("assets.page_all"))
 
         form = flask.request.form
@@ -302,14 +295,14 @@ def performance(uri: str) -> flask.Response:
 
     """
     p = web.portfolio
-    with p.begin_session() as s:
-        a = base.find(s, Asset, uri)
+    with p.begin_session():
+        a = base.find(Asset, uri)
         period = flask.request.args.get("chart-period")
         html = flask.render_template(
             "assets/performance.jinja",
             asset={
                 "uri": uri,
-                "performance": ctx_performance(s, a, base.today_client(), period),
+                "performance": ctx_performance(a, base.today_client(), period),
             },
         )
     response = flask.make_response(html)
@@ -337,11 +330,10 @@ def table(uri: str) -> str | flask.Response:
     """
     p = web.portfolio
     args = flask.request.args
-    with p.begin_session() as s:
-        a = base.find(s, Asset, uri)
+    with p.begin_session():
+        a = base.find(Asset, uri)
         cf = CURRENCY_FORMATS[a.currency]
         val_table = ctx_table(
-            s,
             a,
             base.today_client(),
             args.get("period"),
@@ -382,13 +374,13 @@ def validation() -> str:
     """
     p = web.portfolio
     # dict{key: (required, prop if unique required)}
-    properties: dict[str, tuple[bool, orm.QueryableAttribute | None]] = {
+    properties: dict[str, tuple[bool, sql.Column | None]] = {
         "name": (True, Asset.name),
         "description": (False, None),
         "ticker": (False, Asset.ticker),
     }
 
-    with p.begin_session() as s:
+    with p.begin_session():
         args = flask.request.args
         uri = args.get("uri")
         for key, (required, prop) in properties.items():
@@ -398,7 +390,7 @@ def validation() -> str:
                 args[key],
                 is_required=required,
                 check_length=key != "ticker",
-                session=s,
+                cls=Asset,
                 no_duplicates=prop,
                 no_duplicate_wheres=(
                     None if uri is None else [Asset.id_ != Asset.uri_to_id(uri)]
@@ -406,7 +398,7 @@ def validation() -> str:
             )
 
         if "date" in args:
-            wheres: list[sqlalchemy.ColumnExpressionArgument] = []
+            wheres: list[sql.ColumnClause] = []
             if uri:
                 wheres.append(
                     AssetValuation.asset_id == Asset.uri_to_id(uri),
@@ -420,7 +412,7 @@ def validation() -> str:
                 args["date"],
                 base.today_client(),
                 is_required=True,
-                session=s,
+                cls=AssetValuation,
                 no_duplicates=AssetValuation.date_ord,
                 no_duplicate_wheres=wheres,
             )
@@ -470,14 +462,13 @@ def new_valuation(uri: str) -> str | flask.Response:
 
     try:
         p = web.portfolio
-        with p.begin_session() as s:
-            a = base.find(s, Asset, uri)
-            v = AssetValuation(
+        with p.begin_session():
+            a = base.find(Asset, uri)
+            AssetValuation.create(
                 asset_id=a.id_,
                 date_ord=date.toordinal(),
                 value=value,
             )
-            s.add(v)
     except exc.IntegrityError as e:
         # Get the line that starts with (...IntegrityError)
         orig = str(e.orig)
@@ -505,7 +496,7 @@ def valuation(uri: str) -> str | flask.Response:
     today = base.today_client()
 
     with p.begin_session() as s:
-        v = base.find(s, AssetValuation, uri)
+        v = base.find(AssetValuation, uri)
 
         date_max = today + datetime.timedelta(days=utils.DAYS_IN_WEEK)
         if flask.request.method == "GET":
@@ -521,7 +512,7 @@ def valuation(uri: str) -> str | flask.Response:
             )
         if flask.request.method == "DELETE":
             date = v.date
-            s.delete(v)
+            v.delete()
             return base.dialog_swap(
                 event="valuation",
                 snackbar=f"{date} valuation deleted",
@@ -564,8 +555,8 @@ def update() -> str | flask.Response:
 
     """
     p = web.portfolio
-    with p.begin_session() as s:
-        n = query_count(s.query(Asset).where(Asset.ticker.is_not(None)))
+    with p.begin_session():
+        n = sql.count(Asset.query().where(Asset.ticker.is_not(None)))
     if flask.request.method == "GET":
         return flask.render_template(
             "assets/update.jinja",
@@ -600,7 +591,6 @@ def update() -> str | flask.Response:
 
 
 def ctx_rows(
-    s: orm.Session,
     today: datetime.date,
     *,
     include_unheld: bool,
@@ -608,7 +598,6 @@ def ctx_rows(
     """Get the context to build the page all rows.
 
     Args:
-        s: SQL session to use
         today: Today's date
         include_unheld: True will include assets with zero current quantity
 
@@ -620,7 +609,7 @@ def ctx_rows(
 
     today_ord = today.toordinal()
 
-    accounts = Account.get_asset_qty_all(s, today_ord, today_ord)
+    accounts = Account.get_asset_qty_all(today_ord, today_ord)
     qtys: dict[int, Decimal] = defaultdict(Decimal)
     for acct_qtys in accounts.values():
         for a_id, values in acct_qtys.items():
@@ -628,14 +617,14 @@ def ctx_rows(
     held_ids = {a_id for a_id, qty in qtys.items() if qty}
 
     query = (
-        s.query(Asset)
+        Asset.query()
         .where(Asset.category != AssetCategory.INDEX)
         .order_by(Asset.category)
     )
     if not include_unheld:
         query = query.where(Asset.id_.in_(held_ids))
-    prices = Asset.get_value_all(s, today_ord, today_ord, held_ids)
-    for asset in query.yield_per(YIELD_PER):
+    prices = Asset.get_value_all(today_ord, today_ord, held_ids)
+    for asset in sql.yield_(query):
         qty = qtys[asset.id_]
         price = prices[asset.id_][0]
         value = qty * price
@@ -655,7 +644,6 @@ def ctx_rows(
 
 
 def ctx_asset(
-    s: orm.Session,
     a: Asset,
     today: datetime.date,
     period: str | None,
@@ -667,7 +655,6 @@ def ctx_asset(
     """Get the context to build the asset details.
 
     Args:
-        s: SQL session to use
         a: Asset to generate context for
         today: Today's date
         period: Period to get table for
@@ -681,7 +668,7 @@ def ctx_asset(
 
     """
     valuation = (
-        s.query(AssetValuation)
+        AssetValuation.query()
         .where(AssetValuation.asset_id == a.id_)
         .order_by(AssetValuation.date_ord.desc())
         .first()
@@ -692,18 +679,14 @@ def ctx_asset(
     else:
         current_value = valuation.value
         current_date = valuation.date
-    deletable = (
-        s.query(TransactionSplit.id_)
-        .where(TransactionSplit.asset_id == a.id_)
-        .limit(1)
-        .scalar()
-        is None
+    query = TransactionSplit.query(TransactionSplit.id_).where(
+        TransactionSplit.asset_id == a.id_,
     )
+    deletable = not sql.any_(query)
 
-    accounts = Account.map_name(s)
+    accounts = Account.map_name()
     query = (
-        s.query(TransactionSplit)
-        .with_entities(
+        TransactionSplit.query(
             TransactionSplit.account_id,
             func.sum(TransactionSplit.asset_quantity),
         )
@@ -722,7 +705,7 @@ def ctx_asset(
             qty,
             qty * current_value,
         )
-        for acct_id, qty in query.yield_per(YIELD_PER)
+        for acct_id, qty in sql.yield_(query)
         if qty
     ]
 
@@ -738,15 +721,14 @@ def ctx_asset(
         "currency_format": CURRENCY_FORMATS[a.currency],
         "value": current_value,
         "value_date": current_date,
-        "performance": ctx_performance(s, a, today, period_chart),
-        "table": ctx_table(s, a, today, period, start, end, page),
+        "performance": ctx_performance(a, today, period_chart),
+        "table": ctx_table(a, today, period, start, end, page),
         "holdings": sorted(holdings, key=operator.itemgetter(2), reverse=True),
         "deletable": deletable,
     }
 
 
 def ctx_performance(
-    s: orm.Session,
     a: Asset,
     today: datetime.date,
     period: str | None,
@@ -754,7 +736,6 @@ def ctx_performance(
     """Get the context to build the asset performance details.
 
     Args:
-        s: SQL session to use
         a: Asset to generate context for
         today: Today's date
         period: Chart-period to fetch performance for
@@ -767,12 +748,10 @@ def ctx_performance(
     start, end = base.parse_period(period, today)
     end_ord = end.toordinal()
     if start is None:
-        start_ord = (
-            s.query(func.min(AssetValuation.date_ord))
-            .where(AssetValuation.asset_id == a.id_)
-            .scalar()
-            or end_ord
+        query = AssetValuation.query(func.min(AssetValuation.date_ord)).where(
+            AssetValuation.asset_id == a.id_,
         )
+        start_ord = sql.one(query) or end_ord
     else:
         start_ord = start.toordinal()
 
@@ -782,12 +761,11 @@ def ctx_performance(
         **base.chart_data(start_ord, end_ord, values),
         "period": period,
         "period_options": base.PERIOD_OPTIONS,
-        "currency_format": CURRENCY_FORMATS[Config.base_currency(s)]._asdict(),
+        "currency_format": CURRENCY_FORMATS[Config.base_currency()]._asdict(),
     }
 
 
 def ctx_table(
-    s: orm.Session,
     a: Asset,
     today: datetime.date,
     period: str | None,
@@ -798,7 +776,6 @@ def ctx_table(
     """Get the context to build the valuations table.
 
     Args:
-        s: SQL session to use
         a: Asset to get valuations for
         today: Today's date
         period: Period to get table for
@@ -813,7 +790,7 @@ def ctx_table(
     page_start = None if page is None else datetime.date.fromisoformat(page).toordinal()
 
     query = (
-        s.query(AssetValuation)
+        AssetValuation.query()
         .where(AssetValuation.asset_id == a.id_)
         .order_by(AssetValuation.date_ord.desc())
     )
@@ -854,7 +831,7 @@ def ctx_table(
             "date_max": None,
             "value": v.value,
         }
-        for v in query.limit(PAGE_LEN).yield_per(YIELD_PER)
+        for v in sql.yield_(query.limit(PAGE_LEN))
     ]
 
     next_page = (
