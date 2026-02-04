@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from colorama import Fore
-
 from nummus.commands.unlock import Unlock
 
 if TYPE_CHECKING:
@@ -22,6 +20,6 @@ def test_empty(
     assert c.run() == 0
 
     captured = capsys.readouterr()
-    target = f"{Fore.GREEN}Portfolio is unlocked\n"
+    target = "Portfolio is unlocked\n"
     assert captured.out == target
     assert not captured.err

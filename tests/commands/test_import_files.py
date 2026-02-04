@@ -4,7 +4,6 @@ import shutil
 from typing import TYPE_CHECKING
 
 import pytest
-from colorama import Fore
 
 from nummus.commands.import_files import Import
 
@@ -24,7 +23,7 @@ def test_empty(capsys: pytest.CaptureFixture[str], empty_portfolio: Portfolio) -
     assert c.run() == 0
 
     captured = capsys.readouterr()
-    target = f"{Fore.GREEN}Portfolio is unlocked\n{Fore.GREEN}Imported 0 files\n"
+    target = "Portfolio is unlocked\nImported 0 files\n"
     assert captured.out == target
     assert not captured.err
 
@@ -43,12 +42,9 @@ def test_non_existant(
     assert c.run() != 0
 
     captured = capsys.readouterr()
-    target = f"{Fore.GREEN}Portfolio is unlocked\n"
+    target = "Portfolio is unlocked\n"
     assert captured.out == target
-    target = (
-        f"{Fore.RED}File does not exist: {path}\n"
-        f"{Fore.RED}Abandoned import, restored from backup\n"
-    )
+    target = f"File does not exist: {path}\nAbandoned import, restored from backup\n"
     assert captured.err == target
 
     assert not path_debug.exists()
@@ -76,7 +72,7 @@ def test_data_dir(
     assert c.run() == 0
 
     captured = capsys.readouterr()
-    target = f"{Fore.GREEN}Portfolio is unlocked\n{Fore.GREEN}Imported 2 files\n"
+    target = "Portfolio is unlocked\nImported 2 files\n"
     assert captured.out == target
     assert not captured.err
 
@@ -101,12 +97,12 @@ def test_unknown_importer(
     assert c.run() != 0
 
     captured = capsys.readouterr()
-    assert captured.out == f"{Fore.GREEN}Portfolio is unlocked\n"
+    assert captured.out == "Portfolio is unlocked\n"
     target = (
-        f"{Fore.RED}Unknown importer for {path}\n"
-        f"{Fore.YELLOW}Create a custom importer in {empty_portfolio.importers_path}\n"
-        f"{Fore.RED}Abandoned import, restored from backup\n"
-        f"{Fore.YELLOW}Raw imported file may help at {path_debug}\n"
+        f"Unknown importer for {path}\n"
+        f"Create a custom importer in {empty_portfolio.importers_path}\n"
+        "Abandoned import, restored from backup\n"
+        f"Raw imported file may help at {path_debug}\n"
     )
     assert captured.err == target
 
@@ -132,12 +128,12 @@ def test_duplicate(
     assert c.run() != 0
 
     captured = capsys.readouterr()
-    assert captured.out == f"{Fore.GREEN}Portfolio is unlocked\n"
+    assert captured.out == "Portfolio is unlocked\n"
     target = (
-        f"{Fore.RED}Already imported {path} on {today}\n"
-        f"{Fore.YELLOW}Delete file or run import with --force flag which "
+        f"Already imported {path} on {today}\n"
+        "Delete file or run import with --force flag which "
         "may create duplicate transactions.\n"
-        f"{Fore.RED}Abandoned import, restored from backup\n"
+        "Abandoned import, restored from backup\n"
     )
     assert captured.err == target
 
@@ -159,10 +155,10 @@ def test_data_dir_no_account(
     assert c.run() != 0
 
     captured = capsys.readouterr()
-    target = f"{Fore.GREEN}Portfolio is unlocked\n"
+    target = "Portfolio is unlocked\n"
     assert captured.out == target
     target = (
-        f"{Fore.RED}Abandoned import, restored from backup\n"
-        f"{Fore.YELLOW}Raw imported file may help at {path_debug}\n"
+        "Abandoned import, restored from backup\n"
+        f"Raw imported file may help at {path_debug}\n"
     )
     assert captured.err == target

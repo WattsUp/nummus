@@ -4,7 +4,6 @@ import sys
 from typing import override, TYPE_CHECKING
 
 import pytest
-from colorama import Fore
 
 from nummus.commands.change_password import ChangePassword
 from nummus.portfolio import Portfolio
@@ -37,8 +36,8 @@ def test_no_change_unencrypted(
     assert c.run() != 0
 
     captured = capsys.readouterr()
-    assert captured.out == f"{Fore.GREEN}Portfolio is unlocked\n"
-    assert captured.err == f"{Fore.YELLOW}Neither password changing\n"
+    assert captured.out == "Portfolio is unlocked\n"
+    assert captured.err == "Neither password changing\n"
 
 
 @pytest.mark.parametrize(
@@ -66,9 +65,9 @@ def test_change(
 
     captured = capsys.readouterr()
     target_out = (
-        f"{Fore.GREEN}Portfolio is unlocked\n"
-        f"{Fore.GREEN}Changed password(s)\n"
-        f"{Fore.CYAN}Run 'nummus clean' to remove backups with old password\n"
+        "Portfolio is unlocked\n"
+        "Changed password(s)\n"
+        "Run 'nummus clean' to remove backups with old password\n"
     )
     assert captured.out == target_out
     assert captured.err == target

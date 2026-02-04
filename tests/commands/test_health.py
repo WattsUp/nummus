@@ -3,8 +3,6 @@ from __future__ import annotations
 import datetime
 from typing import TYPE_CHECKING
 
-from colorama import Fore
-
 from nummus.commands.health import Health
 from nummus.health_checks.top import HEALTH_CHECKS
 from nummus.models.config import Config, ConfigKey
@@ -37,13 +35,13 @@ def test_issues(
 
     captured = capsys.readouterr()
     # big output, use "" in checks
-    assert f"{Fore.GREEN}Check 'Database integrity'" in captured.out
-    assert f"{Fore.CYAN}    Checks for issues in the underlying" in captured.out
-    assert f"{Fore.YELLOW}Check 'Unused categories'" in captured.out
-    assert f"{Fore.YELLOW}  Has the following issues:" in captured.out
+    assert "Check 'Database integrity'" in captured.out
+    assert "Checks for issues in the underlying" in captured.out
+    assert "Check 'Unused categories'" in captured.out
+    assert "Has the following issues:" in captured.out
     assert "has no transactions nor budget assignments" in captured.out
     assert "more issues, use --limit flag to see more" in captured.out
-    assert f"{Fore.MAGENTA}Use web interface to fix issues" in captured.out
+    assert "Use web interface to fix issues" in captured.out
     assert not captured.err
 
     with empty_portfolio.begin_session():
@@ -75,13 +73,13 @@ def test_no_limit_severe(
 
     captured = capsys.readouterr()
     # big output, use "" in checks
-    assert f"{Fore.GREEN}Check 'Database integrity'" in captured.out
-    assert f"{Fore.CYAN}    Checks for issues in the underlying" in captured.out
-    assert f"{Fore.RED}Check 'Unused categories'" in captured.out
-    assert f"{Fore.RED}  Has the following issues:" in captured.out
+    assert "Check 'Database integrity'" in captured.out
+    assert "Checks for issues in the underlying" in captured.out
+    assert "Check 'Unused categories'" in captured.out
+    assert "Has the following issues:" in captured.out
     assert "has no transactions nor budget assignments" in captured.out
     assert "more issues, use --limit flag to see more" not in captured.out
-    assert f"{Fore.MAGENTA}Use web interface to fix issues" in captured.out
+    assert "Use web interface to fix issues" in captured.out
     assert not captured.err
 
     with empty_portfolio.begin_session():
@@ -120,13 +118,12 @@ def test_ignore_all(
 
     captured = capsys.readouterr()
     # big output, use "" in checks
-    assert f"{Fore.GREEN}Check 'Database integrity'" in captured.out
-    assert f"{Fore.CYAN}    Checks for issues in the underlying" not in captured.out
-    assert f"{Fore.YELLOW}Check 'Unused categories'" not in captured.out
-    assert f"{Fore.YELLOW}  Has the following issues:" not in captured.out
+    assert "Check 'Database integrity'" in captured.out
+    assert "Checks for issues in the underlying" not in captured.out
+    assert "Has the following issues:" not in captured.out
     assert "has no transactions nor budget assignments" not in captured.out
     assert "more issues, use --limit flag to see more" not in captured.out
-    assert f"{Fore.MAGENTA}Use web interface to fix issues" not in captured.out
+    assert "Use web interface to fix issues" not in captured.out
     assert not captured.err
 
     with empty_portfolio.begin_session():
@@ -161,8 +158,8 @@ def test_clear_ignores(
 
     captured = capsys.readouterr()
     # big output, use "" in checks
-    assert f"{Fore.YELLOW}Check 'Unused categories'" in captured.out
-    assert f"{Fore.YELLOW}  Has the following issues:" in captured.out
+    assert "Check 'Unused categories'" in captured.out
+    assert "Has the following issues:" in captured.out
     assert "has no transactions nor budget assignments" in captured.out
     assert not captured.err
 

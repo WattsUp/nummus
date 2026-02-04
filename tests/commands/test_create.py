@@ -3,8 +3,6 @@ from __future__ import annotations
 import sys
 from typing import override, TYPE_CHECKING
 
-from colorama import Fore
-
 from nummus.commands.create import Create
 from nummus.portfolio import Portfolio
 
@@ -39,7 +37,7 @@ def test_create_existing(
 
     captured = capsys.readouterr()
     assert not captured.out
-    target = f"{Fore.RED}Cannot overwrite portfolio at {path}. Try with --force\n"
+    target = f"Cannot overwrite portfolio at {path}. Try with --force\n"
     assert captured.err == target
 
 
@@ -56,7 +54,7 @@ def test_create_unencrypted_forced(
     assert c.run() == 0
 
     captured = capsys.readouterr()
-    target = f"{Fore.GREEN}Portfolio created at {path}\n"
+    target = f"Portfolio created at {path}\n"
     assert captured.out == target
     target = f"Creating {path} with None\n"
     assert captured.err == target
@@ -74,7 +72,7 @@ def test_create_unencrypted(
     assert c.run() == 0
 
     captured = capsys.readouterr()
-    target = f"{Fore.GREEN}Portfolio created at {path}\n"
+    target = f"Portfolio created at {path}\n"
     assert captured.out == target
     target = f"Creating {path} with None\n"
     assert captured.err == target
@@ -101,7 +99,7 @@ def test_create_encrypted(
     assert c.run() == 0
 
     captured = capsys.readouterr()
-    target = f"{Fore.GREEN}Portfolio created at {path}\n"
+    target = f"Portfolio created at {path}\n"
     assert captured.out == target
     target = f"Creating {path} with {rand_str}\n"
     assert captured.err == target
@@ -123,7 +121,7 @@ def test_create_encrypted_pass_file(
     assert c.run() == 0
 
     captured = capsys.readouterr()
-    target = f"{Fore.GREEN}Portfolio created at {path}\n"
+    target = f"Portfolio created at {path}\n"
     assert captured.out == target
     target = f"Creating {path} with {rand_str}\n"
     assert captured.err == target

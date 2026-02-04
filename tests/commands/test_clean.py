@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from colorama import Fore
-
 from nummus.commands.clean import Clean
 
 if TYPE_CHECKING:
@@ -21,9 +19,9 @@ def test_clean(capsys: pytest.CaptureFixture[str], empty_portfolio: Portfolio) -
 
     captured = capsys.readouterr()
     target = (
-        f"{Fore.GREEN}Portfolio is unlocked\n"
-        f"{Fore.GREEN}Portfolio cleaned\n"
-        f"{Fore.CYAN}Portfolio was optimized by 0.0KB/0.0KiB\n"
+        "Portfolio is unlocked\n"
+        "Portfolio cleaned\n"
+        "Portfolio was optimized by 0.0KB/0.0KiB\n"
     )
     assert captured.out == target
     assert not captured.err
