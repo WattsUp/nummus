@@ -82,7 +82,7 @@ def test_init_properties(
 
 def test_short() -> None:
     with pytest.raises(exc.InvalidORMValueError):
-        Asset(name="a")
+        Asset.create(name="a")
 
 
 def test_get_value_empty(

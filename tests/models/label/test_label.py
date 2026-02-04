@@ -16,4 +16,4 @@ def test_init_properties(rand_str: str) -> None:
 
 def test_short() -> None:
     with pytest.raises(exc.InvalidORMValueError):
-        Label(name="a")
+        Label.create(name="a")

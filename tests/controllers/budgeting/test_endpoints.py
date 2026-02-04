@@ -426,7 +426,7 @@ def test_parse_form(
     due: bool | str | int,
     repeat_every: int,
 ) -> None:
-    target = Target(
+    target = Target(  # nummus: ignore
         amount=0,
         type_=TargetType.ACCUMULATE,
         period=TargetPeriod.MONTH,

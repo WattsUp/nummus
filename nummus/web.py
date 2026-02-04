@@ -56,7 +56,7 @@ class FlaskExtension:
             app: Flask app to initialize
 
         """
-        config = flask.Config(app.root_path)
+        config = flask.Config(app.root_path)  # nummus: ignore
         config.from_prefixed_env("NUMMUS")
         self._portfolio = self._open_portfolio(config)
 

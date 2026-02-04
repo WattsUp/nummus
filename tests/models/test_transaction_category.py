@@ -44,17 +44,17 @@ def test_init_properties(
 
 def test_empty() -> None:
     with pytest.raises(exc.InvalidORMValueError):
-        TransactionCategory(emoji_name="😀")
+        TransactionCategory.create(emoji_name="😀")
 
 
 def test_short() -> None:
     with pytest.raises(exc.InvalidORMValueError):
-        TransactionCategory(emoji_name="a")
+        TransactionCategory.create(emoji_name="a")
 
 
 def test_name_direct() -> None:
     with pytest.raises(exc.ParentAttributeError):
-        TransactionCategory(name="a")
+        TransactionCategory.create(name="a")
 
 
 def test_name_no_position(budget_group: BudgetGroup) -> None:
@@ -73,7 +73,7 @@ def test_name_no_group() -> None:
 
 def test_essential_income() -> None:
     with pytest.raises(exc.InvalidORMValueError):
-        TransactionCategory(
+        TransactionCategory.create(
             group=TransactionCategoryGroup.INCOME,
             essential_spending=True,
         )
@@ -94,7 +94,7 @@ def test_essential_expense() -> None:
 
 def test_essential_none() -> None:
     with pytest.raises(TypeError):
-        TransactionCategory(essential_spending=None)
+        TransactionCategory.create(essential_spending=None)
 
 
 def test_emergency_fund_missing() -> None:

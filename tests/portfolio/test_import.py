@@ -147,6 +147,8 @@ def test_import_file_investments(
 
     with empty_portfolio.begin_session():
         assert sql.count(Transaction.query()) == 4
+        # 2 normal, 2 dividends = 6
+        assert sql.count(TransactionSplit.query()) == 6
 
         query = Transaction.query().where(
             Transaction.date_ord == datetime.date(2023, 1, 3).toordinal(),

@@ -354,32 +354,47 @@ def test_find_missing(parent: Parent) -> None:
     assert not cache
 
 
+re_check_no_session_add = re.compile(r"^ *(s|session)\.add\(\w+\)")
+re_check_no_model_new = re.compile(rf"({'|'.join(m.__name__ for m in Base._MODELS)})\(")
+re_check_no_session_query = re.compile(r"[( ](s|session)\.query\(")
+re_check_no_scalar_query = re.compile(r"(\w*)\.scalar\(")
+re_check_no_query_one = re.compile(r"(\w*)\.one\(")
+re_check_no_query_all = re.compile(r"(\w*)\.all\(")
+re_check_no_query_col0 = re.compile(r"for \w+,? in query")
+
+
 def check_no_session_add(line: str) -> str:
-    if re.match(r"^ *(s|session)\.add\(\w\)", line):
+    if re_check_no_session_add.match(line):
         return "Use of session.add found, use Model.create()"
     return ""
 
 
+def check_no_model_new(line: str) -> str:
+    if not line.startswith("class") and re_check_no_model_new.search(line):
+        return "Use of Model(...) found, use Model.create()"
+    return ""
+
+
 def check_no_session_query(line: str) -> str:
-    if re.search(r"[( ](s|session)\.query\(", line):
+    if re_check_no_session_query.search(line):
         return "Use of session.query found, use Model.query()"
     return ""
 
 
 def check_no_query_with_entities(line: str) -> str:
-    if ".with_entities" in line:  # nummus: ignore
+    if ".with_entities" in line:
         return "Use of with_entities found, use Model.query(col, ...)"
     return ""
 
 
 def check_no_query_scalar(line: str) -> str:
-    if (m := re.search(r"(\w*)\.scalar\(", line)) and m.group(1) != "sql":
+    if (m := re_check_no_scalar_query.search(line)) and m.group(1) != "sql":
         return "Use of query.scalar found, use sql.scalar()"
     return ""
 
 
 def check_no_query_one(line: str) -> str:
-    if not (m := re.search(r"(\w*)\.one\(", line)):
+    if not (m := re_check_no_query_one.search(line)):
         return ""
     g = m.group(1)
     if (g and g[0] == g[0].upper()) or g == "sql":
@@ -389,7 +404,7 @@ def check_no_query_one(line: str) -> str:
 
 
 def check_no_query_all(line: str) -> str:
-    if not (m := re.search(r"(\w*)\.all\(", line)):
+    if not (m := re_check_no_query_all.search(line)):
         return ""
     g = m.group(1)
     if (g and g[0] == g[0].upper()) or g == "sql":
@@ -399,7 +414,7 @@ def check_no_query_all(line: str) -> str:
 
 
 def check_no_query_col0(line: str) -> str:
-    if re.search(r"for \w+,? in query", line):
+    if re_check_no_query_col0.search(line):
         return "Use of first column iterator found, use sql.col0()"
     return ""
 
@@ -423,14 +438,20 @@ def test_use_of_mixins(path: Path) -> None:
 
     for i, line in enumerate(lines):
         checks = [
-            check_no_session_add(line),
-            check_no_session_query(line),
-            check_no_query_with_entities(line),
-            check_no_query_scalar(line),
-            check_no_query_one(line),
-            check_no_query_all(line),
             check_no_query_col0(line),
         ]
+        if "(" in line:
+            checks.extend(
+                [
+                    check_no_session_add(line),
+                    check_no_model_new(line),
+                    check_no_session_query(line),
+                    check_no_query_with_entities(line),
+                    check_no_query_scalar(line),
+                    check_no_query_one(line),
+                    check_no_query_all(line),
+                ],
+            )
         checks = [f"{path:}:{i + 1}: {c}" for c in checks if c]
         if checks:
             if not line.endswith(ignore):
