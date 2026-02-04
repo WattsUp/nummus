@@ -51,7 +51,7 @@ def test_short_check(rand_str_generator: RandomStringGenerator) -> None:
         "ignore": False,
     }
     with pytest.raises(exc.InvalidORMValueError):
-        HealthCheckIssue(**d)
+        HealthCheckIssue.create(**d)
 
 
 def test_short_value(

@@ -6,6 +6,7 @@ import sys
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+import colorama
 from colorama import Fore
 
 if TYPE_CHECKING:
@@ -40,6 +41,7 @@ class Command(ABC):
 
         """
         super().__init__()
+        colorama.init(autoreset=True)
 
         path_db = path_db.expanduser().absolute()
         if path_password:

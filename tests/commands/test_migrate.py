@@ -3,8 +3,6 @@ from __future__ import annotations
 import shutil
 from typing import TYPE_CHECKING
 
-from colorama import Fore
-
 from nummus.commands.migrate import Migrate
 
 if TYPE_CHECKING:
@@ -24,10 +22,7 @@ def test_not_required(
     assert c.run() == 0
 
     captured = capsys.readouterr()
-    target = (
-        f"{Fore.GREEN}Portfolio is unlocked\n"
-        f"{Fore.GREEN}Portfolio does not need migration\n"
-    )
+    target = "Portfolio is unlocked\nPortfolio does not need migration\n"
     assert captured.out == target
     assert not captured.err
 
@@ -45,17 +40,17 @@ def test_v0_1_migration(
 
     captured = capsys.readouterr()
     target = (
-        f"{Fore.GREEN}Portfolio is unlocked\n"
-        f"{Fore.CYAN}This transaction had multiple payees, only one allowed: "
+        "Portfolio is unlocked\n"
+        "This transaction had multiple payees, only one allowed: "
         "1948-03-15 Savings, please validate\n"
-        f"{Fore.GREEN}Portfolio migrated to v0.2.0\n"
-        f"{Fore.GREEN}Portfolio migrated to v0.10.0\n"
-        f"{Fore.GREEN}Portfolio migrated to v0.11.0\n"
-        f"{Fore.GREEN}Portfolio migrated to v0.13.0\n"
-        f"{Fore.GREEN}Portfolio migrated to v0.15.0\n"
-        f"{Fore.CYAN}Portfolio currency set to USD (US Dollar), use web to edit\n"
-        f"{Fore.GREEN}Portfolio migrated to v0.16.0\n"
-        f"{Fore.GREEN}Portfolio model schemas updated\n"
+        "Portfolio migrated to v0.2.0\n"
+        "Portfolio migrated to v0.10.0\n"
+        "Portfolio migrated to v0.11.0\n"
+        "Portfolio migrated to v0.13.0\n"
+        "Portfolio migrated to v0.15.0\n"
+        "Portfolio currency set to USD (US Dollar), use web to edit\n"
+        "Portfolio migrated to v0.16.0\n"
+        "Portfolio model schemas updated\n"
     )
     assert captured.out == target
     assert not captured.err

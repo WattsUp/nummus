@@ -5,7 +5,6 @@ import sys
 from typing import override, TYPE_CHECKING
 
 import pytest
-from colorama import Fore
 
 from nummus.commands.backup import Backup, Restore
 from nummus.commands.base import Command
@@ -50,7 +49,7 @@ def test_no_file(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
 
     captured = capsys.readouterr()
     assert not captured.out
-    target = f"{Fore.RED}Portfolio does not exist at {path}. Run nummus create\n"
+    target = f"Portfolio does not exist at {path}. Run nummus create\n"
     assert captured.err == target
 
 
@@ -58,7 +57,7 @@ def test_unlock(capsys: pytest.CaptureFixture[str], empty_portfolio: Portfolio) 
     MockCommand(empty_portfolio.path, None)
 
     captured = capsys.readouterr()
-    target = f"{Fore.GREEN}Portfolio is unlocked\n"
+    target = "Portfolio is unlocked\n"
     assert captured.out == target
     assert not captured.err
 
@@ -73,10 +72,7 @@ def test_migration_required(
     captured = capsys.readouterr()
     assert not captured.out
     v = MIGRATORS[-1].min_version()
-    target = (
-        f"{Fore.RED}Portfolio requires migration to v{v}\n"
-        f"{Fore.YELLOW}Run 'nummus migrate' to resolve\n"
-    )
+    target = f"Portfolio requires migration to v{v}\nRun 'nummus migrate' to resolve\n"
     assert captured.err == target
 
 
@@ -94,7 +90,7 @@ def test_unlock_encrypted_path(
     MockCommand(p.path, path_password)
 
     captured = capsys.readouterr()
-    target = f"{Fore.GREEN}Portfolio is unlocked\n"
+    target = "Portfolio is unlocked\n"
     assert captured.out == target
     assert not captured.err
 
@@ -115,7 +111,7 @@ def test_unlock_encrypted_path_bad_key(
 
     captured = capsys.readouterr()
     assert not captured.out
-    target = f"{Fore.RED}Could not decrypt with password file\n"
+    target = "Could not decrypt with password file\n"
     assert captured.err == target
 
 
@@ -138,10 +134,10 @@ def test_unlock_encrypted(
     MockCommand(p.path, None)
 
     captured = capsys.readouterr()
-    assert captured.out == f"{Fore.GREEN}Portfolio is unlocked\n"
+    assert captured.out == "Portfolio is unlocked\n"
     target = (
         "\u26bf  Please enter password: \n"
-        f"{Fore.RED}Incorrect password\n"
+        "Incorrect password\n"
         "\u26bf  Please enter password: \n"
     )
     assert captured.err == target
@@ -193,12 +189,12 @@ def test_unlock_encrypted_failed(
     assert not captured.out
     target = (
         "\u26bf  Please enter password: \n"
-        f"{Fore.RED}Incorrect password\n"
+        "Incorrect password\n"
         "\u26bf  Please enter password: \n"
-        f"{Fore.RED}Incorrect password\n"
+        "Incorrect password\n"
         "\u26bf  Please enter password: \n"
-        f"{Fore.RED}Incorrect password\n"
-        f"{Fore.RED}Too many incorrect attempts\n"
+        "Incorrect password\n"
+        "Too many incorrect attempts\n"
     )
     assert captured.err == target
 

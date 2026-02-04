@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from colorama import Fore
 
 from nummus import main, version
 
@@ -47,4 +46,4 @@ def test_unlock_successful(
 ) -> None:
     args = ["--portfolio", str(empty_portfolio.path), "unlock"]
     assert main.main(args) == 0
-    assert capsys.readouterr().out == f"{Fore.GREEN}Portfolio is unlocked\n"
+    assert capsys.readouterr().out == "Portfolio is unlocked\n"

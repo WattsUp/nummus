@@ -72,7 +72,7 @@ def test_zero_amount(session: orm.Session, transactions: list[Transaction]) -> N
 
 def test_short() -> None:
     with pytest.raises(exc.InvalidORMValueError):
-        TransactionSplit(memo="a")
+        TransactionSplit.create(memo="a")
 
 
 def test_parent_attributes_direct(transactions: list[Transaction]) -> None:

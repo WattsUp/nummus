@@ -606,7 +606,7 @@ def target(uri: str) -> str | flask.Response:
         new_target = tar is None
         if tar is None:
             # New target
-            tar = Target(
+            tar = Target(  # nummus: ignore
                 category_id=t_cat_id,
                 amount=0,
                 type_=TargetType.ACCUMULATE,
@@ -635,7 +635,7 @@ def target(uri: str) -> str | flask.Response:
         try:
             if flask.request.method == "POST":
                 with s.begin_nested():
-                    s.add(tar)
+                    s.add(tar)  # nummus: ignore
                 return base.dialog_swap(
                     event="budget",
                     snackbar=f"{emoji_name} target created",

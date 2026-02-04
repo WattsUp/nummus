@@ -413,12 +413,12 @@ def new() -> str | flask.Response:
 
         try:
             with s.begin_nested():
-                txn = Transaction(
+                txn = Transaction(  # nummus: ignore
                     statement="Manually added",
                 )
                 if err := _transaction_edit(txn, today):
                     return base.error(err)
-                s.add(txn)
+                s.add(txn)  # nummus: ignore
                 s.flush()
                 if err := _transaction_split_edit(txn):
                     return base.error(err)

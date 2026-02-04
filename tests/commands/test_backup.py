@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from colorama import Fore
-
 from nummus.commands.backup import Backup, Restore
 
 if TYPE_CHECKING:
@@ -22,10 +20,7 @@ def test_backup(capsys: pytest.CaptureFixture[str], empty_portfolio: Portfolio) 
     assert path_backup.exists()
 
     captured = capsys.readouterr()
-    target = (
-        f"{Fore.GREEN}Portfolio is unlocked\n"
-        f"{Fore.GREEN}Portfolio backed up to {path_backup}\n"
-    )
+    target = f"Portfolio is unlocked\nPortfolio backed up to {path_backup}\n"
     assert captured.out == target
     assert not captured.err
 
@@ -39,10 +34,7 @@ def test_restore(
     assert c.run() == 0
 
     captured = capsys.readouterr()
-    target = (
-        f"{Fore.CYAN}Extracted backup tar\n"
-        f"{Fore.GREEN}Portfolio restored for {empty_portfolio.path}\n"
-    )
+    target = f"Extracted backup tar\nPortfolio restored for {empty_portfolio.path}\n"
     assert captured.out == target
     assert not captured.err
 
@@ -56,7 +48,7 @@ def test_restore_missing(
 
     captured = capsys.readouterr()
     assert not captured.out
-    target = f"{Fore.RED}No backup exists for {empty_portfolio.path}\n"
+    target = f"No backup exists for {empty_portfolio.path}\n"
     assert captured.err == target
 
 
@@ -69,7 +61,7 @@ def test_restore_list_empty(
 
     captured = capsys.readouterr()
     assert not captured.out
-    target = f"{Fore.RED}No backups found, run 'nummus backup'\n"
+    target = "No backups found, run 'nummus backup'\n"
     assert captured.err == target
 
 
@@ -85,6 +77,6 @@ def test_restore_list(
     ts_local = utc_frozen.astimezone().isoformat(timespec="seconds")
 
     captured = capsys.readouterr()
-    target = f"{Fore.CYAN}Backup # 1 created at {ts_local} (0.0 seconds ago)\n"
+    target = f"Backup # 1 created at {ts_local} (0.0 seconds ago)\n"
     assert captured.out == target
     assert not captured.err

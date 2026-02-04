@@ -574,7 +574,7 @@ class Portfolio:
                 payee=d["payee"],
                 cleared=True,
             )
-            TransactionSplit(
+            TransactionSplit.create(
                 parent=txn,
                 amount=d["amount"],
                 memo=d["memo"],
