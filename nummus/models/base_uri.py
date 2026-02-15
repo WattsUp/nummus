@@ -72,7 +72,7 @@ class Cipher:
         if max(box) != (n - 1):
             msg = f"Box's maximum should be n - 1: {box}"
             raise ValueError(msg)
-        if sum(box) != (n * (n - 1) / 2):
+        if sum(box) != (n * (n - 1) // 2):
             msg = f"Box's sum should be n * (n - 1) / 2: {box}"
             raise ValueError(msg)
         box_rev = [0] * n
