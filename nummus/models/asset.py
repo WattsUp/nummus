@@ -566,9 +566,7 @@ class Asset(Base):
             # yfinance raises Exception if no data found
             raise exc.AssetWebError(e) from e
 
-        valuations: dict[int, float] = utils.pd_series_to_dict(
-            raw["Close"],  # type: ignore[attr-defined]
-        )
+        valuations: dict[int, float] = utils.pd_series_to_dict(raw["Close"])
 
         query = AssetValuation.query().where(AssetValuation.asset_id == self.id_)
         update_rows(
@@ -583,7 +581,7 @@ class Asset(Base):
         )
 
         splits: dict[int, float] = utils.pd_series_to_dict(
-            raw.loc[raw["Stock Splits"] != 0]["Stock Splits"],  # type: ignore[attr-defined]
+            raw.loc[raw["Stock Splits"] != 0]["Stock Splits"],
         )
 
         query = AssetSplit.query().where(AssetSplit.asset_id == self.id_)

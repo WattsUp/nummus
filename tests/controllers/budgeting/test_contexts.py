@@ -468,7 +468,7 @@ def test_ctx_budget(
     assert group["position"] == -1
     assert group["uri"] is None
     unhidden = [cat for cat in group["categories"] if not cat["hidden"]]
-    target: list[budgeting.CategoryContext] = [
+    target = [
         {
             "name": "emergency fund",
             "emoji_name": "Emergency Fund",

@@ -57,11 +57,11 @@ Install module with encryption
 > python -m pip install .[encrypt]
 ```
 
-For development, install as a link to repository such that code changes are used. It is recommended to install pre-commit hooks
+For development, install as a link to repository such that code changes are used. It is recommended to install prek hooks
 
 ```bash
 > python -m pip install -e .[dev]
-> pre-commit install
+> prek install
 ```
 
 ---
@@ -133,7 +133,7 @@ Code development of this project adheres to [Google Python Guide](https://google
 Linters
 
 - `ruff` for Python
-- `pyright` for Python type analysis
+- `basedpyright` for Python type analysis
 - `djlint` for Jinja HTML templates
 - `codespell` for all files
 
