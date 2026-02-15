@@ -152,7 +152,6 @@ force_alphabetical_sort_within_sections = true
 include = ["nummus", "tests", "tools"]
 exclude = ["**/__pycache__", "typing"]
 venvPath = "."
-venv = ".venv"
 typeCheckingMode = "strict"
 
 reportUnknownParameterType = "warning"
