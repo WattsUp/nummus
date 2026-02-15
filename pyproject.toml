@@ -74,9 +74,9 @@ dev = [
   "codespell>=2.4.1",
   "black>=25.9",
   "isort",
-  "pre-commit",
+  "prek",
   "djlint>=1.36.4",
-  "pyright>=1.1.408",
+  "basedpyright>=1.38.0",
   "taplo",
   "scipy-stubs",
   "pandas-stubs",
@@ -148,7 +148,7 @@ skip_gitignore = true
 float_to_top = true
 force_alphabetical_sort_within_sections = true
 
-[tool.pyright]
+[tool.basedpyright]
 include = ["nummus", "tests", "tools"]
 exclude = ["**/__pycache__", "typing"]
 venvPath = "."

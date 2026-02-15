@@ -95,22 +95,21 @@ def get_constraints(
 
     """
     config = "\n".join(dump_table_configs(model))
-    constraints: list[tuple[type[Constraint], str]] = []
 
     re_unique = re.compile(r"UNIQUE \(([^\)]+)\)")
-    for cols in re_unique.findall(config):
-        cols: str
-        constraints.append((UniqueConstraint, cols))
+    constraints: list[tuple[type[Constraint], str]] = [
+        (UniqueConstraint, cols) for cols in re_unique.findall(config)
+    ]
 
     re_check = re.compile(r'CONSTRAINT "[^"]+" CHECK \(([^\)]+)\)')
-    for sql_text in re_check.findall(config):
-        sql_text: str
-        constraints.append((CheckConstraint, sql_text))
+    constraints.extend(
+        (CheckConstraint, sql_text) for sql_text in re_check.findall(config)
+    )
 
     re_foreign = re.compile(r"FOREIGN KEY\((\w+)\) REFERENCES \w+ \(\w+\)")
-    for cols in re_foreign.findall(config):
-        sql_text: str
-        constraints.append((ForeignKeyConstraint, cols))
+    constraints.extend(
+        (ForeignKeyConstraint, cols) for cols in re_foreign.findall(config)
+    )
 
     return constraints
 
