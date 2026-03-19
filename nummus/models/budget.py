@@ -276,7 +276,7 @@ class BudgetAssignment(Base):
                 leftover,
             )
 
-        assignable = ending_balance - total_available
+        assignable = ending_balance - total_available - future_assigned
 
         return BudgetAvailable(categories, assignable, future_assigned)
 

@@ -651,7 +651,6 @@ def transactions_spending(
 
 @pytest.fixture
 def budget_assignments(
-    month: datetime.date,
     month_ord: int,
     session: orm.Session,
     categories: dict[str, int],
@@ -662,7 +661,6 @@ def budget_assignments(
         [
             BudgetAssignment this month for $50 of groceries,
             BudgetAssignment this month for $100 of emergency fund,
-            BudgetAssignment next month for $2000 of rent,
         ]
 
     """
@@ -677,6 +675,27 @@ def budget_assignments(
             amount=Decimal(100),
             category_id=categories["emergency fund"],
         )
+        return BudgetAssignment.all()
+
+
+@pytest.fixture
+def budget_assignments_future(
+    month: datetime.date,
+    session: orm.Session,
+    categories: dict[str, int],
+    budget_assignments: list[BudgetAssignment],
+) -> list[BudgetAssignment]:
+    """Create BudgetAssignments.
+
+    Returns:
+        [
+            BudgetAssignment this month for $50 of groceries,
+            BudgetAssignment this month for $100 of emergency fund,
+            BudgetAssignment next month for $2000 of rent,
+        ]
+
+    """
+    with session.begin_nested():
         BudgetAssignment.create(
             month_ord=utils.date_add_months(month, 1).toordinal(),
             amount=Decimal(2000),

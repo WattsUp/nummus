@@ -874,7 +874,7 @@ def ctx_sidebar(
                 None if month < utils.start_of_month(today) else future_assigned
             ),
             "activity": total_activity,
-            "to_go": total_to_go,
+            "to_go": max(Decimal(), total_to_go),
             "no_target": no_target_names,
             "target": None,
         }

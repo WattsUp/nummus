@@ -34,7 +34,7 @@ def test_ctx_sidebar_global(
     today: datetime.date,
     month: datetime.date,
     transactions_spending: list[Transaction],
-    budget_assignments: list[BudgetAssignment],
+    budget_assignments_future: list[BudgetAssignment],
     budget_target: Target,
 ) -> None:
     data = BudgetAssignment.get_monthly_available(month)

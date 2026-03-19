@@ -73,7 +73,7 @@ def test_get_monthly_available(
     month: datetime.date,
     categories: dict[str, int],
     transactions_spending: list[Transaction],
-    budget_assignments: list[BudgetAssignment],
+    budget_assignments_future: list[BudgetAssignment],
 ) -> None:
     availables, assignable, future_assigned = BudgetAssignment.get_monthly_available(
         month,
@@ -110,7 +110,7 @@ def test_get_monthly_available(
     # Remaining all zero
     non_zero = {k: v for k, v in availables.items() if any(vv != 0 for vv in v)}
     assert non_zero == {}
-    assert assignable == Decimal(1170)
+    assert assignable == Decimal(1170 - 2000)
     assert future_assigned == Decimal(2000)
 
 
@@ -118,7 +118,7 @@ def test_get_monthly_available_next_month(
     month: datetime.date,
     categories: dict[str, int],
     transactions_spending: list[Transaction],
-    budget_assignments: list[BudgetAssignment],
+    budget_assignments_future: list[BudgetAssignment],
 ) -> None:
     availables, assignable, future_assigned = BudgetAssignment.get_monthly_available(
         utils.date_add_months(month, 1),
