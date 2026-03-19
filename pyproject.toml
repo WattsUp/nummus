@@ -67,6 +67,7 @@ test = [
   "numpy-financial",
   "pytailwindcss",
   "jsmin",
+  "setuptools>=77",
 ]
 dev = [
   "nummus-financial[deploy,test]",
