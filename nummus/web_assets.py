@@ -8,7 +8,11 @@ from typing import override, TYPE_CHECKING
 import flask
 import flask_assets
 import webassets.filter
-from setuptools.command import build_py
+
+try:
+    from setuptools.command import build_py
+except ImportError:
+    build_py = None
 
 try:
     import jsmin
@@ -121,20 +125,25 @@ def build_bundles(app: flask.Flask, *, force: bool = False) -> None:
     bundle_js.build(force=force, disable_cache=force)
 
 
-class BuildAssets(build_py.build_py):
-    """Build assets during build command."""
+if build_py:
 
-    @override
-    def __init__(self, dist: setuptools.Distribution) -> None:
-        if pytailwindcss is None or jsmin is None:  # pragma: no cover
-            msg = "Filters not installed for BuildAssets"
-            raise ImportError(msg)
-        super().__init__(dist)
-
-    def run(self) -> None:
+    class BuildAssets(build_py.build_py):
         """Build assets during build command."""
-        path_root = Path(__file__).parent.resolve()
-        app = flask.Flask(__name__, root_path=str(path_root))
-        app.debug = False
-        build_bundles(app, force=True)
-        return super().run()
+
+        @override
+        def __init__(self, dist: setuptools.Distribution) -> None:
+            if pytailwindcss is None or jsmin is None:  # pragma: no cover
+                msg = "Filters not installed for BuildAssets"
+                raise ImportError(msg)
+            super().__init__(dist)
+
+        def run(self) -> None:
+            """Build assets during build command."""
+            path_root = Path(__file__).parent.resolve()
+            app = flask.Flask(__name__, root_path=str(path_root))
+            app.debug = False
+            build_bundles(app, force=True)
+            return super().run()
+
+else:  # pragma: no cover
+    pass
